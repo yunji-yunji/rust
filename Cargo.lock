@@ -4234,6 +4234,7 @@ dependencies = [
  "field-offset",
  "gsgdt",
  "measureme",
+ "petgraph",
  "polonius-engine",
  "rustc-rayon",
  "rustc-rayon-core",

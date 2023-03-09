@@ -3,6 +3,9 @@
 //! The main entry point is the `step` method.
 
 use either::Either;
+// yunji
+use std::io::Write;
+use std::fs;
 
 use rustc_middle::mir;
 use rustc_middle::mir::interpret::{InterpResult, Scalar};
@@ -32,6 +35,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         };
         let basic_block = &self.body().basic_blocks[loc.block];
 
+        // yunji
+        let def_id = self.body().source.def_id();
+        if self.tcx.def_path_str(def_id) == "fuzz_target" {
+            let bb_number = format!("{:?} ", loc.block);
+            let mut file = fs::OpenOptions::new().append(true).create(true).open("/home/y23kim/rust/output_dir/result3").expect("Fail to write yunji");
+            file.write_all(bb_number.as_bytes()).expect("yunji: Fail to write.");
+            // file.write_all(loc.block.as_bytes()).expect("yunji: Fail to write.");
+        }
         if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
             let old_frames = self.frame_idx();
             self.statement(stmt)?;

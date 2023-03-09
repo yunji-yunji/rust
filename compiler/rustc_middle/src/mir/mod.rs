@@ -65,6 +65,9 @@ pub mod traversal;
 mod type_foldable;
 pub mod visit;
 
+// yunji 
+pub mod fuzz;
+
 pub use self::generic_graph::graphviz_safe_def_name;
 pub use self::graphviz::write_mir_graphviz;
 pub use self::pretty::{
@@ -1171,7 +1174,8 @@ rustc_index::newtype_index! {
     /// [`CriticalCallEdges`]: ../../rustc_const_eval/transform/add_call_guards/enum.AddCallGuards.html#variant.CriticalCallEdges
     /// [guide-mir]: https://rustc-dev-guide.rust-lang.org/mir/
     #[derive(HashStable)]
-    #[debug_format = "bb{}"]
+    // #[debug_format = "bb{}"]
+    #[debug_format = "{}"]
     pub struct BasicBlock {
         const START_BLOCK = 0;
     }

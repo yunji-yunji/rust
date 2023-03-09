@@ -3,9 +3,15 @@
 use std::ffi::{OsStr, OsString};
 use std::iter;
 use std::panic::{self, AssertUnwindSafe};
-use std::path::PathBuf;
+// use std::path::PathBuf;
 use std::task::Poll;
 use std::thread;
+
+// yunji
+use std::fs;
+use std::path::{Path, PathBuf};
+use rustc_middle::mir::pretty::dump_mir_def_ids;
+use rustc_middle::mir::fuzz::*;
 
 use log::info;
 use rustc_middle::ty::Ty;
@@ -434,6 +440,51 @@ pub fn eval_entry<'tcx>(
         }
     };
 
+
+    // yunji
+    // after create_ecx and before run_threads
+
+    let def_ids = dump_mir_def_ids(tcx, None);
+    let mut my_graph = default_g();
+    let mut bb_arr = vec!();
+
+    // mirs == bodys
+    let mirs =
+        def_ids
+            .iter()
+            .flat_map(|def_id| {
+                if tcx.is_const_fn_raw(*def_id) {
+                    vec![tcx.optimized_mir(*def_id), tcx.mir_for_ctfe(*def_id)]
+                } else {
+                    vec![]
+                    // vec![tcx.instance_mir(ty::InstanceDef::Item(ty::WithOptConstParam::unknown(
+                    //     *def_id,
+                    // )))]
+                }
+            })
+            .collect::<Vec<_>>();
+
+    // mir == body
+    for mir in mirs {
+        // write_mir_fn_graphviz(tcx, mir, use_subgraphs, w)?;
+
+        let def_id = mir.source.def_id();
+        if &tcx.def_path_str(def_id) == "fuzz_target" { // if flag {
+            println!("find? {:?}", &tcx.def_path_str(def_id));
+            // my_app(tcx, body);
+            let r_tup =  my_app(tcx, mir);
+                my_graph = r_tup.0;
+                bb_arr = r_tup.1;
+        }
+    }
+    
+    // file to write output of step.rs
+    if Path::new("/home/y23kim/rust/output_dir/result3").exists() {
+        fs::remove_file("/home/y23kim/rust/output_dir/result3").expect("File delete failed yunji");
+    }
+    
+    // yunji: end of my code 
+    
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
@@ -446,6 +497,12 @@ pub fn eval_entry<'tcx>(
         // `Ok` can never happen
         Ok(never) => match never {},
     };
+
+    // yunji: post-processing after run_trheads()
+    println!("Yunji: after run_threads()");
+    let mut start : usize = 0;
+    let my_path = generate_path(my_graph, &mut start, bb_arr);
+    println!("my path={:?} and arr= ", my_path);
 
     // Machine cleanup. Only do this if all threads have terminated; threads that are still running
     // might cause Stacked Borrows errors (https://github.com/rust-lang/miri/issues/2396).
