@@ -446,6 +446,7 @@ pub fn eval_entry<'tcx>(
 
     let def_ids = dump_mir_def_ids(tcx, None);
     let mut my_graph = default_g();
+    let mut new_graph = default_g();
     let mut bb_arr = vec!();
 
     // mirs == bodys
@@ -470,21 +471,23 @@ pub fn eval_entry<'tcx>(
 
         let def_id = mir.source.def_id();
         if &tcx.def_path_str(def_id) == "fuzz_target" { // if flag {
-            println!("find? {:?}", &tcx.def_path_str(def_id));
+            println!("function name = {:?}", &tcx.def_path_str(def_id));
             // my_app(tcx, body);
             let r_tup =  my_app(tcx, mir);
                 my_graph = r_tup.0;
-                bb_arr = r_tup.1;
+                new_graph = r_tup.1;
+
+                bb_arr = r_tup.2;
         }
     }
-    
+
     // file to write output of step.rs
     if Path::new("/home/y23kim/rust/output_dir/result3").exists() {
         fs::remove_file("/home/y23kim/rust/output_dir/result3").expect("File delete failed yunji");
     }
-    
-    // yunji: end of my code 
-    
+
+    // yunji: end of my code
+
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
@@ -501,7 +504,7 @@ pub fn eval_entry<'tcx>(
     // yunji: post-processing after run_trheads()
     println!("Yunji: after run_threads()");
     let mut start : usize = 0;
-    let my_path = generate_path(my_graph, &mut start, bb_arr);
+    let my_path = generate_path(&mut my_graph,&mut new_graph, &mut start, bb_arr);
     println!("my path={:?} and arr= ", my_path);
 
     // Machine cleanup. Only do this if all threads have terminated; threads that are still running
