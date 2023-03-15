@@ -471,7 +471,7 @@ pub fn eval_entry<'tcx>(
 
         let def_id = mir.source.def_id();
         if &tcx.def_path_str(def_id) == "fuzz_target" { // if flag {
-            println!("function name = {:?}", &tcx.def_path_str(def_id));
+            println!("create graph function name = {:?}", &tcx.def_path_str(def_id));
             // my_app(tcx, body);
             let r_tup =  my_app(tcx, mir);
                 my_graph = r_tup.0;
@@ -481,13 +481,12 @@ pub fn eval_entry<'tcx>(
         }
     }
 
-    // file to write output of step.rs
+    // ===================== file to write output of step.rs =====================
     if Path::new("/home/y23kim/rust/output_dir/result3").exists() {
         fs::remove_file("/home/y23kim/rust/output_dir/result3").expect("File delete failed yunji");
     }
 
-    // yunji: end of my code
-
+    // ===================== yunji: run step function =====================
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
@@ -501,11 +500,13 @@ pub fn eval_entry<'tcx>(
         Ok(never) => match never {},
     };
 
-    // yunji: post-processing after run_trheads()
+    // ===================== yunji: post-processing after run_trheads() =====================
     println!("Yunji: after run_threads()");
     let mut start : usize = 0;
     let my_path = generate_path(&mut my_graph,&mut new_graph, &mut start, bb_arr);
     println!("my path={:?} and arr= ", my_path);
+    // ===================== yunji: post-processing after run_trheads() =====================
+
 
     // Machine cleanup. Only do this if all threads have terminated; threads that are still running
     // might cause Stacked Borrows errors (https://github.com/rust-lang/miri/issues/2396).

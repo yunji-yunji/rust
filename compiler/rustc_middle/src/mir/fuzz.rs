@@ -9,7 +9,6 @@ use rustc_middle::ty::TyCtxt;
 use rustc_middle::mir::*;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
-use std::cmp;
 // use std::string;
 
 pub fn _a() {
@@ -52,47 +51,12 @@ pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'_>) -> (Graph<usize, Strin
         let labels = terminator.kind.fmt_successor_labels();
 
         for (target, _label) in terminator.successors().zip(labels) {
-            // let mut s;
 
-            // for node in my_g.raw_nodes() {
-            //     if node.weight == source.index() {
-            //         s = node;
-            //         // let s = my_g.add_node(source.index());
-            //         break;
-            //     }
-            // }
-            //
-            // println!("{:?} {:?} {:?}", node, node.weight, node.weight.index());
-
-            // // let a = NodeIndex();
-            // let k :u32 = source.index();
-            // let a = NodeIndex(k);
-            // let b = NodeIndex(target.index());
-            // println!("node index from to check = {:?} {:?}", a, b);
-            // for node in my_g.raw_nodes() {
-            //     println!("{:?}", node);
-            //
-            // }
-
-            //// add node
-            // let s = my_g.add_node(source.index());
-            // let t = my_g.add_node(target.index());
-
-            // let s  = i32::from(source.index());
-            // let t  = i32::from(target.index());
-            // let k : i32 = 3;
             my_g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
-            // my_g.add_edge(s.into(), t.into(), ());
-            // my_g.add_edge(source.index().into(), target.index().into(), ());
-            // my_g.extend_with_edges(&[(a, b)]);
-            // my_g.extend_with_edges(&[(s, t)]);
 
         }
     }
-    // println!("nodes={:?}", my_g.raw_nodes());
-    // for node in my_g.raw_nodes() {
-    //     println!("{:?} {:?} {:?}", node, node.weight, node.weight.index());
-    // }
+
     println!("{:?}", Dot::with_config(&my_g, &[Config::EdgeIndexLabel]));
 
     // using graph..
@@ -113,8 +77,10 @@ fn node_in_which_scc(n_idx: NodeIndex, sccs: Vec<Vec<NodeIndex>>) -> usize {
     return 0;
 }
 
-pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize, String>, start : &mut usize, _arr: Vec<NodeIndex>) -> Vec<i32> {
+pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize, String>, 
+    start : &mut usize, arr: Vec<NodeIndex>) -> Vec<i32> {
     let mut tmp: Vec<i32> = vec![];
+    let mut paths: Vec<Vec<i32>> = vec![];
     let f = File::open("/home/y23kim/rust/output_dir/result3").unwrap();
     let reader = BufReader::new(f);
     for line in reader.lines() {
@@ -130,27 +96,23 @@ pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize,
 
         for i in *start..numbers.len() {
             let n: i32 = numbers[i];
+
             if prev1 != n {
+                if n == 0 {
+                    paths.push(tmp.clone());
+                    tmp = vec![];
+                }
                 tmp.push(n);
                 prev1 = n;
             }
         }
+
+        paths.push(tmp.clone());
+        // i dont use this start
         *start = numbers.len();
     }
 
-
-    // let res = kosaraju_scc(_g);
-    // println!("SCC ={:?}", res);
-
-    // SCC =[[NodeIndex(11)], [NodeIndex(10)], [NodeIndex(9)], [NodeIndex(1), NodeIndex(2), NodeIndex(5), NodeIndex(6), NodeIndex(7), NodeIndex(8), NodeIndex(3), NodeIndex(4)], [NodeIndex(0)]]
-    // yunji: in run_thread!
-    // seed = 0 0 2 trace_seed = Some([0, 1, 2, 3, 4, 7, 8, 1, 2, 5, 6, 7, 8, 1, 2, 3, 4, 7, 8, 1, 2, 5, 6, 7, 8, 1, 2, 3, 4, 7, 8, 1, 9, 11])
-    // yunji: after run threads
-
-    // let arr_len = arr.len();
-    let mut mark_bb = [0; 100];
-
-
+    println!("paths = {:?}", paths);
     let sccs = kosaraju_scc(&g.clone());
     println!("in below func SCC ={:?}", g);
 
@@ -159,54 +121,29 @@ pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize,
                  edge, edge.source(), edge.target(), node_in_which_scc(edge.source(), sccs.clone()));
         let s = node_in_which_scc(edge.source(), sccs.clone());
         let t = node_in_which_scc(edge.target(), sccs.clone());
-        // if len == 1 : NL
-        // if len > 1 : Loop(L)
-
 
         if s == t {
             if edge.source() > edge.target() {
-                let w = String::from("back edge");
+                let w = String::from("Back");
                 println!("Found back edge {:?} {:?}", edge.source(), edge.target());
                 g.update_edge(edge.source(), edge.target(), w);
             }
         } else { // s != t
             if sccs[s].len() > sccs[t].len() { // source is bigger => exiting
-                let w = String::from("exiting edge");
+                let w = String::from("Exit");
                 println!("Found exiting edge {:?}", edge);
                 g.update_edge(edge.source(), edge.target(), w);
             } else if sccs[s].len() < sccs[t].len() { // target is bigger => exiting
-                let w = String::from("entering edge");
+                let w = String::from("Enter");
                 println!("Found entering edge {:?}", edge);
                 g.update_edge(edge.source(), edge.target(), w);
-            } else {
-                println!("NOTHING {:?}", edge);
+            } else { // s len == t len NL -> NL
+                // println!("NOTHING {:?}", edge);
+                let w = String::from("NoLoop");
+                println!("Found no loop single node SCC {:?}", edge);
+                g.update_edge(edge.source(), edge.target(), w);
             }
         }
-
-/*
-        // s == NL && t == L : entering edge (-1)
-        // let a:EdgeWeightsMut<>
-        if (sccs[s].len() == 1) && (sccs[t].len() != 1){
-            let w = String::from("entering edge");
-            println!("Found entering edge {:?}", edge);
-            // g.remove_edge(ei);
-            g.update_edge(edge.source(), edge.target(), w);
-            // new_g.update_edge(edge.source(), edge.target(), w);
-        }
-
-        // s == L && t == NL : outgoing edge (+1)
-        if (sccs[s].len() > 1) && (sccs[t].len() == 1){
-            let w = String::from("exiting edge");
-            println!("Found exiting edge {:?}", edge);
-            g.update_edge(edge.source(), edge.target(), w);
-        }
-        // s == last node in L && t == first node in L (0)
-        if (s == sccs[s].len() > 1) && (sccs[t].len() == 1){
-            let w = String::from("exiting edge");
-            println!("Found outgoing edge {:?}", edge);
-            g.update_edge(edge.source(), edge.target(), w);
-        }
-*/
 
     }
 
@@ -214,79 +151,11 @@ pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize,
     for edge in g.clone().raw_edges() {
         println!("new edge = {:?}", edge);
     }
-    // println!("new graph{:?}", Dot::with_config(&new_g.clone(), &[Config::EdgeIndexLabel]));
-    // println!("{:?}", Dot::(g));
-    // println!("{:?}", Dot::with_config(g, &[Config::EdgeIndexLabel]));
 
-    // for scc in sccs {
-    //     if scc.len() == 1 {
-    //         mark_bb[g[scc[0]]] = -1;
-    //
-    //     }
-    // }
 
-    for scc in sccs {
-        // for node_idx in scc {
-        //     mark_bb[g[node_idx]]= -1;
-        // }
-        if scc.len() == 1 {
-            mark_bb[g[scc[0]]] = -1;
-        } else {
-            let mut min = 10000;
-            let mut max = 0;
-            // let mut prev = g[scc[0]];
-            for node_idx in scc {
-                // println!("{:?} {:?} {:?}", min, max, g[node_idx]);
-
-                mark_bb[g[node_idx]] = -100;
-                min = cmp::min(min, g[node_idx]);
-                max = cmp::max(max, g[node_idx]);
-                // prev = g[node_idx];
-            }
-            // let Some(minv) = g.node_weight(scc.iter()).min();
-            // let Some(maxv) = scc.iter().max();
-            // println!("{:?} {:?}", minv, maxv);
-            println!("{:?} {:?}", min, max);
-
-            mark_bb[min] = 88;
-            mark_bb[max] = 999;
-
-            // for node_idx in scc.clone() {
-            //     // let Some(node) = node_idx;
-            //     let node = g[node_idx];
-            //     println!("{:?}", node);
-            //     // match node {
-            //     //     min =>  mark_bb[node]= -100,
-            //     //     max =>  mark_bb[node]= 10,
-            //     //     _ =>  mark_bb[node]= 7,
-            //     // }
-            //     // if node == minv {
-            //     //     mark_bb.push(0);
-            //     // } else if node == maxv {
-            //     //     mark_bb.push(10);
-            //     // } else {
-            //     //     mark_bb.push(7);
-            //     // }
-            // }
-        }
-
-        // if scc.len() > 1 {
-        //     println!("scc = {:?}", r);
-        //     for rr in r {
-        //         // let Some(nw) = my_g.node_weight_mut(rr);
-        //         let nw = my_g[rr];
-        //         println!("{:?}", nw);
-        //     }
-        // }
-    }
-    println!("mark bb  {:?}", mark_bb);
-
-    // 88 : start of scc
-    // 999 : source node of back edge
-    // -100 : inside of scc
-    // -1 : NO loop basic block
-    // 0 : empty
-
+    // enter 0 -> 1
+    // exit 1 -> 0
+    // back 8 -> 1
     // my path=[0,
     //     1, 2, 3, 4, 7, 8,
     //     1, 2, 5, 6, 7, 8,
@@ -303,30 +172,165 @@ pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize,
     //     [NodeIndex(1), NodeIndex(2), NodeIndex(5), NodeIndex(6), NodeIndex(7), NodeIndex(8), NodeIndex(3), NodeIndex(4)],
     //     [NodeIndex(0)]]
 
-    let mut fin = vec!();
-    let limit = 3;
-    let mut cnt = 0;
-    for n in tmp.clone() {
-        let a = n as usize;
-        if mark_bb[a] == 999 {
-            cnt += 1;
+
+    let mut fin : Vec<usize> = vec!();
+    let limit : usize= 3;
+    // let mut cnt = 0;
+    let mut stk :Vec<usize> = vec!();
+    stk.push(0);
+    
+    let mut _flag = false;
+    println!("check tmp = {:?} {}", tmp, tmp.len());
+    let mut start_idx = 0;
+    // let _res = loop {
+    for i in 1..paths.len()-1 {
+        let path = &paths[i];
+    // for path in &paths {
+        println!("start of one execution..");
+        println!("fin path {:?}", fin);
+        println!("stack {:?}", stk);
+        println!("INFO: {:?} {:?} {:?} {:?}", start_idx, path.clone(), paths.clone(), paths.len());
+
+        stk = vec!();
+        // stk = [0];
+        stk.push(0);
+        fin = vec!();
+        for idx in 0..path.len()-2 {
+        // if flag {
+        //     println!("start ids = {:?} {:?}", start_idx, tmp.len());
+        //     return tmp
+
+        // }
+
+        // for idx in start_idx..tmp.len()-2 {
+            // if idx + 1 == tmp.len() -1 {
+            // if idx > 500{
+            //     println!("{:?} {:?} bb", idx, tmp.len());
+            //     flag = true;
+            // }
+
+            // if idx > 500{
+            //     flag = true;
+            // }
+
+            let s : usize = path[idx] as usize;   // bb_n in i32 (todo => usize)
+            let t : usize = path[idx+1].try_into().unwrap();
+
+            let Some(edge_idx) = g.find_edge(arr[s], arr[t]) else { 
+                start_idx = idx + 1;
+                println!("end of one execution..");
+                println!("fin path {:?}", fin);
+                println!("stack {:?}", stk);
+                println!("break here? next edge: {:?} {:?} {:?}", start_idx, arr[s], arr[t]);
+
+                stk = vec!();
+                // stk = [0];
+                stk.push(0);
+                fin = vec!();
+                break;
+            };
+
+
+            println!("{:?} {:?} {:?}: from {:?} to {:?} => {:?}", idx, start_idx, path.len(), arr[s], arr[t], edge_idx);
+            
+            let back = String::from("Back");
+            let enter = String::from("Enter");
+            let exit = String::from("Exit");
+            // let noloop = String::from("NoLoop");
+            let Some(edge_weight) = g.edge_weight(edge_idx) else { 
+                println!("break here?2");
+                break; };
+            // match edge_weight {
+            //     back => cnt +=1,
+            //     enter => cnt +=1,
+            //     exit => cnt +=1,
+            //     // _ => cnt += 3
+            // }
+
+
+
+            // version 1
+    /*
+            if *stk.last().unwrap() < limit {
+                println!("edge weight {:?} -> {:?} : {:?} stk {:?}", s, t, edge_weight, stk);
+                if back.eq(edge_weight) {           // back edge
+                    // top += 1;
+                    let a :usize = 1;
+                    *stk.last_mut().unwrap() += a;
+                    fin.push(t);
+
+                } else if enter.eq(edge_weight){    // entering edge
+                    println!("push only here stk {:?}", stk);
+
+                    stk.push(0);
+                    fin.push(s);
+                    fin.push(t);
+                } 
+                // else if exit.eq(edge_weight) {    // exiting edge
+
+                // } 
+                else {        
+                                        // inside large scc
+                    fin.push(t);
+
+                }
+            } else {
+                if exit.eq(edge_weight) {
+                    fin.push(t);
+                    stk.pop();
+                }
+            }
+    */
+
+            // version 2
+            if back.eq(edge_weight) {           // back edge
+
+                if *stk.last().unwrap() < limit {
+                    fin.push(t);
+                }
+                let a :usize = 1;
+                *stk.last_mut().unwrap() += a;
+
+            } else if enter.eq(edge_weight){    // entering edge
+                println!("push only here stk {:?}", stk);
+
+                stk.push(0);
+                if *stk.last().unwrap() < limit {
+
+                    fin.push(s);
+                    fin.push(t);
+                }
+            } 
+            else if exit.eq(edge_weight) {    // exiting edge
+                stk.pop();
+                if *stk.last().unwrap() < limit {
+                    // fin.push(s);
+                    fin.push(t);
+                }
+            } 
+            else {        
+                // inside large scc
+                if *stk.last().unwrap() < limit {
+                    fin.push(t);
+                }
+
+            }
+
         }
-        if cnt == limit {
-            fin.push(a);
-        }
 
 
-//        if mark_bb[n] == 999 {
-//             cnt += 1;
-//         } else {
-//             fin.push(n);
-//         }
-    }
-    println!("fin path {:?}", fin);
 
+    };
+
+
+    // let mut file = fs::OpenOptions::new().append(true).create(true).open("/home/y23kim/rust/output_dir/final_path").expect("Fail to write yunji in fuzz.rs");
+    // file.write_all(stk.as_bytes()).expect("yunji: Fail to write in fuzz.rs.");
+
+    // for (idx, val) in tmp.clone().iter().enumerate() {
+    //     let edge_idx = g.find_edge(arr[idx], arr[idx+1]);
+    //     println!("edge index {:?}", edge_idx);
+    // }
+    
     return tmp
 }
 
-// fn is_in_cycle() -> bool {
-//
-// }
