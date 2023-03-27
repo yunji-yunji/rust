@@ -66,7 +66,7 @@ mod type_foldable;
 pub mod visit;
 
 // yunji 
-pub mod fuzz;
+// pub mod fuzz;
 
 pub use self::generic_graph::graphviz_safe_def_name;
 pub use self::graphviz::write_mir_graphviz;

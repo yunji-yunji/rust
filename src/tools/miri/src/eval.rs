@@ -11,7 +11,9 @@ use std::thread;
 use std::fs;
 use std::path::{Path, PathBuf};
 use rustc_middle::mir::pretty::dump_mir_def_ids;
-use rustc_middle::mir::fuzz::*;
+// use rustc_middle::mir::fuzz::*;
+// use rustc_middle::mir::fuzz::*;
+use crate::fuzz::*;
 
 use log::info;
 use rustc_middle::ty::Ty;
@@ -443,6 +445,7 @@ pub fn eval_entry<'tcx>(
 
     // yunji
     // after create_ecx and before run_threads
+    // ===================== Process MIR graph =====================
 
     let def_ids = dump_mir_def_ids(tcx, None);
     let mut my_graph = default_g();
@@ -501,10 +504,10 @@ pub fn eval_entry<'tcx>(
     };
 
     // ===================== yunji: post-processing after run_trheads() =====================
-    println!("Yunji: after run_threads()");
+    println!("Test compiler Yunji: after run_threads()");
     let mut start : usize = 0;
     let my_path = generate_path(&mut my_graph,&mut new_graph, &mut start, bb_arr);
-    println!("my path={:?} and arr= ", my_path);
+    println!("[TO DO FIX] tmp path={:?} and arr= ", my_path);
     // ===================== yunji: post-processing after run_trheads() =====================
 
 

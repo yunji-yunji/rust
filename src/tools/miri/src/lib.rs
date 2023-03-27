@@ -81,6 +81,8 @@ mod range_map;
 mod shims;
 mod tag_gc;
 
+// yunji
+mod fuzz;
 // Establish a "crate-wide prelude": we often import `crate::*`.
 
 // Make all those symbols available in the same place as our own.
