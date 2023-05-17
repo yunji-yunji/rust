@@ -20,6 +20,8 @@ use rustc_middle::mir::*;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 
+
+
 pub fn default_g () -> Graph<usize, String> {
     let my_g = Graph::<usize, String>::new();
     my_g
@@ -28,6 +30,7 @@ pub fn default_g () -> Graph<usize, String> {
 pub fn has_cycle2(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
     let mut new = Graph::<usize, String>::new();
     let mut i = 0;
+
     for _node in orig.clone().raw_nodes() {
         let _node1 = new.add_node(i);
         i += 1;
@@ -41,26 +44,19 @@ pub fn has_cycle2(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
         }
     
     }
-    // println!("new graph\n{:?}", Dot::with_config(&new, &[Config::EdgeIndexLabel]));
+    println!("in has cycle {:?}", scc);
+    println!("new graph\n{:?}", Dot::with_config(&new, &[Config::EdgeIndexLabel]));
     match toposort(&new, None){
         Ok(_order) => {
-            // println!("no cycle");
+            println!("no cycle");
             return false;
         },
-        Err(_err) => {
-            // println!("cycle");
+        Err(err) => {
+            println!("cycle {:?}",err);
             return true;
         }
     }
 }
-
-
-// pub fn _mark_scc(scc:Vec<NodeIndex>, scc_id:i32) {
-
-//     for i in 0..scc.len() {
-//         stk_info[scc[i].index()].push(scc_id);
-//     }
-// }
 
 
 // pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> HashSet<NodeIndex> {
@@ -82,28 +78,26 @@ pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> Vec<Node
 
 pub fn get_all_back_edges(scc:Vec<NodeIndex>, header: NodeIndex, g:&mut Graph<usize, String>) 
 ->Vec<(NodeIndex, NodeIndex)> {
-// ->Vec<EdgeIndex> {
     // println!("IN get all back edges(");
     let mut back_edges :Vec<(NodeIndex, NodeIndex)> = vec!();
     let mut inner_edges :Vec<(NodeIndex, NodeIndex)> = vec!();
     let mut remove = false;
-    for edge in g.clone().raw_edges() {
-        // let e = edge.seconds();
-        // let edge_idx = g.find_edge();
+    println!("SCC in get back edges {:?}", scc);
 
+    for edge in g.clone().raw_edges() {
 
         let mut test_g = g.clone();
         // g.remove_edge(edge_idx);
-        if scc.contains(&edge.source()) && scc.contains(&edge.target()) && edge.target() == header {
-
-            
+        println!("header, source, target {:?} {:?} {:?}", header, edge.source(), edge.target());
+        if scc.contains(&edge.source()) && scc.contains(&edge.target()) 
+        && edge.target() == header {
             let Some(edge_idx) = test_g.find_edge(edge.source(), edge.target()) else { 
                 continue;
             };
+            
             // assume
             test_g.remove_edge(edge_idx);
             println!("remove edge {:?} -> {:?}", edge.source(), edge.target());
-            // println!("new graph\n{:?}", Dot::with_config(&test_g, &[Config::EdgeIndexLabel]));
 
             let mut dfs_res = vec!();
             // let mut dfs = DfsPostOrder::new(&test_g, edge.source());
@@ -147,14 +141,13 @@ pub fn get_all_back_edges(scc:Vec<NodeIndex>, header: NodeIndex, g:&mut Graph<us
     return back_edges;
 
 }
-// pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize, String>){}
 
 pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<NodeIndex> {
     let mut preds :Vec<NodeIndex> = vec!();
 
     for edge in g.clone().raw_edges() {
 
-        if edge.target() == header {
+        if edge.target() == header && edge.source() != header {
             preds.push(edge.source());
             println!("{:?}", edge);
         }
@@ -162,8 +155,6 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
     return preds;
 
 }
-
-
 
 
 pub fn _break_down_outer_once(scc:Vec<NodeIndex>, _scc_id: &mut i32, g: &mut Graph<usize, String>) {
@@ -218,14 +209,15 @@ pub fn _break_down_outer_once(scc:Vec<NodeIndex>, _scc_id: &mut i32, g: &mut Gra
 #[derive(Debug)]
 pub struct SccInfo {
     _id: i32,
-    // n_type: String,
     _n_type: char,
     _n_info: usize,
 }
 
-pub fn break_down_and_mark(scc:Vec<NodeIndex>, scc_id: &mut i32, 
-    g: &mut Graph<usize, String>, scc_info_stk: &mut HashMap<NodeIndex, Vec<SccInfo>>) {
-
+pub fn break_down_and_mark(scc: &Vec<NodeIndex>, scc_id: &mut i32, 
+    g: &mut Graph<usize, String>, 
+    scc_info_stk: &mut HashMap<NodeIndex, Vec<SccInfo>>,
+    arr: &mut Vec<NodeIndex>) {
+    
     // for i in 0..scc.len() {
     //     stk_info[scc[i].index()].push(scc_id);
     //     // stk_info array(vector) -> dictionary(key == node index, value = stack)
@@ -236,21 +228,32 @@ pub fn break_down_and_mark(scc:Vec<NodeIndex>, scc_id: &mut i32,
     let back_edges :Vec<(NodeIndex, NodeIndex)>;
     // let back_edges :Vec<EdgeIndex>;
     let headers = find_all_headers(scc.clone(), g);
+
     let loop_header;
     let new_node;
     if headers.len() ==1 {
+        println!("case 1 {:?}", headers);
         loop_header = headers[0];
         back_edges = get_all_back_edges(scc.clone(), headers[0], g);
+        // if scc.len() == 1 {
+            // self loop
+            // -> no backedges
+            // back_edges = vec!();
+
         let scc_info = SccInfo {
             _id: *scc_id, 
             _n_type: 'H', 
-            _n_info: 1,
+            _n_info: back_edges.len(),
+            // _n_info: 1,
         };
         scc_info_stk.get_mut(&headers[0]).map(|stk| stk.push(scc_info));
-        // scc_info_stk
+
     } else {
+        println!("case 2 {:?}", headers);
         new_node = g.add_node(777);
         loop_header = new_node;
+        arr.push(new_node);
+        scc_info_stk.insert(new_node, vec!());
 
         for header in headers {
             let predecessors = get_predecessors_of(header, g);
@@ -261,15 +264,16 @@ pub fn break_down_and_mark(scc:Vec<NodeIndex>, scc_id: &mut i32,
                     continue;
                 };
                 g.remove_edge(edge_to_remove);
-                // println!("after remove backedges\n{:?}", Dot::with_config(g, [Config::EdgeIndexLabel]));
-                // println!("gra\n{:?}", Dot::with_config(g, &[Config::EdgeIndexLabel]));
-        
-                // g.remove_edge(edge_idx);
                 g.update_edge(pred, new_node, String::from("REDIR"));
                 g.update_edge(new_node, header, String::from("REDIR"));
             }
         }
-        back_edges = get_all_back_edges(scc.clone(), new_node, g);
+        // scc = kosaraju_scc(&*g);
+        let mut new_scc = scc.clone();
+        new_scc.push(new_node);
+
+        back_edges = get_all_back_edges(new_scc.clone(), new_node, g);
+        println!("all back edges = {:?}", back_edges);
         let scc_info = SccInfo {
             _id: *scc_id, 
             _n_type: 'H', 
@@ -280,16 +284,26 @@ pub fn break_down_and_mark(scc:Vec<NodeIndex>, scc_id: &mut i32,
     }
 
     // find and remove backedges correctly
-    let l_idx =0;
+    let mut l_idx =0;
     let mut l_list = vec!();
     for back_edge in back_edges {
         l_list.push(back_edge.0);
-        let scc_info = SccInfo {
-            _id: *scc_id, 
-            _n_type: 'L', 
-            _n_info: l_idx,
-        };
-        scc_info_stk.get_mut(&back_edge.0).map(|stk| stk.push(scc_info));
+        let scc_info;
+        if scc.len() != 1 {
+        //     scc_info = SccInfo {
+        //         _id: *scc_id, 
+        //         _n_type: 'S', 
+        //         _n_info: l_idx,
+        //     };
+        // } else {
+            scc_info = SccInfo {
+                _id: *scc_id, 
+                _n_type: 'L', 
+                _n_info: l_idx,
+            };
+            scc_info_stk.get_mut(&back_edge.0).map(|stk| stk.push(scc_info));
+            l_idx += 1;
+        }
         
     // for edge in g.clone().raw_edges() {
         let Some(edge_idx) = g.find_edge(back_edge.0, back_edge.1) else { 
@@ -335,12 +349,14 @@ pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, _body: &Body<'_>)
     let mut scc_info_stk : HashMap<NodeIndex, Vec<SccInfo>> = HashMap::new();
 
     // ===================== create graph
-    let scc_info1 = SccInfo {
-        _id:2, 
-        _n_type: 'H', 
-        _n_info:3,
-    };
-    for i in 0..14 {
+    let case = 1;
+    let num_node;
+    if case ==1 {
+        num_node = 7;
+    } else {
+        num_node = 14;
+    }
+    for i in 0..num_node {
         let node1 = g.add_node(i);
         scc_info_stk.insert(node1, vec!());
         // if i==12 {
@@ -351,38 +367,45 @@ pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, _body: &Body<'_>)
         check_done.push(false);
         // stk_info.push(vec!());
     }
-    
-    // let tmp_node = g.add_node(99999);
-
+    println!("{:?} {:?}", arr0, arr0.len());
     println!("Initial stack info hash map {:?}\n\n", scc_info_stk);
-    println!("Initial stack info hash map {:?}\n\n", scc_info1);
 
-    g.update_edge(arr0[0], arr0[1], String::from("1"));
-    g.update_edge(arr0[1], arr0[2], String::from("2"));
-    g.update_edge(arr0[2], arr0[3], String::from(" 3"));
-    g.update_edge(arr0[3], arr0[5], String::from("4"));
-    g.update_edge(arr0[2], arr0[4], String::from("5"));
-    g.update_edge(arr0[4], arr0[5], String::from("6"));
-    g.update_edge(arr0[5], arr0[6], String::from("7"));
-    g.update_edge(arr0[6], arr0[7], String::from("8"));
-    g.update_edge(arr0[7], arr0[8], String::from("9"));
-    g.update_edge(arr0[8], arr0[5], String::from("10"));
-    g.update_edge(arr0[7], arr0[9], String::from("11"));
-    g.update_edge(arr0[9], arr0[10], String::from("12"));
-    g.update_edge(arr0[9], arr0[9], String::from("13"));
-    g.update_edge(arr0[10], arr0[11], String::from("14"));
-    g.update_edge(arr0[11], arr0[12], String::from("15"));
-    g.update_edge(arr0[10], arr0[1], String::from("16"));
-    g.update_edge(arr0[11], arr0[10], String::from("17"));
-    g.update_edge(arr0[12], arr0[10], String::from("18"));
-    g.update_edge(arr0[12], arr0[13], String::from("19"));
-    g.update_edge(arr0[11], arr0[1], String::from("20"));
-    // g.update_edge(arr0[9], arr0[11], String::from("21"));
-    // ===================== create graph
-
-
-    //temp
-    // g.update_edge(arr0[12], arr0[1], String::from("20"));
+    if case == 1 {
+        g.update_edge(arr0[0], arr0[1], String::from("1"));
+        g.update_edge(arr0[1], arr0[2], String::from("2"));
+        g.update_edge(arr0[2], arr0[3], String::from("3"));
+        g.update_edge(arr0[2], arr0[4], String::from("4"));
+        g.update_edge(arr0[3], arr0[4], String::from("5"));
+        g.update_edge(arr0[4], arr0[3], String::from("6"));
+        g.update_edge(arr0[4], arr0[5], String::from("7"));
+        g.update_edge(arr0[3], arr0[5], String::from("8"));
+        g.update_edge(arr0[5], arr0[6], String::from("9"));
+        g.update_edge(arr0[3], arr0[3], String::from("10"));
+    
+    } else {
+        // big graph
+        g.update_edge(arr0[0], arr0[1], String::from("1"));
+        g.update_edge(arr0[1], arr0[2], String::from("2"));
+        g.update_edge(arr0[2], arr0[3], String::from("3"));
+        g.update_edge(arr0[3], arr0[5], String::from("4"));
+        g.update_edge(arr0[2], arr0[4], String::from("5"));
+        g.update_edge(arr0[4], arr0[5], String::from("6"));
+        g.update_edge(arr0[5], arr0[6], String::from("7"));
+        g.update_edge(arr0[6], arr0[7], String::from("8"));
+        g.update_edge(arr0[7], arr0[8], String::from("9"));
+        g.update_edge(arr0[8], arr0[5], String::from("10"));
+        g.update_edge(arr0[7], arr0[9], String::from("11"));
+        g.update_edge(arr0[9], arr0[10], String::from("12"));
+        // g.update_edge(arr0[9], arr0[9], String::from("13"));
+        g.update_edge(arr0[10], arr0[11], String::from("14"));
+        g.update_edge(arr0[11], arr0[12], String::from("15"));
+        g.update_edge(arr0[10], arr0[1], String::from("16"));
+        g.update_edge(arr0[11], arr0[10], String::from("17"));
+        g.update_edge(arr0[12], arr0[10], String::from("18"));
+        g.update_edge(arr0[12], arr0[13], String::from("19"));
+        g.update_edge(arr0[11], arr0[1], String::from("20"));
+        // g.update_edge(arr0[9], arr0[11], String::from("21"));
+    }
     println!("before transform graph\n{:?}", Dot::with_config(&g, &[Config::EdgeIndexLabel]));
 
     // =================== NEW version =================== //
@@ -397,7 +420,9 @@ pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, _body: &Body<'_>)
             if is_cycle == true {
                 stop = false;
                 // _break_down_outer_once(scc.clone(), &mut scc_id, &mut copy_graph);
-                break_down_and_mark(scc.clone(), &mut scc_id, &mut copy_graph, &mut scc_info_stk);
+                break_down_and_mark(scc, &mut scc_id, 
+                &mut copy_graph, &mut scc_info_stk
+                , &mut arr0);
             }
         }
         println!("after break down graph = \n{:?}", Dot::with_config(&copy_graph, &[Config::EdgeIndexLabel]));
@@ -435,284 +460,331 @@ pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, _body: &Body<'_>)
 pub fn generate_path3(_g: Graph::<usize, String>, 
     scc_info_stk: &mut HashMap<NodeIndex, Vec<SccInfo>>,
     arr: Vec<NodeIndex>) -> Vec<usize> {
-    let mut fin : Vec<usize> = vec![];
-    fin.push(3);
+
+    #[derive(Debug)]
+    struct Ele {
+        counts: Vec<usize>,
+        temp_path: Vec<Vec<usize>>,
+        prefix: Vec<usize>,
+    }
+
+    let mut fin : Vec<usize>;
+    // let mut letter = String::from("");
     let limit : usize= 3;
-    let mut stk :Vec<Vec<usize>> = vec!();
+    // let mut stk :Vec<(Vec<usize>, Vec<usize>)> = vec!()                                                                                                                                          ;
+    let mut stk :Vec<Ele> = vec!()                                                                                                                                 ;
+    // let mut path_stk :Vec<Vec<usize>> = vec!();
     // let mut stk :Vec<usize> = vec!();
-    let mut record = true;
-    
-    let path :Vec<usize>= vec![0, 1, 2, 3, 
-    5, 6, 7, 8, 
-    5, 6, 7, 8, 
-    5, 6, 7, 8, 
-    5, 6, 7, 8, 
-    5, 6, 7, 
-    9, 9, 9, 9, 9 ,9, 
-    10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 
-    12, 13];
+    // let mut record = true;
+    let mut is_loop = false;
+    let case = 1;
+    let path: Vec<usize>;
+    if case ==1 {
+        path = vec![
+            0, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 3,3, 3,3, 3, 3,3 , 3,3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 5, 6];
+            // 0, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 5, 6];
+        //    [0, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 7, 5, 6]
+    } else {
+        // big graph test path
+        path = vec![0, 1, 2, 3, 
+        5, 6, 7, 8, 
+        5, 6, 7, 8, 
+        5, 6, 7, 8, 
+        5, 6, 7, 8, 
+        5, 6, 7, 9,
+        // 9, 9, 9, 9, 9 ,9, 
+        10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 
+        12, 13];
+        // [0, 1, 2, 3, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 9, 9, 9, 9, 10, 11, 10, 11, 10, 11, 10, 11, 12, 13]
+        // let path :Vec<usize>= vec![0, 1, 2, 3, 4, 3, 4, 3,4, 3, 4, 5, 6];
+        // [0, 2, 3, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 9, 10, 11, 10, 11, 10, 11, 10, 11, 12, 13]
+    }
+    // [0, 1, 2, 3, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 9, 10, 11, 10, 11, 10, 11, 10, 11, 12, 13]
 
     println!("============= Generate Path ================");
     println!("path INFO: {:?} {:?} ", path.len(), path.clone());
 
     fin = vec!();
     fin.push(path[0] as usize);
+
     for idx in 0..path.len()-1 {
         let s : usize = path[idx] as usize;   // bb_n in i32 (todo => usize)
         let t : usize = path[idx+1].try_into().unwrap();
-        println!("{:?} -> {:?}", s, t);
-        // let Some(edge_idx) = g.find_edge(arr[s], arr[t]) else { 
-        //     println!("cannot find edge");
-        //     break;
-        // };
-        // let Some(edge_weight) = g.edge_weight(edge_idx) else { 
-        //     println!("cannot find weight");
-        //     break; };
-        // println!("edge {:?} --> {:?}, stack = {:?}", s, t, stk);
+        println!("---------{:?} -> {:?}--------", s, t);
+        let mut recorded = false;
 
-        // let back = String::from("back");
-        // if edge_weight.find(&back).is_some() {    // exit edge
-        //     println!("[0] BACK EDGE {:?} ", stk);
-        //     let a :usize = 1;
-        //     *stk.last_mut().unwrap() += a;
-        //     // if it's over limit, bool = true
-        //     if *stk.last_mut().unwrap() >= limit {
-        //         record = false;
-        //     }
-        // } else {
         let mut s_idx = 0;
         let mut t_idx = 0;
 
+        while s_idx < scc_info_stk[&arr[s]].len() 
+            && t_idx < scc_info_stk[&arr[t]].len() 
+            && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
+                s_idx += 1;
+                t_idx += 1;
+        }
 
-        // if s_idx < scc_info_stk[&arr[s]].len() 
-        // && t_idx < scc_info_stk[&arr[t]].len() 
-        // && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id 
-        // && scc_info_stk[&arr[s]][s_idx]._n_type == 'L' 
-        // && scc_info_stk[&arr[t]][t_idx]._n_type == 'H' {
-        //     let a :usize = 1;
-        //     stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
-        //     println!("[1] back edge {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+        while s_idx < scc_info_stk[&arr[s]].len() {
+
+            // ============= old code ============= //
+            // stk.pop();
+            // record = true;
+            // for in_stk in &stk {
+            //     for el in in_stk {
+            //         if *el > limit {
+            //             record = false;
+            //         }
+            //     }
+            // }
+            // ============= old code ============= //
+            // println!("[3] Exit edge (POP) {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+            // println!("pop before {:?} {:?} {:?} {:?}", stk, tmp_path, fin, path_stk);
+            if let Some(mut prev) = stk.pop() {
+                prev.temp_path.push(prev.prefix.clone());
+
+                if let Some(last) = stk.last_mut() {
+                    for p in prev.temp_path {
+                        for pp in p {
+                            last.prefix.push(pp);
+                        }
+                    }
+                } else {
+                    for p in prev.temp_path {
+                        for pp in p {
+                            fin.push(pp);
+                        }
+                    }
+                }
+            }
+            println!("[3] Exit edge, pop after {:?} {:?} {:?}", stk, is_loop, fin);
+
+            s_idx += 1;
+            is_loop=false;
+
+            // let prev_path = path_stk.last_mut().unwrap();
+            // path_stk.pop();
+            // if path_stk.last_mut() != None {
+            //     for p in prev_path {
+            //         path_stk.last_mut().unwrap().push(*p);
+            //     }
+            // } else {
+            //     for p in prev_path {
+            //         fin.push(*p);
+            //     }    
+            // }
+
+            // tmp_path.push(t);
+            // for p in &tmp_path {
+            //     fin.push(*p);
+            // }
+            // println!("temp path = {:?} {:?} ", tmp_path, path_stk);
+            // tmp_path = vec!();e
+            // is_loop = false;
+        } 
+        // self loop
+        // if s == t {
+            // tmp_path.push(t);
+            // println!("[2-1] self loop edge {:?} {:?} {:?} {:?} {} {}", record, stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+            // println!("SELF LOOP {:?} {:?} {:?} {:?}", stk, tmp_path, fin, path_stk);
+            // let a :usize = 1;
+            // stk.last_mut().unwrap()[0] += a;
+            // if stk.last_mut().unwrap()[0] > limit {
+            //         // record = false;
+            //     } else {
+            //         // record = true;
+            //         // for p in &tmp_path {
+            //         //     fin.push(*p);
+            //         // }
+            //         // println!("self loop =- temp path = {:?} {:?}", tmp_path, fin);
+            //         // tmp_path = vec!();
+            //     }
         // } else {
+            // 5 [0, 1, 2, 7, 3]
+            s_idx = 0;
+            t_idx = 0;
             while s_idx < scc_info_stk[&arr[s]].len() 
             && t_idx < scc_info_stk[&arr[t]].len() 
             && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
+                is_loop=true;
+                
+                if s== t { // self loop
+                    if let Some(last) = stk.last_mut() {
+                        // option 1
+                        if recorded==false {
+                            last.prefix.push(t);
+                            recorded=true;
+                        }
+                        let a :usize = 1;
+                        last.counts[0] += a;
+                        if last.counts[0] <= limit {
+                            // option 2
+                            // if recorded==false {
+                            //     last.prefix.push(t);
+                            //     recorded=true;
+                            // }
+                            last.temp_path.push(last.prefix.clone());
+                        }
+                        last.prefix = vec!();
+                    }
+                    s_idx = scc_info_stk[&arr[s]].len();
+                    t_idx = scc_info_stk[&arr[t]].len();
+                    break;
+                }
 
                 if scc_info_stk[&arr[s]][s_idx]._n_type == 'L' 
-                && scc_info_stk[&arr[t]][t_idx]._n_type == 'H'{
-                    let a :usize = 1;
-                    stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
-                    println!("[1] back edge {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-                
-                }
-                else {
-                    println!("[2] normal edge {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-                }
+                && scc_info_stk[&arr[t]][t_idx]._n_type == 'H' {
+                    // back edge
 
-                s_idx += 1;
-                t_idx += 1;
-            }
-
-            while s_idx < scc_info_stk[&arr[s]].len() 
-            || t_idx < scc_info_stk[&arr[t]].len() {
-                while s_idx < scc_info_stk[&arr[s]].len() {
-                stk.pop();
-                    record = true;
-                    for in_stk in &stk {
-                        for el in in_stk {
-                            if *el >= limit {
-                                record = false;
-                            }
+                    if let Some(last) = stk.last_mut() {
+                        // option 1
+                        if recorded==false {
+                            last.prefix.push(t);
+                            recorded=true;
                         }
+                        let a :usize = 1;
+                        last.counts[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
+                        if last.counts[scc_info_stk[&arr[s]][s_idx]._n_info] <= limit {
+                            // option 2
+                            // if recorded==false {
+                            //     last.prefix.push(t);
+                            //     recorded=true;
+                            // }
+                            last.temp_path.push(last.prefix.clone());
+                        }
+                        last.prefix = vec!();
                     }
-                    s_idx += 1;
-                    println!("[3] Exit edge (POP) {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+
+                    // if stk.last_mut().unwrap().counts[scc_info_stk[&arr[s]][s_idx]._n_info] < limit {
+                    //     // record = false;
+                    //     stk.last_mut().unwrap().temp_path.push(stk.last_mut().unwrap().prefix);
+                    //     stk.last_mut().unwrap().prefix = vec!();
+                    // } 
+                    // -================================================== old code -==================================================
+                    // println!("[1] back edge {:?} {:?} {:?} {:?} {:?} {:?} {:?} {} {}", scc_info_stk[&arr[s]],scc_info_stk[&arr[s]][s_idx], scc_info_stk[&arr[s]][s_idx]._n_info, record, stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+                    // let a :usize = 1;
+                    // stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
+                    // if stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] > limit {
+                    //     record = false;
+                    // } else {
+                    //     record = true;
+                    // println!("[1] back edge {:?}, {:} -> {:?}", stk, s, t);
+                    
+                    println!("[2] back edge" );
+                    for e in &stk {
+                        println!("  * {:?}", e);
+                    }// for p in &tmp_path {
+                    //         // fin.push(*p);
+                    //         path_stk.last_mut().unwrap().push(*p);
+                    //     }
+                    //     tmp_path = vec!();
+                    // }
+                    // println!("normal back edge= temp path = {:?} {:?}", tmp_path, fin);
+
+                    // println!("{:?} {:?}", record, stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info]);
+                    //-================================================== old code -==================================================
+                    // back_idx = s_idx;
                 } 
-                while t_idx < scc_info_stk[&arr[t]].len() {
-                    // scc_info_stk[&arr[t]][t_idx]
-                    let mut tmp = vec!();
-                    for _i in 0..scc_info_stk[&arr[t]][t_idx]._n_info {
-                        tmp.push(0);
-                    }
-                    stk.push(tmp);
-                    t_idx += 1;
-                    println!("[4] Entering edge (Push) {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-                }
-            }
-        // }
-
-
-
-/*
-
-        // if
-        let mut same = false;
-        while s_idx < scc_info_stk[&arr[s]].len() 
-        && t_idx < scc_info_stk[&arr[t]].len() 
-        && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
-            same = true;
-            if scc_info_stk[&arr[s]][s_idx]._n_type == 'L' 
-                && scc_info_stk[&arr[t]][t_idx]._n_type == 'H'{
-                // back edge
-                let a :usize = 1;
-                stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
-                // if it's over limit, bool = true
-                // if *stk.last_mut().unwrap() >= limit {
-                //     record = false;
-                // }
-                println!("[1] back edge {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-                // break;
-            } 
-            else {
-                println!("[1-2] normal edge {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-            }
-            s_idx += 1;
-            t_idx += 1;
+            // else if scc_info_stk[&arr[s]][s_idx]._n_type == 'H' 
+            // && scc_info_stk[&arr[t]][t_idx]._n_type == 'H' {
+            //     println!("[2] self loop edge {:?} {:?} {:?} {:?} {} {}", record, stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+            //     let a :usize = 1;
+            //     stk.last_mut().unwrap()[0] += a;
+            //     println!("{:?} ", record);
+            //     // stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
             // }
-
-        }
-
-        while !same 
-        && s_idx < scc_info_stk[&arr[s]].len() 
-        || t_idx < scc_info_stk[&arr[t]].len() {
-            while s_idx < scc_info_stk[&arr[s]].len() {
-                stk.pop();
-                record = true;
-                for in_stk in &stk {
-                    for el in in_stk {
-                        if *el >= limit {
-                            record = false;
-                        }
+                else {
+                    // [SccInfo { _id: 0, _n_type: 'L', _n_info: 0 }, 
+                    // SccInfo { _id: 1, _n_type: 'H', _n_info: 1 }, 
+                    // SccInfo { _id: 4, _n_type: 'H', _n_info: 1 }] 
+                    
+                    // [SccInfo { _id: 0, _n_type: 'L', _n_info: 1 }, 
+                    // SccInfo { _id: 1, _n_type: 'X', _n_info: 9999 }, 
+                    // SccInfo { _id: 4, _n_type: 'L', _n_info: 0 }]
+                    if recorded==false {
+                        stk.last_mut().unwrap().prefix.push(t);
+                        recorded=true;
                     }
+                    // println!("[2] normal edge {:?} {:?} {:?} {:?} {} {}", stk, is_loop, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+                    println!("[1] normal edge" );
+                    for e in &stk {
+                        println!("  * {:?}", e);
+                    }
+                    
+                    // tmp_path.push(t);
+                    // if scc_info_stk[&arr[t]][t_idx]._n_type == 'L' && stk.last_mut().unwrap()[scc_info_stk[&arr[t]][t_idx]._n_info] < limit {
+                    //     record = true;
+                    // } 
+                    // else {
+                    //     record = false;
+                    // }
                 }
                 s_idx += 1;
-                println!("[2] Exit edge (POP) {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-            } 
-            while t_idx < scc_info_stk[&arr[t]].len() {
-                // scc_info_stk[&arr[t]][t_idx]
-                let mut tmp = vec!();
-                for _i in 0..scc_info_stk[&arr[t]][t_idx]._n_info {
-                    tmp.push(0);
-                }
-                stk.push(tmp);
                 t_idx += 1;
-                println!("[3] Entering edge (Push) {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-            }
         }
         // }
-        */
-        if record && 
-            s_idx < scc_info_stk[&arr[s]].len() && 
-            stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] < limit {
-            fin.push(t);
+
+        // header node, entering edge
+        while t_idx < scc_info_stk[&arr[t]].len() {
+            // scc_info_stk[&arr[t]][t_idx]
+            is_loop = true;
+            // == new vesion using temp path
+            //= ================ push stdck
+            let mut tmp = vec!();
+            for _i in 0..scc_info_stk[&arr[t]][t_idx]._n_info {
+                tmp.push(0);
+            }
+
+            let ele1;
+            // in case that never meet back edge
+            if recorded {
+                ele1 = Ele {
+                    counts: tmp, 
+                    temp_path: vec!(vec!()), 
+                    prefix: vec!(),
+                };
+            } else {
+                ele1 = Ele {
+                    counts: tmp, 
+                    temp_path: vec!(vec!(t)), 
+                    prefix: vec!(),
+                };
+                recorded = true;
+            }
+
+            stk.push(ele1);
+            //= ================ push stdck
+            // tmp_path = vec!();
+            // tmp_path.push(t);
+            // path_stk.push(vec!());
+            // println!("header node temp path = {:?} {:?}", tmp_path, fin);
+
+            t_idx += 1;
+            // println!("[4] Entering edge (Push) {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+            println!("[4] Entering edge (Push)" );
+            for e in &stk {
+                println!("  * {:?}", e);
+            }
         }
-        println!("");
+            // }
+            // println!("push into fin: {:?} {:?}", back_idx, fin);
+
+        // if record{
+        if is_loop == false {
+            fin.push(t);
+            // println!("[5] not loop is loop? {:?} {:?} {:?}", is_loop, stk, t);
+            println!("[5] not loop" );
+            for e in &stk {
+                println!("  * {:?}", e);
+            }
+                    // back_idx < scc_info_stk[&arr[s]].len() && 
+            // stk.last_mut().unwrap()[scc_info_stk[&arr[s]][back_idx]._n_info] < limit {
+        }
+        println!("-----------------");
     }
     
     println!("fin: {:?} {:?}", fin.len(), fin);
     return fin;
     //// evaluate_path(fin, &mut final_paths);
     //// final_paths.push(fin.clone());
-}
-
-// ======= Generate final path (Discard repeated component) ============== //
-pub fn _generate_path2(g: Graph::<usize, String>, 
-    stk_info : Vec<Vec<i32>>,  arr: Vec<NodeIndex>) -> Vec<usize> {
-    let mut _tmp: Vec<i32> = vec![];
-
-    let _final_paths: Vec<Vec<usize>> = vec!();
-    let mut fin : Vec<usize>;
-    let limit : usize= 3;
-    let mut stk :Vec<usize> = vec!();
-    
-    // println!("Paths INFO {:?} {:?}", paths.len(), paths.clone());
-    // stack info =[[], [0], [0], [0], [0], [0, 3], [0, 3], [0, 3], [0, 3], [0, 2], [0, 1], [0, 1], [0, 1], []]
-    let path :Vec<usize>= vec![0, 1, 2, 3, 
-    5, 6, 7, 8, 
-    5, 6, 7, 8, 
-    5, 6, 7, 8, 
-    5, 6, 7, 8, 
-    5, 6, 7, 
-    9, 9, 9, 9, 9 ,9, 
-    10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 
-    12, 13];
-
-    // Result
-    // [0, 1, 2, 3, 
-    // 5, 6, 7, 8, 
-    // 5, 6, 7, 8, 
-    // 5, 6, 7, 8, 
-    // 9, 9, 9, 
-    // 10, 11, 10, 11, 10, 11,
-    //  13]
-
-    println!("=============================");
-    println!("[test] path INFO: {:?} {:?} ", path.len(), path.clone());
-
-    fin = vec!();
-    fin.push(path[0] as usize);
-    let mut record = true;
-    for idx in 0..path.len()-1 {
-
-        let s : usize = path[idx] as usize;   // bb_n in i32 (todo => usize)
-        let t : usize = path[idx+1].try_into().unwrap();
-        let Some(edge_idx) = g.find_edge(arr[s], arr[t]) else { 
-            println!("cannot find edge");
-            break;
-        };
-        let Some(edge_weight) = g.edge_weight(edge_idx) else { 
-            println!("cannot find weight");
-            break; };
-        println!("edge {:?} --> {:?}, stack = {:?}", s, t, stk);
-
-        let back = String::from("back");
-        if edge_weight.find(&back).is_some() {    // exit edge
-            println!("[0] BACK EDGE {:?} ", stk);
-            let a :usize = 1;
-            *stk.last_mut().unwrap() += a;
-            // if it's over limit, bool = true
-            if *stk.last_mut().unwrap() >= limit {
-                record = false;
-            }
-        } else {
-            // process according to enter/exit
-            let mut s_idx = 0;
-            let mut t_idx = 0;
-            while s_idx < stk_info[s].len() && t_idx < stk_info[t].len() && stk_info[s][s_idx] == stk_info[t][t_idx] {
-                s_idx += 1;
-                t_idx += 1;
-                println!("[1] Same SCC {:?} {:?} {:?} {} {}", stk, stk_info[s], stk_info[t], s_idx, t_idx);
-            }
-
-            while s_idx < stk_info[s].len() || t_idx < stk_info[t].len() {
-                while s_idx < stk_info[s].len() {
-                    stk.pop();
-                    record = true;
-                    for el in &stk {
-                        if *el >= limit {
-                            record = false;
-                        }
-                    }
-                    println!("[2] Exit edge (POP) {:?} {:?} {:?} {} {}", stk, stk_info[s], stk_info[t], s_idx, t_idx);
-                    s_idx += 1;
-                } 
-                while t_idx < stk_info[t].len() {
-                    // stk_info[t][t_idx]
-                    stk.push(0);
-                    println!("[3] Entering edge (Push) {:?} {:?} {:?} {} {}", stk, stk_info[s], stk_info[t], s_idx, t_idx);
-                    t_idx += 1;
-                }
-            }
-        }
-        if record {
-            fin.push(t);
-        }
-        println!("");
-    }
-    
-    println!("fin: {:?} {:?}", fin.len(), fin);
-    return fin;
-    // evaluate_path(fin, &mut final_paths);
-    // final_paths.push(fin.clone());
 }
 
 // ========================= TODO: remove OLD CODE ========================= //
@@ -836,10 +908,6 @@ pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize,
         println!("stack {:?}", stk);
         // println!("previous fin: {:?} {:?}", fin.clone().len(), fin.clone());
         // final_paths.push(fin.clone());
-
-
-        
-
 
         fin = vec!();
         fin.push(path[0] as usize);
