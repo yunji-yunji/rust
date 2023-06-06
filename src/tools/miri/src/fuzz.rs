@@ -380,7 +380,7 @@ pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, _body: &Body<'_>)
         g.update_edge(arr0[4], arr0[5], String::from("7"));
         g.update_edge(arr0[3], arr0[5], String::from("8"));
         g.update_edge(arr0[5], arr0[6], String::from("9"));
-        g.update_edge(arr0[3], arr0[3], String::from("10"));
+        // g.update_edge(arr0[3], arr0[3], String::from("10"));
     
     } else {
         // big graph
@@ -477,13 +477,15 @@ pub fn generate_path3(_g: Graph::<usize, String>,
     // let mut stk :Vec<usize> = vec!();
     // let mut record = true;
     let mut is_loop = false;
-    let case = 1;
+    let case = 2;
     let path: Vec<usize>;
     if case ==1 {
         path = vec![
-            0, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 3,3, 3,3, 3, 3,3 , 3,3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 5, 6];
+            0, 1, 2, 7,  3,3, 3,3, 3, 3,3, 3, 7, 4, 7, 3, 7, 3, 7, 3,3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 5, 6];
             // 0, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 5, 6];
+            // 0, 1, 2, 7, 3, 3, 3, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 7, 4, 5, 6]
         //    [0, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 7, 5, 6]
+        // [   0, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 7, 4, 5, 6]
     } else {
         // big graph test path
         path = vec![0, 1, 2, 3, 
@@ -492,7 +494,7 @@ pub fn generate_path3(_g: Graph::<usize, String>,
         5, 6, 7, 8, 
         5, 6, 7, 8, 
         5, 6, 7, 9,
-        // 9, 9, 9, 9, 9 ,9, 
+        9, 9, 9, 9, 9 ,9, 
         10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 
         12, 13];
         // [0, 1, 2, 3, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 9, 9, 9, 9, 10, 11, 10, 11, 10, 11, 10, 11, 12, 13]
@@ -524,20 +526,6 @@ pub fn generate_path3(_g: Graph::<usize, String>,
         }
 
         while s_idx < scc_info_stk[&arr[s]].len() {
-
-            // ============= old code ============= //
-            // stk.pop();
-            // record = true;
-            // for in_stk in &stk {
-            //     for el in in_stk {
-            //         if *el > limit {
-            //             record = false;
-            //         }
-            //     }
-            // }
-            // ============= old code ============= //
-            // println!("[3] Exit edge (POP) {:?} {:?} {:?} {} {}", stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-            // println!("pop before {:?} {:?} {:?} {:?}", stk, tmp_path, fin, path_stk);
             if let Some(mut prev) = stk.pop() {
                 prev.temp_path.push(prev.prefix.clone());
 
@@ -555,170 +543,100 @@ pub fn generate_path3(_g: Graph::<usize, String>,
                     }
                 }
             }
-            println!("[3] Exit edge, pop after {:?} {:?} {:?}", stk, is_loop, fin);
-
+            println!("[3] Exit edge");
+            for e in &stk {
+                println!("  * {:?}", e);
+            }
             s_idx += 1;
             is_loop=false;
-
-            // let prev_path = path_stk.last_mut().unwrap();
-            // path_stk.pop();
-            // if path_stk.last_mut() != None {
-            //     for p in prev_path {
-            //         path_stk.last_mut().unwrap().push(*p);
-            //     }
-            // } else {
-            //     for p in prev_path {
-            //         fin.push(*p);
-            //     }    
-            // }
-
-            // tmp_path.push(t);
-            // for p in &tmp_path {
-            //     fin.push(*p);
-            // }
-            // println!("temp path = {:?} {:?} ", tmp_path, path_stk);
-            // tmp_path = vec!();e
-            // is_loop = false;
         } 
-        // self loop
-        // if s == t {
-            // tmp_path.push(t);
-            // println!("[2-1] self loop edge {:?} {:?} {:?} {:?} {} {}", record, stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-            // println!("SELF LOOP {:?} {:?} {:?} {:?}", stk, tmp_path, fin, path_stk);
-            // let a :usize = 1;
-            // stk.last_mut().unwrap()[0] += a;
-            // if stk.last_mut().unwrap()[0] > limit {
-            //         // record = false;
-            //     } else {
-            //         // record = true;
-            //         // for p in &tmp_path {
-            //         //     fin.push(*p);
-            //         // }
-            //         // println!("self loop =- temp path = {:?} {:?}", tmp_path, fin);
-            //         // tmp_path = vec!();
-            //     }
-        // } else {
-            // 5 [0, 1, 2, 7, 3]
-            s_idx = 0;
-            t_idx = 0;
-            while s_idx < scc_info_stk[&arr[s]].len() 
-            && t_idx < scc_info_stk[&arr[t]].len() 
-            && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
-                is_loop=true;
-                
-                if s== t { // self loop
-                    if let Some(last) = stk.last_mut() {
-                        // option 1
-                        if recorded==false {
-                            last.prefix.push(t);
-                            recorded=true;
-                        }
-                        let a :usize = 1;
-                        last.counts[0] += a;
-                        if last.counts[0] <= limit {
-                            // option 2
-                            // if recorded==false {
-                            //     last.prefix.push(t);
-                            //     recorded=true;
-                            // }
-                            last.temp_path.push(last.prefix.clone());
-                        }
-                        last.prefix = vec!();
-                    }
-                    s_idx = scc_info_stk[&arr[s]].len();
-                    t_idx = scc_info_stk[&arr[t]].len();
-                    break;
-                }
 
-                if scc_info_stk[&arr[s]][s_idx]._n_type == 'L' 
-                && scc_info_stk[&arr[t]][t_idx]._n_type == 'H' {
-                    // back edge
-
-                    if let Some(last) = stk.last_mut() {
-                        // option 1
-                        if recorded==false {
-                            last.prefix.push(t);
-                            recorded=true;
-                        }
-                        let a :usize = 1;
-                        last.counts[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
-                        if last.counts[scc_info_stk[&arr[s]][s_idx]._n_info] <= limit {
-                            // option 2
-                            // if recorded==false {
-                            //     last.prefix.push(t);
-                            //     recorded=true;
-                            // }
-                            last.temp_path.push(last.prefix.clone());
-                        }
-                        last.prefix = vec!();
-                    }
-
-                    // if stk.last_mut().unwrap().counts[scc_info_stk[&arr[s]][s_idx]._n_info] < limit {
-                    //     // record = false;
-                    //     stk.last_mut().unwrap().temp_path.push(stk.last_mut().unwrap().prefix);
-                    //     stk.last_mut().unwrap().prefix = vec!();
-                    // } 
-                    // -================================================== old code -==================================================
-                    // println!("[1] back edge {:?} {:?} {:?} {:?} {:?} {:?} {:?} {} {}", scc_info_stk[&arr[s]],scc_info_stk[&arr[s]][s_idx], scc_info_stk[&arr[s]][s_idx]._n_info, record, stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-                    // let a :usize = 1;
-                    // stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
-                    // if stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] > limit {
-                    //     record = false;
-                    // } else {
-                    //     record = true;
-                    // println!("[1] back edge {:?}, {:} -> {:?}", stk, s, t);
-                    
-                    println!("[2] back edge" );
-                    for e in &stk {
-                        println!("  * {:?}", e);
-                    }// for p in &tmp_path {
-                    //         // fin.push(*p);
-                    //         path_stk.last_mut().unwrap().push(*p);
-                    //     }
-                    //     tmp_path = vec!();
-                    // }
-                    // println!("normal back edge= temp path = {:?} {:?}", tmp_path, fin);
-
-                    // println!("{:?} {:?}", record, stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info]);
-                    //-================================================== old code -==================================================
-                    // back_idx = s_idx;
-                } 
-            // else if scc_info_stk[&arr[s]][s_idx]._n_type == 'H' 
-            // && scc_info_stk[&arr[t]][t_idx]._n_type == 'H' {
-            //     println!("[2] self loop edge {:?} {:?} {:?} {:?} {} {}", record, stk, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-            //     let a :usize = 1;
-            //     stk.last_mut().unwrap()[0] += a;
-            //     println!("{:?} ", record);
-            //     // stk.last_mut().unwrap()[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
-            // }
-                else {
-                    // [SccInfo { _id: 0, _n_type: 'L', _n_info: 0 }, 
-                    // SccInfo { _id: 1, _n_type: 'H', _n_info: 1 }, 
-                    // SccInfo { _id: 4, _n_type: 'H', _n_info: 1 }] 
-                    
-                    // [SccInfo { _id: 0, _n_type: 'L', _n_info: 1 }, 
-                    // SccInfo { _id: 1, _n_type: 'X', _n_info: 9999 }, 
-                    // SccInfo { _id: 4, _n_type: 'L', _n_info: 0 }]
+        s_idx = 0;
+        t_idx = 0;
+        while s_idx < scc_info_stk[&arr[s]].len() 
+        && t_idx < scc_info_stk[&arr[t]].len() 
+        && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
+            is_loop=true;
+            
+            if s== t { // self loop
+                if let Some(last) = stk.last_mut() {
+                    // option 1
                     if recorded==false {
-                        stk.last_mut().unwrap().prefix.push(t);
+                        last.prefix.push(t);
                         recorded=true;
                     }
-                    // println!("[2] normal edge {:?} {:?} {:?} {:?} {} {}", stk, is_loop, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
-                    println!("[1] normal edge" );
-                    for e in &stk {
-                        println!("  * {:?}", e);
+                    let a :usize = 1;
+                    last.counts[0] += a;
+                    if last.counts[0] <= limit {
+                        // option 2
+                        // if recorded==false {
+                        //     last.prefix.push(t);
+                        //     recorded=true;
+                        // }
+                        last.temp_path.push(last.prefix.clone());
                     }
-                    
-                    // tmp_path.push(t);
-                    // if scc_info_stk[&arr[t]][t_idx]._n_type == 'L' && stk.last_mut().unwrap()[scc_info_stk[&arr[t]][t_idx]._n_info] < limit {
-                    //     record = true;
-                    // } 
-                    // else {
-                    //     record = false;
-                    // }
+                    last.prefix = vec!();
                 }
-                s_idx += 1;
-                t_idx += 1;
+                println!("[6] self back edge" );
+                for e in &stk {
+                    println!("  * {:?}", e);
+                }
+                // s_idx = scc_info_stk[&arr[s]].len();
+                t_idx = scc_info_stk[&arr[t]].len();
+                break;
+            }
+
+            if scc_info_stk[&arr[s]][s_idx]._n_type == 'L' 
+            && scc_info_stk[&arr[t]][t_idx]._n_type == 'H' {
+                // back edge
+
+                if let Some(last) = stk.last_mut() {
+                    // option 1
+                    if recorded==false {
+                        last.prefix.push(t);
+                        recorded=true;
+                    }
+                    let a :usize = 1;
+                    last.counts[scc_info_stk[&arr[s]][s_idx]._n_info] += a;
+                    if last.counts[scc_info_stk[&arr[s]][s_idx]._n_info] <= limit {
+                        // option 2
+                        // if recorded==false {
+                        //     last.prefix.push(t);
+                        //     recorded=true;
+                        // }
+                        last.temp_path.push(last.prefix.clone());
+                    }
+                    last.prefix = vec!();
+                }
+
+                println!("[2] back edge" );
+                for e in &stk {
+                    println!("  * {:?}", e);
+                }
+
+            } 
+            else {
+
+                if recorded==false {
+                    stk.last_mut().unwrap().prefix.push(t);
+                    recorded=true;
+                }
+                // println!("[2] normal edge {:?} {:?} {:?} {:?} {} {}", stk, is_loop, scc_info_stk[&arr[s]], scc_info_stk[&arr[t]], s_idx, t_idx);
+                println!("[1] normal edge" );
+                for e in &stk {
+                    println!("  * {:?}", e);
+                }
+                
+                // tmp_path.push(t);
+                // if scc_info_stk[&arr[t]][t_idx]._n_type == 'L' && stk.last_mut().unwrap()[scc_info_stk[&arr[t]][t_idx]._n_info] < limit {
+                //     record = true;
+                // } 
+                // else {
+                //     record = false;
+                // }
+            }
+            s_idx += 1;
+            t_idx += 1;
         }
         // }
 
