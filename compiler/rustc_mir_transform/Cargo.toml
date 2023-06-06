@@ -28,6 +28,11 @@ rustc_trait_selection = { path = "../rustc_trait_selection" }
 smallvec = { version = "1.8.1", features = ["union", "may_dangle"] }
 tracing = "0.1"
 # tidy-alphabetical-end
+# yunji
+#rustc_span = { path = "../rustc_span" }
+#rustc_fluent_macro = { path = "../rustc_fluent_macro" }
+#rustc_macros = { path = "../rustc_macros" }
+petgraph = "0.5.1"
 
 [dev-dependencies]
 # tidy-alphabetical-start

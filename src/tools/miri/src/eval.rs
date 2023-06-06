@@ -420,6 +420,13 @@ pub fn create_ecx<'mir, 'tcx: 'mir>(
     Ok(ecx)
 }
 
+// use rustc_middle::arena::Arena;
+// use copy_arena::Arena;
+
+
+
+
+
 /// Evaluates the entry function specified by `entry_id`.
 /// Returns `Some(return_code)` if program executed completed.
 /// Returns `None` if an evaluation error occurred.
@@ -442,7 +449,12 @@ pub fn eval_entry<'tcx>(
         }
     };
 
-
+    // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
+    //     if let Err(error) = rustc_mir_transform::add_bb::run_pass(tcx) {
+    //         tcx.sess.emit_err(errors::CantEmitMIR { error });
+    //         tcx.sess.abort_if_errors();
+    //     }
+    // }
     // yunji
     // after create_ecx and before run_threads
     // ===================== Process MIR graph =====================
@@ -467,20 +479,64 @@ pub fn eval_entry<'tcx>(
                 }
             })
             .collect::<Vec<_>>();
-
-    // mir == body
+    
+    // mir ==> body
     for mir in mirs {
         // write_mir_fn_graphviz(tcx, mir, use_subgraphs, w)?;
 
         let def_id = mir.source.def_id();
+ 
         if &tcx.def_path_str(def_id) == "fuzz_target" { // if flag {
             println!("create graph function name = {:?}", &tcx.def_path_str(def_id));
             // my_app(tcx, body);
-            let r_tup =  my_app(tcx, mir);
-                my_graph = r_tup.0;
-                new_graph = r_tup.1;
+            println!("[len = {:?}] basic block in eval.rs {:?}", mir.basic_blocks.len(), mir.basic_blocks);
+            
+            let res_opt_mir = tcx.optimized_mir(def_id);
+            println!("optimized mir is run {:?}", res_opt_mir);
 
-                bb_arr = r_tup.2;
+            // println!("after transform {:?}", tcx.body().basic_blocks);
+
+            // ==================== yj: transform body mir directly ==================== /
+
+            // ================= try Arena
+            // let mut arena = Arena::new();
+            // let mut allocator = arena.allocator();
+            // let c = tcx.arena.alloc_slice(b"some text");
+            // println!("allocate res {:?}", c);
+
+
+            // for _tmp in mir.basic_blocks.iter() {
+            //     let node1 = my_g.add_node(cnt);
+            //     let _node2 = copy_g.add_node(cnt);
+            //     arr.push(node1);
+            //     cnt = cnt + 1;
+            // }
+
+            // for (source, _) in body.basic_blocks.iter_enumerated() {
+            //     // let def_id = body.source.def_id();
+            //     // let def_name = format!("{}_{}", def_id.krate.index(), def_id.index.index(),);
+
+            //     let terminator = body[source].terminator();
+            //     let labels = terminator.kind.fmt_successor_labels();
+
+            //     for (target, _label) in terminator.successors().zip(labels) {
+
+            //         my_g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
+            //         copy_g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
+
+            //     }
+            // }
+
+            // ==================== ================================= ==================== /
+
+
+
+
+            let r_tup =  my_app(tcx, mir);
+            my_graph = r_tup.0;
+            new_graph = r_tup.1;
+
+            bb_arr = r_tup.2;
         }
     }
 

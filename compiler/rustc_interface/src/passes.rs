@@ -948,7 +948,15 @@ pub fn start_codegen<'tcx>(
             tcx.sess.abort_if_errors();
         }
     }
-
+    // run_optimization_passes<'tcx>(tcx, body);
+    
+    // yunji pass
+    // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
+    //     if let Err(error) = rustc_mir_transform::add_bb::add_single_bb(tcx, body) {
+    //         // tcx.sess.emit_err(errors::CantEmitMIR { error });
+    //         // tcx.sess.abort_if_errors();
+    //     }
+    // }
     codegen
 }
 

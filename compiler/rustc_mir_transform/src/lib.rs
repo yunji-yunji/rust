@@ -96,6 +96,8 @@ mod prettify;
 mod ref_prop;
 mod remove_noop_landing_pads;
 mod remove_storage_markers;
+// yunji
+mod add_bb;
 mod remove_uninit_drops;
 mod remove_unneeded_drops;
 mod remove_zsts;
@@ -560,6 +562,7 @@ fn run_optimization_passes<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
     fn o1<T>(x: T) -> WithMinOptLevel<T> {
         WithMinOptLevel(1, x)
     }
+    // println!("run optimization passes");
 
     // The main optimizations that we do on MIR.
     pm::run_passes(
@@ -574,6 +577,9 @@ fn run_optimization_passes<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
             &unreachable_prop::UnreachablePropagation,
             &o1(simplify::SimplifyCfg::AfterUninhabitedEnumBranching),
             &remove_storage_markers::RemoveStorageMarkers,
+            // yunji
+            &add_bb::DummyYJ,
+            // &add_bb::DummyYJ::run_pass(,tcx, body),
             &remove_zsts::RemoveZsts,
             &normalize_array_len::NormalizeArrayLen, // has to run after `slice::len` lowering
             &const_goto::ConstGoto,
@@ -634,7 +640,7 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
         // constructors.
         return shim::build_adt_ctor(tcx, did.to_def_id());
     }
-
+    // println!("inner optimized mir");
     match tcx.hir().body_const_context(did) {
         // Run the `mir_for_ctfe` query, which depends on `mir_drops_elaborated_and_const_checked`
         // which we are going to steal below. Thus we need to run `mir_for_ctfe` first, so it
@@ -662,6 +668,11 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
     }
 
     run_optimization_passes(tcx, &mut body);
+        // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
+    // if let Err(error) = rustc_mir_transform::add_bb::run_pass(tcx, &mut body) {
+    //     // tcx.sess.emit_err(errors::CantEmitMIR { error });
+    //     // tcx.sess.abort_if_errors();
+    // }
 
     body
 }

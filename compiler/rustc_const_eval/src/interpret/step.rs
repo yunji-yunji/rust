@@ -34,8 +34,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             return Ok(true);
         };
         let basic_block = &self.body().basic_blocks[loc.block];
-
+        
+        // let tmp = &self.body().basic_blocks_mut();
+        // println!("yunji {:?}", tmp);
         // yunji
+        
         let def_id = self.body().source.def_id();
         if self.tcx.def_path_str(def_id) == "fuzz_target" {
             let bb_number = format!("{:?} ", loc.block);
