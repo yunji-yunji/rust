@@ -2,6 +2,7 @@
 
 use std::fs::File;
 use std::io;
+// use std::intrinsics::mir::BasicBlock;
 
 use crate::MirPass;
 // use rustc_middle::mir::write_mir_pretty;
@@ -11,7 +12,6 @@ use rustc_session::config::{OutFileName, OutputType};
 
 // use std::collections::HashMap;
 use rustc_data_structures::fx::FxHashMap;
-
 use petgraph::Graph;
 use petgraph::dot::{Dot, Config};
 use petgraph::algo::kosaraju_scc;
@@ -23,6 +23,7 @@ pub struct Marker(pub &'static str);
 
 use rustc_middle::mir::*; // visit
 use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
+use rustc_index::vec::IndexVec;
 // use rustc_middle::mir::patch::MirPatch;
 // use rustc_middle::
 
@@ -36,26 +37,11 @@ impl<'tcx> MirPass<'tcx> for Marker {
         let def_id = body.source.def_id();
         if &tcx.def_path_str(def_id) == "fuzz_target" {
             println!("YuNJI: FUZZ target");
-            // dummy_mir(tcx, body);
-            // println!(" before add test {:?} {:?}", body.basic_blocks.len(), body.basic_blocks);
-            println!(" before add test {:?}", body.basic_blocks.len());
-            for i in 0..body.basic_blocks.len() {
-                println!("   * {:?}: {:?}", i, body.basic_blocks[i.into()].terminator);
-            }
-            test_add(tcx, body);
-            // println!("after");
-            println!(" after add test {:?}", body.basic_blocks.len());
-            for i in 0..body.basic_blocks.len() {
-                println!("   * {:?}: {:?}", i, body.basic_blocks[i.into()].terminator);
-            }
-            // * 0: Some(Terminator { source_info: SourceInfo { span: ../hello_world/src/main9.rs:27:5: 41:6 (#0), scope: scope[1] }, kind: goto -> 1 })
-            // * 1: Some(Terminator { source_info: SourceInfo { span: ../hello_world/src/main9.rs:27:11: 27:21 (#57), scope: scope[1] }, kind: switchInt(move _4) -> [0: 5, otherwise: 2] })
-            // * 2: Some(Terminator { source_info: SourceInfo { span: ../hello_world/src/main9.rs:29:12: 29:17 (#58), scope: scope[2] }, kind: switchInt(move _10) -> [0: 4, otherwise: 3] })
-            // * 3: Some(Terminator { source_info: SourceInfo { span: ../hello_world/src/main9.rs:31:13: 31:21 (#0), scope: scope[2] }, kind: goto -> 6 })
-            // * 4: Some(Terminator { source_info: SourceInfo { span: ../hello_world/src/main9.rs:35:13: 35:21 (#0), scope: scope[2] }, kind: goto -> 6 })
-            // * 5: Some(Terminator { source_info: SourceInfo { span: ../hello_world/src/main9.rs:44:2: 44:2 (#0), scope: scope[0] }, kind: return })
-            // * 6: Some(Terminator { source_info: SourceInfo { span: no-location (#0), scope: scope[1] }, kind: goto -> 1 })
-            // * 7: Some(Terminator { source_info: SourceInfo { span: ../hello_world/src/main9.rs:27:11: 27:21 (#57), scope: scope[1] }, kind: switchInt(_4) -> [0: 5, otherwise: 4] })
+
+            // let bbs=body.basic_blocks_mut();
+            print_bbs(body.clone().basic_blocks, "Before add dummy");
+            insert_dummy_block(body);
+            print_bbs(body.clone().basic_blocks, "after add dummy");
 
             let mut index_map: Vec<NodeIndex> = vec!();
             let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
@@ -86,11 +72,6 @@ impl<'tcx> MirPass<'tcx> for Marker {
                 }
             }
         }
-        // insert_bb(tcx, body);
-
-
-        // find_scc(tcx, body);
-
     }
 
 }
@@ -108,209 +89,8 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
     }
     Ok(())
 }
-// use rustc_index::vec::IndexVec;
-// /// Ensures that the `otherwise` branch leads to an unreachable bb, returning `None` if so and a new
-// /// bb to use as the new target if not.
-// fn ensure_otherwise_unreachable<'tcx>(
-//     bbs: &mut IndexVec<usize, BasicBlockData<'tcx>>,
-//     targets: &SwitchTargets,
-// ) -> Option<BasicBlockData<'tcx>> {
-//     let otherwise = targets.otherwise();
-//     let bb = &bbs[otherwise.into()];
-//     if bb.terminator().kind == TerminatorKind::Unreachable
-//         && bb.statements.iter().all(|s| matches!(&s.kind, StatementKind::StorageDead(_)))
-//     {
-//         return None;
-//     }
-//
-//     let mut new_block = BasicBlockData::new(Some(Terminator {
-//         source_info: bb.terminator().source_info,
-//         kind: TerminatorKind::Unreachable,
-//     }));
-//     new_block.is_cleanup = bb.is_cleanup;
-//     Some(new_block)
-// }
-
-fn test_add<'tcx>(_tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
-    let bbs = body.basic_blocks_mut();
-    // basicblock-> statements, "terminator", is_cleanup
-    // terminator-> source_info, kind
-    // kind (TerminatorKind) -> Goto | SwitchInt
-    // SwitchInt -> discr, targets
-    // discr -> Operand<'tcx>
-    // targets = SwitchTargets -> values(SmallVec<[u128; 1]>), targets(SmallVec<[BasicBlock; 2]>)
-    //     /// new(iterator(1.1), otherwise(1.2))
-    //
-    //
-    // index of basic block to copy...
-
-    // 1. new targets (switchTargets)
-        // 1.1. iterator
-        // 2.1. otherwise
-    // 2. discr(parent's)
-    // 3. source_info
-    // 4. terminator
-    // 5. basicblcok
-    let i = 1;
-    let copy = BasicBlock::from_usize(i);
-    let new_dest = BasicBlock::from_usize(4);
-    // let go_1 m
-    let TerminatorKind::SwitchInt {
-        discr: copy_op,
-        targets: copy_targets
-    } = &bbs[copy].terminator().kind else {
-        println!("faile to declare");
-        unreachable!()
-    };
 
 
-
-
-    let copy_op = match copy_op {
-        Operand::Move(x) => Operand::Copy(*x),
-        Operand::Copy(x) => Operand::Copy(*x),
-        Operand::Constant(x) => Operand::Constant(x.clone()),
-    };
-    // let copy_ty = copy_op.ty(body.local_decls(), tcx);
-    // let statements_before = bbs[copy].statements.len();
-    // let copy_end = Location { block: copy, statement_index: statements_before};
-    // let mut patch = MirPatch::new(body);
-
-    // 1.1.
-    let new_targets = copy_targets.iter().map(|(value, block)| {
-        if value ==0 {
-            println!("check target 1 {:?} {:?} {:?}", value, block, bbs[block].terminator().kind);
-            (value, copy)
-        } else if value==1 {
-            println!("check target 2 {:?} {:?} {:?}", value, block, bbs[block].terminator().kind);
-            (value, block)
-
-        }
-        // let TerminatorKind::SwitchInt {targets, ..} = &bbs[block].terminator().kind else {
-        //     unreachable!()
-        //     // return
-        // };
-        else {
-            // (value, targets.target_for_value(value))
-            println!("check target 3 {:?} {:?} {:?}", value, block, bbs[block].terminator().kind);
-            (value, block)
-        }
-    });
-
-    // 1.
-    // let TerminatorKind::SwitchInt {
-    //     targets: otherwise_t,
-    //     discr: o_op,
-    // } = &copy.kind else {
-    //     // return None;
-    //     println!("error 1");
-    //     unreachable!()
-    // };
-
-    let eq_targets = SwitchTargets::new(new_targets, new_dest);
-
-    let eq_b = BasicBlockData::new(Some(Terminator {
-        source_info: bbs[copy].terminator().source_info,
-        kind: TerminatorKind::SwitchInt {
-            discr: copy_op,
-            targets: eq_targets,
-        },
-    }));
-    bbs.push(eq_b);
-
-    let root = BasicBlock::from_usize(0);
-    // method 1
-    let goto_new = TerminatorKind::Goto {
-        target: BasicBlock::from_usize(7),
-        // target: root,
-    };
-
-    // method 2
-    // if let TerminatorKind::Goto {target} = &bbs[root].terminator().kind {
-    //     *target =  BasicBlock::from_usize(7);
-    //     // target = eq_b;
-    // } else {
-    //     println!("faile to declare");
-    //     unreachable!()
-    // };
-
-    let b2change = bbs.get_mut(root).expect("get root");
-    // let mut new_term_for_b = b2change.terminator.as_ref().expect("no ter").clone();
-    let mut new_term_for_b = b2change.terminator.as_mut().expect("n t");
-    new_term_for_b.kind = goto_new;
-
-    println!("after change root {:?}", BasicBlock::from_usize(0));
-
-
-
-    // bbs[root].terminator().kind = goto_new;
-
-    // source_info = self.source_info()
-    // let si = body.basic_blocks[0].statement.source_info;
-    // body.source_info(body.span);
-
-    /*
-    // for bb in body.basic_blocks.indices() {
-        for bb in bbs.indices() {
-        println!("processing block {:?}", bb);
-        //
-        // let Some(discriminant_ty) = get_switched_on_type(&body.basic_blocks[bb], tcx, body) else {
-        //     continue;
-        // };
-        //
-        // let layout = tcx.layout_of(tcx.param_env(body.source.def_id()).and(discriminant_ty));
-        //
-        // let allowed_variants = if let Ok(layout) = layout {
-        //     variant_discriminants(&layout, discriminant_ty, tcx)
-        // } else {
-        //     continue;
-        // };
-        //
-        // trace!("allowed_variants = {:?}", allowed_variants);
-
-        if let TerminatorKind::SwitchInt { targets, .. } =
-            &mut bbs[bb].terminator_mut().kind
-        {
-            let mut new_targets = SwitchTargets::new(
-                // targets.iter().filter(|(val, _)| body.basic_blocks.as_ref().contains(val)),
-                // targets.iter().filter(|(val, _)| body.basic_blocks.as_mut().clone().contains(val)),
-                targets.iter(),
-                targets.otherwise(),
-            );
-
-            if let Some(updated) = ensure_otherwise_unreachable(bbs, &new_targets) {
-                let new_otherwise = bbs.push(updated);
-                *new_targets.all_targets_mut().last_mut().unwrap() = new_otherwise;
-            }
-
-            if let TerminatorKind::SwitchInt { targets, .. } =
-                &mut bbs[bb].terminator_mut().kind
-            {
-                *targets = new_targets;
-            } else {
-                // unreachable!()
-                println!("unreachable1");
-            }
-        } else {
-            println!("unreachable2");
-            // unreachable!()
-        }
-        let original_last_block = bbs.get_mut(BasicBlock::from_usize(1)).expect("No last block!");
-        let new_terminator = original_last_block.terminator.as_ref().expect("no terminator").clone();
-
-
-        // new_terminator.kind = asm_terminator_kind;
-        let new_bb = BasicBlockData {
-            statements: vec![],
-            terminator: Some(new_terminator.to_owned()),
-            is_cleanup: false,
-        };
-        bbs.push(new_bb);
-
-    }
-*/
-
-}
 
 
 fn _dummy_mir<'tcx>(_tcx: TyCtxt<'tcx>, _body: &mut Body<'tcx>) {
@@ -549,6 +329,7 @@ fn is_cycle(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
 }
 
 
+
 pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> Vec<NodeIndex> {
     let mut headers :Vec<NodeIndex> = vec!();
     for edge in g.clone().raw_edges() {
@@ -562,6 +343,224 @@ pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> Vec<Node
     return headers;
 }
 
+
+fn insert_dummy_block<'tcx>(body: &mut Body<'tcx>) {
+    /// basicblock-> statements, "terminator", is_cleanup
+    /// terminator-> source_info, kind
+    /// kind (TerminatorKind) -> Goto | SwitchInt
+    /// SwitchInt -> discr, targets
+    /// discr -> Operand<'tcx>
+    /// targets = SwitchTargets -> new(target_iter, otherwise)
+    /// target_iter -> values,targets
+        /// values -> SmallVec<[u128; 1]>
+        /// targets -> SmallVec<[BasicBlock; 2]>
+
+    let bbs = body.basic_blocks_mut();
+
+    // 1. add Dummy basic block(node 7) branch to b1 and b4
+    insert_switchint(bbs, BasicBlock::from_usize(1), BasicBlock::from_usize(1), BasicBlock::from_usize(4));
+
+    // 2. change edge 0->1 to 0->7(new node)
+    change_target_goto(bbs, BasicBlock::from_usize(0), BasicBlock::from_usize(7));
+
+}
+
+pub fn print_bbs<'tcx>(bbs: BasicBlocks<'tcx>, title: &str) {
+    println!("=====  {} ({:?})  =====", title, bbs.len());
+    for i in 0..bbs.len() {
+        let tmp = bbs[i.into()].terminator.as_ref().expect("Error in print bbs").clone();
+        println!("  * {:?}: span[{:?}]  kind[{:?}]", i, tmp.source_info.span, tmp.kind);
+    }
+}
+
+/// TODO: [fix] not necessarily mutable
+pub fn print_bbs_mut<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, title: &str) {
+    println!("=====  {} ({:?})  =====", title, bbs.len());
+    for i in 0..bbs.len() {
+        let tmp = bbs[i.into()].terminator.as_ref().expect("Error in print bbs").clone();
+        println!("  * {:?}: span[{:?}]  kind[{:?}]", i, tmp.source_info.span, tmp.kind);
+    }
+}
+
+/// insert inline assembly kind basic block
+fn _insert_inline_asm<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
+    let bbs = body.basic_blocks_mut();
+
+    let template_piece = InlineAsmTemplatePiece::String(String::from("yunji mir pass test"));
+    let template = [template_piece];
+    // let template = tcx.arena.alloc(&template);
+    // let template = tcx.arena.alloc([template_piece]);
+    let template = tcx.arena.alloc_from_iter(template);
+
+    let asm_terminator_kind = TerminatorKind::InlineAsm {
+        template,
+        operands: vec![],
+        options: InlineAsmOptions::empty(),
+        line_spans: &[],
+        destination: Some(bbs.next_index()),
+        cleanup: None,
+    };
+
+    let len = bbs.len();
+    let original_last_block = bbs.get_mut(BasicBlock::from_usize(len-1)).expect("No last block!");
+
+    let mut new_terminator = original_last_block.terminator.as_ref().expect("no terminator").clone();
+    let original_last_block_terminator = original_last_block.terminator_mut();
+    new_terminator.kind = asm_terminator_kind;
+
+    let new_bb = BasicBlockData {
+        statements: vec![],
+        terminator: Some(original_last_block_terminator.to_owned()),
+        is_cleanup: false,
+    };
+
+    bbs.push(new_bb);
+}
+
+
+
+pub fn change_target_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, change_bb: BasicBlock, new_t: BasicBlock) {
+    let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
+    let mut bb_terminator = bb.terminator.as_mut().expect("terminator");
+
+    /// method 1
+    let new_goto_kind = TerminatorKind::Goto {
+        target: new_t,
+    };
+    bb_terminator.kind = new_goto_kind;
+
+
+    /// method 2
+/*
+    if let Some(_) = bb_terminator.kind.as_goto() {
+        let new_goto_kind = TerminatorKind::Goto {
+            target: new_t,
+        };
+        bb_terminator.kind = new_goto_kind;
+    } else {
+        println!("Input Basic block is not Goto Type!");
+        unreachable!()
+    }
+*/
+
+    println!("after change GOTO target = {:?}", bb_terminator);
+}
+
+/// copy, modify target, insert
+pub fn insert_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, copy: BasicBlock, t: BasicBlock) {
+    let bbd = BasicBlockData::new(Some(Terminator {
+        source_info: bbs[copy].terminator().source_info,
+        kind: TerminatorKind::Goto {
+            target: t,
+        },
+    }));
+    bbs.push(bbd);
+}
+
+pub fn change_targets_switchint<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, change_bb: BasicBlock, new_t1: BasicBlock, new_t2:BasicBlock, keep_otherwise: bool) {
+
+    let bb = bbs.get_mut(change_bb).expect("Get basic block to be changed");
+    let bb_terminator = bb.terminator.as_mut().expect("Get terminator of the BB");
+    let TerminatorKind::SwitchInt {
+        discr: copy_op,
+        targets: copy_targets
+    } = &bb_terminator.kind else {
+        println!("Terminator kind of change_bb should be SwitchInt");
+        unreachable!()
+    };
+
+    /// otherwise
+    let otherwise;
+    if keep_otherwise {
+        otherwise = copy_targets.otherwise();
+    } else {
+        otherwise = new_t2;
+    }
+
+    /// change targets : condition can be changed
+    let new_targets = copy_targets.iter().map(|(value, block)| {
+        /// TODO: for in header part condition 1, for other part condition 2
+        // if block==BasicBlock::from_usize(header.index()) {
+            if value==0{
+            (value, new_t1)
+        } else {
+            (value, block)
+        }
+    });
+    let switch_targets = SwitchTargets::new(new_targets, otherwise);
+
+    /// new terminator kind
+    let new_target_terminator_kind = TerminatorKind::SwitchInt {
+        discr: copy_op.to_copy(),
+        targets: switch_targets,
+    };
+
+    // a update terminator kind
+    bb_terminator.kind = new_target_terminator_kind;
+}
+
+
+/// copy, modify targets, insert
+pub fn insert_switchint<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, copy: BasicBlock, t1: BasicBlock, t2:BasicBlock) {
+
+    let TerminatorKind::SwitchInt {
+        discr: copy_op,
+        targets: copy_targets
+    } = &bbs[copy].terminator().kind else {
+        println!("Terminator kind of copy is not SwitchInt");
+        unreachable!()
+    };
+
+    /// SwitchTargets
+    let new_targets = copy_targets.iter().map(|(value, block)| {
+        if value==0 {
+            println!("value is 0 {:?} {:?} {:?}", value, block, bbs[block].terminator().kind);
+            (value, t1)
+        } else {
+            (value, block)
+        }
+    });
+    let new_switch_targets = SwitchTargets::new(new_targets, t2);
+
+    /// discr
+    let copy_op = match copy_op {
+        Operand::Move(x) => Operand::Copy(*x),
+        Operand::Copy(x) => Operand::Copy(*x),
+        Operand::Constant(x) => Operand::Constant(x.clone()),
+    };
+
+    /// BasicBlockData with SwitchInt kind
+    let new_bbd = BasicBlockData::new(Some(Terminator {
+        source_info: bbs[copy].terminator().source_info,
+        kind: TerminatorKind::SwitchInt {
+            discr: copy_op,
+            targets: new_switch_targets,
+        },
+    }));
+
+    bbs.push(new_bbd);
+}
+
+
+pub fn decide_and_change_target<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
+                                      change_bb: BasicBlock,
+                                      t_goto: BasicBlock,
+                                      new_t1: BasicBlock, new_t2:BasicBlock, keep_otherwise: bool) {
+    // let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
+    /// bb == bbs[change_bb]
+    let bb_terminator = bbs[change_bb].terminator.as_ref().expect("terminator kind check only").clone();
+
+    if let Some(_) = bb_terminator.kind.as_goto() {
+        println!("Input Basic block is Goto Type!");
+        change_target_goto(bbs, change_bb, t_goto);
+    } else {
+        /// TODO: [fix] assume if it's not goto, it is SwitchInt
+        println!("Input Basic block is not Goto Type! It is SwitchInt");
+        change_targets_switchint(bbs, change_bb, new_t1, new_t2, keep_otherwise);
+    }
+}
+
+
 pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
                         headers: Vec<NodeIndex>,
                         g: &mut Graph<usize, String>,
@@ -569,17 +568,22 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
                         arr: &mut Vec<NodeIndex>,
                                   _tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>)
                         -> NodeIndex {
+    /// add to petgraph
     let new_node = g.add_node(777);
     scc.push(new_node);
     arr.push(new_node);
     scc_info_stk.insert(new_node, vec!());
 
-    // add to petgraph
-
-    // add to mir body
     let bbs = body.basic_blocks_mut();
 
+    /// copy type MUST be SwitchInt
+    insert_switchint(bbs, BasicBlock::from_usize(7),BasicBlock::from_usize(headers[0].index()), BasicBlock::from_usize(headers[1].index()) );
+
     for header in headers {
+
+        let h = bbs.get_mut(BasicBlock::from_usize(header.index())).expect("no bb in mir");
+        println!("header {:?}", h);
+
         let predecessors = get_predecessors_of(header, g);
         for pred in predecessors {
             // redirect
@@ -589,48 +593,33 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
             g.remove_edge(edge_to_remove);
             g.update_edge(pred, new_node, String::from("HEADER"));
             g.update_edge(new_node, header, String::from("HEADER"));
+            println!("$$ first predecessors {:?} {:?} {:?}", pred, new_node, header);
+
+            /// MIR
+            decide_and_change_target(bbs,
+                                     BasicBlock::from_usize(pred.index()),
+                                     BasicBlock::from_usize(8),
+                                     BasicBlock::from_usize(8), BasicBlock::from_usize(8), true);
         }
 
-        let h = bbs.get_mut(BasicBlock::from_usize(header.index())).expect("no bb in mir");
-        println!("header basicblock {:?}", h);
+        print_bbs_mut(bbs, "Get single hedaer");
+
     }
 
-
-
-    // let bbs = body.basic_blocks_mut();
-    // // let template_piece = InlineAsmTemplatePiece::String(String::from("new header"));
-    // // let template2 = [template_piece];
-    // // let template = tcx.arena.alloc_from_iter(template2);
-    //
-    // let asm_terminator_kind = TerminatorKind::Goto {
-    //     target: bbs.next_index()
-    // };
-    //
-    // let len = bbs.len();
-    // let prev_last_b = bbs.get_mut(BasicBlockData::from_usize(len-1)).expect("no last block");
-    //
-    // let mut new_terminator = prev_last_b.terminator.as_ref().expect("no terminator").clone();
-    // new_terminator.kind = asm_terminator_kind;
-    //
-    // let prev_last_b_terminator = prev_last_b.terminator_mut();
-    //
-    // let new_bb = BasicBlockData {
-    //     statements: vec![],
-    //     terminator: Some(prev_last_b_terminator.to_owned()),
-    //     is_cleanup: false,
-    // };
-    // bbs.push(new_bb);
-
+    println!("## Generated PETGRAPH in header function ##");
+    for edge in g.clone().raw_edges() {
+        println!("{:?}", edge);
+    }
 
     return new_node;
 }
 
-pub fn transform_to_single_latch(scc: &mut Vec<NodeIndex>,
+pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
                         header: NodeIndex,
                         g: &mut Graph<usize, String>,
                         scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-                        arr: &mut Vec<NodeIndex>
-                                 )
+                        arr: &mut Vec<NodeIndex>,
+                                 body: &mut Body<'tcx>   )
                         -> NodeIndex {
     println!("SCC in get back edges {:?}", scc);
 
@@ -667,7 +656,7 @@ pub fn transform_to_single_latch(scc: &mut Vec<NodeIndex>,
             } else {
                 // if i cannot reach
                 back_edges.push((edge.source(), edge.target()));
-                println!("back_edges  {:?}", back_edges);
+                println!("back_edges  = {:?}", back_edges);
                 remove = true;
             }
         }
@@ -677,15 +666,35 @@ pub fn transform_to_single_latch(scc: &mut Vec<NodeIndex>,
         println!("there is no proper outer back edges, instead both can be latches {:?}", inner_edges);
         back_edges = inner_edges;
     }
+    let bbs = body.basic_blocks_mut();
 
-    // single LATCH
+    /// ============================== add dummy back edge to 8 to make multiple latches
+    /// copy MUST BE Goto kind
+    insert_goto(bbs,BasicBlock::from_usize(3), BasicBlock::from_usize(8));
+
+    /// change_bb MUST BE SwtichInt kind
+    change_targets_switchint(bbs,BasicBlock::from_usize(7),
+                             BasicBlock::from_usize(6),BasicBlock::from_usize(9), false);
+
+
+    /// single LATCH
     let single_latch;
     let new_node;
     if back_edges.len() > 1 {
+        println!("####### back edges {:?}", back_edges);
         new_node = g.add_node(999);
         single_latch = new_node;
         arr.push(new_node);
         scc_info_stk.insert(new_node, vec!());
+
+
+        /// ====================== create new basic block (add new sinlge latchnode)
+        // pick a random latch to be copied
+        // copy any latch(any random goto type) (assume latch is go to)
+        // target shoudl be header
+        insert_goto(bbs, BasicBlock::from_usize(back_edges[0].0.index()),BasicBlock::from_usize(header.index()));
+
+        /// for all latches
         for back_edge in back_edges {
             // redirect
             let latch = back_edge.0;
@@ -695,15 +704,20 @@ pub fn transform_to_single_latch(scc: &mut Vec<NodeIndex>,
             g.remove_edge(edge_to_remove);
             g.update_edge(latch, new_node, String::from("LATCH"));
             g.update_edge(new_node, header, String::from("LATCH"));
+
+            /// ==================== MIR part
+            /// TODO: decide if bb kind is goto or switchInt
+            /// now assuming it's goto
+            // change edge latch->header to latch->new_single_latch
+            change_target_goto(bbs, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(9));
         }
+
+        print_bbs(body.clone().basic_blocks, "In get single latch part");
 
     } else {
         single_latch = back_edges[0].0;
     }
     scc.push(single_latch);
-
-    // 24 [0, 1, 2, 7, 3, 3, 3, 8, 7, 4, 8, 7, 3, 8, 7, 3, 8, 7, 4, 8, 7, 4, 5, 6]
-    // 21 [0, 1, 2, 7, 3, 3, 3, 8, 7, 4, 8, 7, 3, 8, 7, 4, 8, 7, 4, 5, 6]
 
     return single_latch;
 }
@@ -721,6 +735,27 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
     return preds;
 
 }
+
+/// TODO: need to check
+// pub fn _mir_get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<NodeIndex> {
+    // get predecessors using mir
+    // let mut predecessors2: Vec<BasicBlock>= Vec::new();
+    // for (bb, bb_data) in bbs.iter_enumerated() {
+    //     let Terminator {kind, ..} = bb_data.terminator();
+    //         if let Some(tmp) = kind.as_goto() { // i should consider both "goto" and "switchInt"
+    //         // if kind.as_goto() == h{
+    //         //     if bbs[tmp] == h.clone() {
+    //             if tmp == BasicBlock::from_usize(header.index().clone()) {
+    //                 predecessors2.push(bb);
+    //             }
+    //         // if let Some(TerminatorKind::Goto {target}) = kind.as_goto() {
+    //         //     if target == h {
+    //         }
+    // }
+    // println!("predecessors {:?}", predecessors2);
+// }
+
+
 
 #[derive(Debug)]
 pub struct SccInfo {
@@ -756,7 +791,7 @@ pub fn break_down_and_mark<'tcx>(
     scc_info_stk.get_mut(&loop_header).map(|stk| stk.push(scc_info));
 
     // 2. mark latch
-    single_latch = transform_to_single_latch(scc, loop_header, g, scc_info_stk, arr);
+    single_latch = transform_to_single_latch(scc, loop_header, g, scc_info_stk, arr, body);
     if scc.len() != 1 {
         // only if it is not a self loop, mark as Latch
         let scc_info = SccInfo {

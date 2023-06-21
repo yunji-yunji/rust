@@ -15,6 +15,7 @@
 #![feature(yeet_expr)]
 #![feature(if_let_guard)]
 #![recursion_limit = "256"]
+#![allow(unused_doc_comments)]
 
 #[macro_use]
 extern crate tracing;

@@ -336,7 +336,7 @@ pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, _body: &Body<'_>)
 
 
 // ======= Generate final path (Discard repeated component) ============== //
-pub fn generate_path3(_g: Graph::<usize, String>, 
+pub fn generate_path3(_g: Graph::<usize, String>,
     scc_info_stk: &mut HashMap<NodeIndex, Vec<SccInfo>>,
     arr: Vec<NodeIndex>) -> Vec<i32> {
 

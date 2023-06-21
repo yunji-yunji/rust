@@ -489,10 +489,10 @@ pub fn eval_entry<'tcx>(
         if &tcx.def_path_str(def_id) == "fuzz_target" { // if flag {
             println!("create graph function name = {:?}", &tcx.def_path_str(def_id));
             // my_app(tcx, body);
-            println!("[len = {:?}] basic block in eval.rs {:?}", mir.basic_blocks.len(), mir.basic_blocks);
+            // println!("[len = {:?}] basic block in eval.rs {:?}", mir.basic_blocks.len(), mir.basic_blocks);
             
-            let res_opt_mir = tcx.optimized_mir(def_id);
-            println!("optimized mir is run {:?}", res_opt_mir);
+            // let res_opt_mir = tcx.optimized_mir(def_id);
+            // println!("optimized mir is run {:?}", res_opt_mir);
 
             // println!("after transform {:?}", tcx.body().basic_blocks);
 
