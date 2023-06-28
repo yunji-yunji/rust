@@ -90,182 +90,6 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
     Ok(())
 }
 
-
-
-
-fn _dummy_mir<'tcx>(_tcx: TyCtxt<'tcx>, _body: &mut Body<'tcx>) {
-    // let bbs = body.basic_blocks_mut();
-    /*
-    let _switch_block_idx = 1;
-    let block_to_copy_terminator = bbs.get_mut(BasicBlock::from_usize(1)).expect("no bb");
-    let block_to_copy_terminator = block_to_copy_terminator.terminator.as_ref().expect("no terminator").clone();
-    let mut new_bb = BasicBlockData {
-        statements: vec![],
-        terminator: Some(Terminator {
-            source_info: SourceInfo::dummy(),
-            kind: TerminatorKind::Unreachable,
-        }),
-        is_cleanup: false,
-    };
-
-    let modified_terminator = match block_to_copy_terminator.kind {
-        TerminatorKind::SwitchInt { discr, ref targets, ..} => {
-            let modified_targets = targets.iter().map(|target| {
-                // let modified_targets = targets.iter().map(|&target| {
-                if target.0==2 {
-                    4
-                } else {
-                    1
-                }
-            }).collect();
-            TerminatorKind::SwitchInt {discr, targets: modified_targets}
-        },
-        _ => panic!("Error switch"),
-    };
-    new_bb.terminator = Some(Terminator {
-        source_info: SourceInfo::dummy(),
-        kind: modified_terminator,
-    });
-
-    bbs.push(new_bb);
-    println!("after change {:?} {:?}", new_bb, bbs.clone());
-
-
-
-    // copy "As switch" terminator
-    // i will copy #1. (->2, ->5)
-    let block_to_copy_terminator = bbs.get_mut(BasicBlock::from_usize(1)).expect("no bb");
-    let _store_original_terminator = block_to_copy_terminator.terminator.as_ref().expect("no terminator").clone();
-    let get_terminator_and_modify = block_to_copy_terminator.terminator.as_mut().expect("no terminator");
-
-    // new terminator kind
-    let v = SmallVec(0);
-    let t : SmallVec<BasicBlock> = SmallVec(BasicBlock::from_usize(1), BasicBlock::from_usize(4));
-    let new_targets = SwitchTargets {
-        values: v,
-        targets: t,
-    };
-    let new_op : Operand<'tcx> = Operand::Copy(Place::Local(Local::new(0)));
-    let new_terminator_kind = TerminatorKind::SwitchInt {
-        discr: new_op,
-        targets: new_targets,
-    };
-    get_terminator_and_modify.kind = new_terminator_kind;
-    // targets: vec![BasicBlock::new(11), BasicBlock::new(14)],
-    // let mut k = get_terminator_and_modify.kind.as_switch();
-    // // let Some(kk) = get_terminator_and_modify.kind.as_switch() else {
-    // //     println!("error");
-    // //     return;
-    // // };
-    // let kkk = k.unwrap().1.all_targets_mut();
-    // println1
-    // for t in &mut kkk {
-    //     println!("all targets1: {:?}", t);
-    //     *t = BasicBlock::from_usize(1);
-    // }
-    println!("after change {:?} {:?}", kkk, bbs.clone());
-*/
-
-    // let goto7 = TerminatorKind::Goto {
-    //     target: BasicBlock::from_usize(7),
-    // // };
-    // let bb1 = bbs.get_mut(BasicBlock::from_usize(1)).expect("no bb in mir");
-    // // let mut t_bb_store = bb1.terminator.as_ref().expect("no terminator").clone();
-    // let t_bb_store = bb1.terminator.as_mut().expect("no terminator");
-    // // t_bb_store.kind);
-    // let tmp = t_bb_store.kind.as_switch().unwrap().1;
-    // for t in tmp.all_targets() {
-    //     println!("all targets: {:?}", t);
-    //     // *t = BasicBlock::from_usize(1);
-    // }
-    // let mut t_bb_store = bb1.terminator.as_mut().expect("no terminator").clone();
-
-    // let bb0 = bbs.get_mut(BasicBlock::from_usize(0)).expect("no bb in mir");
-    // let mut t_bb0 = bb0.terminator.as_mut().expect("no terminator");
-    // t_bb0.kind = goto7;
-
-
-
-    // let a = [BasicBlock::from_usize(4)];
-    // let mut iter = a.iter();
-    // let target = SwitchTargets(iter, BasicBlock::from_usize(2));
-    //
-    // let op = Operand {
-    //     Copy, Move, Constant
-    // }
-    // let asm_terminator_kind = TerminatorKind::SwitchInt {
-    //     discr: ,
-    //     targets: target,
-    // };
-
-    // [0: 11, otherwise: 2]
-    // let _len = bbs.len();
-    // let original_last_block = bbs.get_mut(BasicBlock::from_usize(0)).expect("No last block!");
-
-    // let h = bbs.get_mut(BasicBlock::from_usize(2)).expect("no bb in mir");
-    // let temr = h.terminator.as_ref().expect("no terminator").clone();
-    // println!("RUn dummy mir \nterm info {:?}", temr.kind);
-
-
-    // let mut new_terminator = original_last_block.terminator.as_ref().expect("no terminator").clone();
-    // let mut new_terminator = original_last_block.terminator.as_mut().expect("no terminator");
-    // let original_last_block_terminator = original_last_block.terminator_mut();
-    // let original_last_block_terminator = original_last_block.terminator();
-    // new_terminator.kind = asm_terminator_kind;
-
-    // let new_bb = BasicBlockData {
-    //     statements: vec![],
-    //     terminator: Some(t_bb_store.to_owned()),
-    //     is_cleanup: false,
-    // };
-    //
-    // bbs.push(new_bb);
-
-}
-
-fn _insert_bb<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
-    // let bbs = mir.basic_blocks_mut();
-    let bbs = body.basic_blocks_mut();
-    // let bbs = tcx.body().basic_blocks_mut();
-    // let bbs = tcx.promoted.basic_blocks_mut();
-    // let bbs = tcx.hir().body().basic_blocks_mut();
-
-    let template_piece = InlineAsmTemplatePiece::String(String::from("yunji mir pass test"));
-    let template = [template_piece];
-    // let template = tcx.arena.alloc(&template);
-    // let template = tcx.arena.alloc([template_piece]);
-    let template = tcx.arena.alloc_from_iter(template);
-
-    let asm_terminator_kind = TerminatorKind::InlineAsm {
-        template,
-        operands: vec![],
-        options: InlineAsmOptions::empty(),
-        line_spans: &[],
-        destination: Some(bbs.next_index()),
-        unwind: UnwindAction::Unreachable,
-        // cleanup: None,
-    };
-
-
-    let len = bbs.len();
-    let original_last_block = bbs.get_mut(BasicBlock::from_usize(len-1)).expect("No last block!");
-
-    let mut new_terminator = original_last_block.terminator.as_ref().expect("no terminator").clone();
-    // let mut new_terminator = original_last_block.terminator.as_mut().expect("no terminator");
-    let original_last_block_terminator = original_last_block.terminator_mut();
-    // let original_last_block_terminator = original_last_block.terminator();
-    new_terminator.kind = asm_terminator_kind;
-
-    let new_bb = BasicBlockData {
-        statements: vec![],
-        terminator: Some(original_last_block_terminator.to_owned()),
-        is_cleanup: false,
-    };
-
-    bbs.push(new_bb);
-
-}
-
 fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<NodeIndex>)
     -> Graph::<usize, String>{
     let mut g = Graph::<usize, String>::new();
@@ -355,13 +179,15 @@ fn insert_dummy_block<'tcx>(body: &mut Body<'tcx>) {
         /// values -> SmallVec<[u128; 1]>
         /// targets -> SmallVec<[BasicBlock; 2]>
 
-    let bbs = body.basic_blocks_mut();
+    let _bbs = body.basic_blocks_mut();
 
     // 1. add Dummy basic block(node 7) branch to b1 and b4
-    insert_switchint(bbs, BasicBlock::from_usize(1), BasicBlock::from_usize(1), BasicBlock::from_usize(4));
+    // TODO: fix
+    // insert_switchint(bbs, BasicBlock::from_usize(1), BasicBlock::from_usize(1), BasicBlock::from_usize(4));
 
     // 2. change edge 0->1 to 0->7(new node)
-    change_target_goto(bbs, BasicBlock::from_usize(0), BasicBlock::from_usize(7));
+    // TODO: remove all dummy insert things..
+    // change_target_goto(bbs, BasicBlock::from_usize(0), BasicBlock::from_usize(7));
 
 }
 
@@ -399,7 +225,8 @@ fn _insert_inline_asm<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
         options: InlineAsmOptions::empty(),
         line_spans: &[],
         destination: Some(bbs.next_index()),
-        cleanup: None,
+        unwind: UnwindAction::Unreachable,
+        // cleanup: None,
     };
 
     let len = bbs.len();
@@ -422,7 +249,7 @@ fn _insert_inline_asm<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
 
 pub fn change_target_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, change_bb: BasicBlock, new_t: BasicBlock) {
     let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
-    let mut bb_terminator = bb.terminator.as_mut().expect("terminator");
+    let bb_terminator = bb.terminator.as_mut().expect("terminator");
 
     /// method 1
     let new_goto_kind = TerminatorKind::Goto {
@@ -543,21 +370,23 @@ pub fn insert_switchint<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx
 }
 
 
-pub fn decide_and_change_target<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
+pub fn _decide_and_change_target<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
                                       change_bb: BasicBlock,
-                                      t_goto: BasicBlock,
-                                      new_t1: BasicBlock, new_t2:BasicBlock, keep_otherwise: bool) {
+                                      _t_goto: BasicBlock,
+                                      _new_t1: BasicBlock, _new_t2:BasicBlock, _keep_otherwise: bool) {
     // let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
     /// bb == bbs[change_bb]
     let bb_terminator = bbs[change_bb].terminator.as_ref().expect("terminator kind check only").clone();
 
     if let Some(_) = bb_terminator.kind.as_goto() {
         println!("Input Basic block is Goto Type!");
-        change_target_goto(bbs, change_bb, t_goto);
+        // TODO: [fix] remove temporarily
+        // change_target_goto(bbs, change_bb, t_goto);
     } else {
-        /// TODO: [fix] assume if it's not goto, it is SwitchInt
+        // TODO: [fix] assume if it's not goto, it is SwitchInt
         println!("Input Basic block is not Goto Type! It is SwitchInt");
-        change_targets_switchint(bbs, change_bb, new_t1, new_t2, keep_otherwise);
+        // TODO: [fix] remove temporarily
+        // change_targets_switchint(bbs, change_bb, new_t1, new_t2, keep_otherwise);
     }
 }
 
@@ -578,7 +407,8 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
     let bbs = body.basic_blocks_mut();
 
     /// copy type MUST be SwitchInt
-    insert_switchint(bbs, BasicBlock::from_usize(7),BasicBlock::from_usize(headers[0].index()), BasicBlock::from_usize(headers[1].index()) );
+    /// TODO: fix
+    // insert_switchint(bbs, BasicBlock::from_usize(7),BasicBlock::from_usize(headers[0].index()), BasicBlock::from_usize(headers[1].index()) );
 
     for header in headers {
 
@@ -596,11 +426,12 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
             g.update_edge(new_node, header, String::from("HEADER"));
             println!("$$ first predecessors {:?} {:?} {:?}", pred, new_node, header);
 
-            /// MIR
-            decide_and_change_target(bbs,
-                                     BasicBlock::from_usize(pred.index()),
-                                     BasicBlock::from_usize(8),
-                                     BasicBlock::from_usize(8), BasicBlock::from_usize(8), true);
+            // MIR
+            // TODO: [fix] remove temp
+        //     decide_and_change_target(bbs,
+        //                              BasicBlock::from_usize(pred.index()),
+        //                              BasicBlock::from_usize(8),
+        //                              BasicBlock::from_usize(8), BasicBlock::from_usize(8), true);
         }
 
         print_bbs_mut(bbs, "Get single hedaer");
@@ -667,15 +498,17 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         println!("there is no proper outer back edges, instead both can be latches {:?}", inner_edges);
         back_edges = inner_edges;
     }
-    let bbs = body.basic_blocks_mut();
+    let _bbs = body.basic_blocks_mut();
 
     /// ============================== add dummy back edge to 8 to make multiple latches
-    /// copy MUST BE Goto kind
-    insert_goto(bbs,BasicBlock::from_usize(3), BasicBlock::from_usize(8));
+    /// copy Goto kind --> not necessary
+    /// TODO: remove temporarily
+    // insert_goto(bbs,BasicBlock::from_usize(3), BasicBlock::from_usize(8));
 
     /// change_bb MUST BE SwtichInt kind
-    change_targets_switchint(bbs,BasicBlock::from_usize(7),
-                             BasicBlock::from_usize(6),BasicBlock::from_usize(9), false);
+    /// TODO: remove temporarily
+    // change_targets_switchint(bbs,BasicBlock::from_usize(7),
+    //                          BasicBlock::from_usize(6),BasicBlock::from_usize(9), false);
 
 
     /// single LATCH
@@ -692,8 +525,10 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         /// ====================== create new basic block (add new sinlge latchnode)
         // pick a random latch to be copied
         // copy any latch(any random goto type) (assume latch is go to)
-        // target shoudl be header
-        insert_goto(bbs, BasicBlock::from_usize(back_edges[0].0.index()),BasicBlock::from_usize(header.index()));
+        // target should be header
+        /// TODO: fix
+        /// remove temporarily
+        // insert_goto(bbs, BasicBlock::from_usize(back_edges[0].0.index()),BasicBlock::from_usize(header.index()));
 
         /// for all latches
         for back_edge in back_edges {
@@ -706,11 +541,12 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
             g.update_edge(latch, new_node, String::from("LATCH"));
             g.update_edge(new_node, header, String::from("LATCH"));
 
-            /// ==================== MIR part
-            /// TODO: decide if bb kind is goto or switchInt
-            /// now assuming it's goto
+            // ==================== MIR part
+            // TODO: decide if bb kind is goto or switchInt
+            // now assuming it's goto
             // change edge latch->header to latch->new_single_latch
-            change_target_goto(bbs, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(9));
+            // TODO: remove dummy things
+            // change_target_goto(bbs, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(9));
         }
 
         print_bbs(body.clone().basic_blocks, "In get single latch part");

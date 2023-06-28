@@ -21,7 +21,7 @@ pub mod interval;
 
 mod idx;
 mod slice;
-mod vec;
+pub mod vec;
 
 pub use {idx::Idx, slice::IndexSlice, vec::IndexVec};
 
