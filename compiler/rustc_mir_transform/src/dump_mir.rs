@@ -195,7 +195,8 @@ pub fn print_bbs<'tcx>(bbs: BasicBlocks<'tcx>, title: &str) {
     println!("=====  {} ({:?})  =====", title, bbs.len());
     for i in 0..bbs.len() {
         let tmp = bbs[i.into()].terminator.as_ref().expect("Error in print bbs").clone();
-        println!("  * {:?}: span[{:?}]  kind[{:?}]", i, tmp.source_info.span, tmp.kind);
+        // println!("  * {:?}: span[{:?}]  kind[{:?}]", i, tmp.source_info.span, tmp.kind);
+        println!("  * {:?}: [{:?}]  [{:?}]", i, tmp.kind, bbs[i.into()].statements);
     }
 }
 
@@ -205,7 +206,8 @@ pub fn print_bbs_mut<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
     for i in 0..bbs.len() {
         let tmp = bbs[i.into()].terminator.as_ref().expect("Error in print bbs").clone();
         // println!("  * {:?}: kind[{:?}]  span[{:?}]", i, tmp.kind, tmp.source_info.span);
-        println!("  * {:?}: [{:?}]", i, tmp.kind);
+        println!("  * {:?}: [{:?}]  [{:?}]", i, tmp.kind, bbs[i.into()].statements);
+        // println!("  * {:?}: [{:?}]", i, tmp.kind);
     }
 }
 
