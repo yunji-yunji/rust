@@ -39,20 +39,19 @@ impl<'tcx> MirPass<'tcx> for Marker {
             println!("YuNJI: FUZZ target");
 
             // let bbs=body.basic_blocks_mut();
-            print_bbs(body.clone().basic_blocks, "Before add dummy");
-            insert_dummy_block(body);
-            print_bbs(body.clone().basic_blocks, "after add dummy");
+            // insert_dummy_block(body);
 
             let mut index_map: Vec<NodeIndex> = vec!();
             let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
-            let g = mir_to_petgraph(tcx, body, &mut index_map);
+            let g = mir_to_petgraph(tcx, body, &mut index_map, &mut scc_info_stk);
+            print_bbs(body.clone().basic_blocks, "Initial MIR");
 
             let mut scc_id: i32 = 1;
             let mut copy_graph = g.clone();
             loop {
                 let mut stop = true;
                 let mut scc_list = kosaraju_scc(&copy_graph);
-                println!("SCC ={:?}", scc_list.clone());
+                println!("SCC = {:?}", scc_list.clone());
                 for scc in &mut scc_list {
                     let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
                     if is_cycle == true {
@@ -71,6 +70,7 @@ impl<'tcx> MirPass<'tcx> for Marker {
                     break;
                 }
             }
+            println!("End of LOOP");
         }
     }
 
@@ -90,13 +90,14 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
     Ok(())
 }
 
-fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<NodeIndex>)
+fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<NodeIndex>, scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>)
     -> Graph::<usize, String>{
     let mut g = Graph::<usize, String>::new();
 
     let mut cnt: usize = 0;
     for _ in body.basic_blocks.iter() {
         let node = g.add_node(cnt);
+        scc_info_stk.insert(node, vec!());
         arr.push(node);
         cnt = cnt + 1;
     }
@@ -110,14 +111,8 @@ fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<No
             g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
         }
     }
+    printpg(g.clone(), "Initial");
 
-    println!("## Generated PETGRAPH ##");
-    for edge in g.clone().raw_edges() {
-        println!("{:?}", edge);
-    }
-    for n in g.clone().raw_nodes() {
-        println!("{:?}", n);
-    }
     g
 }
 
@@ -168,7 +163,7 @@ pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> Vec<Node
 }
 
 
-fn insert_dummy_block<'tcx>(body: &mut Body<'tcx>) {
+fn _insert_dummy_block<'tcx>(body: &mut Body<'tcx>) {
     /// basicblock-> statements, "terminator", is_cleanup
     /// terminator-> source_info, kind
     /// kind (TerminatorKind) -> Goto | SwitchInt
@@ -192,7 +187,7 @@ fn insert_dummy_block<'tcx>(body: &mut Body<'tcx>) {
 }
 
 pub fn print_bbs<'tcx>(bbs: BasicBlocks<'tcx>, title: &str) {
-    println!("=====  {} ({:?})  =====", title, bbs.len());
+    println!("\n\n=====  {} ({:?})  =====", title, bbs.len());
     for i in 0..bbs.len() {
         let tmp = bbs[i.into()].terminator.as_ref().expect("Error in print bbs").clone();
         // println!("  * {:?}: span[{:?}]  kind[{:?}]", i, tmp.source_info.span, tmp.kind);
@@ -202,12 +197,23 @@ pub fn print_bbs<'tcx>(bbs: BasicBlocks<'tcx>, title: &str) {
 
 /// TODO: [fix] not necessarily mutable
 pub fn print_bbs_mut<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, title: &str) {
-    println!("=====  {} ({:?})  =====", title, bbs.len());
+    println!("\n\n=====  {} ({:?})  =====", title, bbs.len());
     for i in 0..bbs.len() {
         let tmp = bbs[i.into()].terminator.as_ref().expect("Error in print bbs").clone();
         // println!("  * {:?}: kind[{:?}]  span[{:?}]", i, tmp.kind, tmp.source_info.span);
         println!("  * {:?}: [{:?}]  [{:?}]", i, tmp.kind, bbs[i.into()].statements);
         // println!("  * {:?}: [{:?}]", i, tmp.kind);
+    }
+}
+
+
+pub fn printpg(g: Graph<usize, String>, title: &str) {
+    println!("\n\n===== PetGraph ({})   =====", title);
+    for edge in g.clone().raw_edges() {
+        println!("{:?}", edge);
+    }
+    for node in g.clone().raw_nodes() {
+        println!("{:?}", node);
     }
 }
 
@@ -277,13 +283,14 @@ pub fn change_target_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'t
 }
 
 /// copy, modify target, insert
-pub fn insert_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, copy: BasicBlock, t: BasicBlock) {
+pub fn insert_latch<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, header: BasicBlock) {
     let bbd = BasicBlockData::new(Some(Terminator {
-        source_info: bbs[copy].terminator().source_info,
+        source_info: bbs[header].terminator().source_info,
         kind: TerminatorKind::Goto {
-            target: t,
+            target: header,
         },
     }));
+    // println!("copy header source info {:?}", bbd.terminator.clone().unwrap().source_info );
     bbs.push(bbd);
 }
 
@@ -437,16 +444,13 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
         }
 
         print_bbs_mut(bbs, "Get single hedaer");
-
     }
 
-    println!("## Generated PETGRAPH in header function ##");
-    for edge in g.clone().raw_edges() {
-        println!("{:?}", edge);
-    }
+    // printpg(g.clone(), "header function");
 
     return new_node;
 }
+
 
 pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
                         header: NodeIndex,
@@ -464,7 +468,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
     for edge in g.clone().raw_edges() {
 
         let mut test_g = g.clone();
-        println!("header, source, target {:?} {:?} {:?}", header, edge.source(), edge.target());
+        println!("header, source, target {:?} {:?} {:?}", header.index(), edge.source().index(), edge.target().index());
         if scc.contains(&edge.source()) && scc.contains(&edge.target())
             && edge.target() == header {
             let Some(edge_idx) = test_g.find_edge(edge.source(), edge.target()) else {
@@ -500,12 +504,14 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         println!("there is no proper outer back edges, instead both can be latches {:?}", inner_edges);
         back_edges = inner_edges;
     }
-    let _bbs = body.basic_blocks_mut();
+    let bbs = body.basic_blocks_mut();
 
     /// ============================== add dummy back edge to 8 to make multiple latches
-    /// copy Goto kind --> not necessary
-    /// TODO: remove temporarily
-    // insert_goto(bbs,BasicBlock::from_usize(3), BasicBlock::from_usize(8));
+    /// copy block not needed
+    /// copy source_info from HEADER and create goto block to header
+    // println!("copy header source info {:?}", BasicBlock::from_usize(header.index()) );
+    insert_latch(bbs,BasicBlock::from_usize(header.index()));
+    let new_latch_idx = bbs.len() - 1;
 
     /// change_bb MUST BE SwtichInt kind
     /// TODO: remove temporarily
@@ -548,10 +554,12 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
             // now assuming it's goto
             // change edge latch->header to latch->new_single_latch
             // TODO: remove dummy things
-            // change_target_goto(bbs, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(9));
+            /// Assumption: one edge of the branch is backedge and other one is normal edge -> not possible
+            /// Assumption: every latch's terminator type is GOTO
+            change_target_goto(bbs, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx));
         }
 
-        print_bbs(body.clone().basic_blocks, "In get single latch part");
+        print_bbs(body.clone().basic_blocks, "In get single latch");
 
     } else {
         single_latch = back_edges[0].0;
@@ -651,7 +659,7 @@ pub fn break_down_and_mark<'tcx>(
         }
     }
 
-    println!("====================== Break Down ======================");
+    println!("\n====================== Break Down ======================");
     let Some(edge_idx) = g.find_edge(single_latch, loop_header) else {
         println!("cannot find edge in mark and break down");
         return;

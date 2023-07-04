@@ -63,8 +63,11 @@ fn eval_body_using_ecx<'mir, 'tcx>(
     )?;
     ecx.storage_live_for_always_live_locals()?;
 
+    // yunji
+    let mut tmp_path : Vec<usize> = vec![];
+
     // The main interpreter loop.
-    while ecx.step()? {}
+    while ecx.step(&mut tmp_path)? {}
 
     // Intern the result
     let intern_kind = if cid.promoted.is_some() {

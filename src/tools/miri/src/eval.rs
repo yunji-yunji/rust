@@ -448,6 +448,7 @@ pub fn eval_entry<'tcx>(
             panic!("Miri initialization error: {kind:?}")
         }
     };
+    println!("IN eval entry file ");
 
     // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
     //     if let Err(error) = rustc_mir_transform::add_bb::run_pass(tcx) {
@@ -473,7 +474,7 @@ pub fn eval_entry<'tcx>(
                     vec![tcx.optimized_mir(*def_id), tcx.mir_for_ctfe(*def_id)]
                 } else {
                     vec![]
-                    // vec![tcx.instance_mir(ty::InstanceDef::Item(ty::WithOptConstParam::unknown(
+                    // vec![tcx.instance_mir(ty::InstanceDef::Item(rustc_middle::ty::WithOptConstParam::unknown(
                     //     *def_id,
                     // )))]
                 }
@@ -481,56 +482,18 @@ pub fn eval_entry<'tcx>(
             .collect::<Vec<_>>();
     
     // mir ==> body
-    for mir in mirs {
+    for mir in &mirs {
         // write_mir_fn_graphviz(tcx, mir, use_subgraphs, w)?;
 
         let def_id = mir.source.def_id();
- 
+
         if &tcx.def_path_str(def_id) == "fuzz_target" { // if flag {
             println!("create graph function name = {:?}", &tcx.def_path_str(def_id));
             // my_app(tcx, body);
-            // println!("[len = {:?}] basic block in eval.rs {:?}", mir.basic_blocks.len(), mir.basic_blocks);
-            
-            // let res_opt_mir = tcx.optimized_mir(def_id);
-            // println!("optimized mir is run {:?}", res_opt_mir);
 
-            // println!("after transform {:?}", tcx.body().basic_blocks);
-
-            // ==================== yj: transform body mir directly ==================== /
-
-            // ================= try Arena
-            // let mut arena = Arena::new();
-            // let mut allocator = arena.allocator();
-            // let c = tcx.arena.alloc_slice(b"some text");
-            // println!("allocate res {:?}", c);
-
-
-            // for _tmp in mir.basic_blocks.iter() {
-            //     let node1 = my_g.add_node(cnt);
-            //     let _node2 = copy_g.add_node(cnt);
-            //     arr.push(node1);
-            //     cnt = cnt + 1;
-            // }
-
-            // for (source, _) in body.basic_blocks.iter_enumerated() {
-            //     // let def_id = body.source.def_id();
-            //     // let def_name = format!("{}_{}", def_id.krate.index(), def_id.index.index(),);
-
-            //     let terminator = body[source].terminator();
-            //     let labels = terminator.kind.fmt_successor_labels();
-
-            //     for (target, _label) in terminator.successors().zip(labels) {
-
-            //         my_g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
-            //         copy_g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
-
-            //     }
-            // }
-
-            // ==================== ================================= ==================== /
-
-
-
+            // let tmp = &self.body().basic_blocks;
+            println!("IN eval.rs file 2{:?}", mir.basic_blocks);
+            // yunji
 
             let r_tup =  my_app(tcx, mir);
             my_graph = r_tup.0;
@@ -540,15 +503,18 @@ pub fn eval_entry<'tcx>(
         }
     }
 
+    println!("IN eval entry file {:?}", mirs.clone().len());
+
     // ===================== file to write output of step.rs =====================
-    if Path::new("/home/y23kim/rust/output_dir/result3").exists() {
-        fs::remove_file("/home/y23kim/rust/output_dir/result3").expect("File delete failed yunji");
+    if Path::new("/home/y23kim/rust/fuzzer/output/res1").exists() {
+        fs::remove_file("/home/y23kim/rust/fuzzer/output/res1").expect("File delete failed yunji");
     }
 
+    let mut path : Vec<usize> = vec![];
     // ===================== yunji: run step function =====================
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
-        panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
+        panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads(&mut path)));
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
         panic::resume_unwind(panic_payload)
@@ -560,7 +526,7 @@ pub fn eval_entry<'tcx>(
     };
 
     // ===================== yunji: post-processing after run_trheads() =====================
-    println!("Test compiler Yunji: after run_threads()");
+    println!("Test compiler Yunji: after run_threads() {:?}", path);
     let mut start : usize = 0;
     let my_path = generate_path(&mut my_graph,&mut new_graph, &mut start, bb_arr);
     println!("[TO DO FIX] tmp path={:?} and arr= ", my_path);

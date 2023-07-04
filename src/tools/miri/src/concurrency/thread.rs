@@ -1026,7 +1026,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
 
     /// Run the core interpreter loop. Returns only when an interrupt occurs (an error or program
     /// termination).
-    fn run_threads(&mut self) -> InterpResult<'tcx, !> {
+    fn run_threads(&mut self, path : &mut Vec<usize>) -> InterpResult<'tcx, !> {
         static SIGNALED: AtomicBool = AtomicBool::new(false);
         ctrlc::set_handler(move || {
             // Indicate that we have ben signaled to stop. If we were already signaled, exit
@@ -1039,15 +1039,51 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             }
         })
         .unwrap();
+
         let this = self.eval_context_mut();
+        {
+            // println!("thread rs {:?} ", self.clone().get_active_thread());
+            // let thread = this.active_thread_mut();
+            // // assert!(thread.stack
+            // let b = &thread.stack;
+            // let mut iterator = b.iter();
+            // loop {
+            //     match iterator.next() {
+            //         Some(k) =>{
+            //             b.pop();
+            //             let kkk = k.body.
+            //             println!("after pop {:?} ", kkk);
+            //             //
+            //             // let Either::Left(loc) = k.loc else {
+            //             //     // We are unwinding and this fn has no cleanup code.
+            //             //     // Just go on unwinding.
+            //             //     trace!("unwinding: skipping frame");
+            //             //     // this.pop
+            //             //     b.pop();
+            //             //     // this.pop_stack_frame(/* unwinding */ true);
+            //             //     println!("after pop {:?} ", k.loc);
+            //             //     // return Ok(true);
+            //             //     break
+            //             // };
+            //             // println!("loc {:?}", loc);
+            //         },
+            //         _ => break,
+            //     }
+            // }
+        }
+
         loop {
             if SIGNALED.load(Relaxed) {
                 this.machine.handle_abnormal_termination();
                 std::process::exit(1);
             }
+            // println!("{:?}", this.get_active_thread());
             match this.machine.threads.schedule(&this.machine.clock)? {
                 SchedulingAction::ExecuteStep => {
-                    if !this.step()? {
+                    // this.my_f();
+                    // println!("execute");
+
+                    if !this.step(path)? {
                         // See if this thread can do something else.
                         match this.run_on_stack_empty()? {
                             Poll::Pending => {} // keep going

@@ -661,7 +661,7 @@ pub fn generate_path(g: &mut Graph::<usize, String>, _new_g: &mut Graph::<usize,
 
     // ========================= parse step.rs result => paths ========================= //
     let mut paths: Vec<Vec<i32>> = vec![];
-    let f = File::open("/home/y23kim/rust/output_dir/result3").unwrap();
+    let f = File::open("/home/y23kim/rust/fuzzer/output/res1").unwrap();
     let reader = BufReader::new(f);
     for line in reader.lines() {
         let data = line.unwrap();
