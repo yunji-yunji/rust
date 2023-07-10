@@ -34,17 +34,18 @@ use rustc_middle::ty::TyCtxt;
 // use rustc_middle::mir::{BasicBlock, Body, TerminatorKind, BasicBlockData, };
 use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
 
-pub struct DummyYJ;
+pub struct DummyYJ();
 impl<'tcx> MirPass<'tcx> for DummyYJ {
     fn is_enabled(&self, sess: &rustc_session::Session) -> bool {
         // sess.instrument_coverage()
-        sess.mir_opt_level() > 0
+        // sess.mir_opt_level() > 0
+        sess.mir_opt_level() == 0
         // true
     }
     // #[instrument(skip(self, tcx, body))]
     fn run_pass(&self, tcx: TyCtxt<'tcx>, mir_body: &mut Body<'tcx>) {
         // ================= try mir pass
-        println!("RUN MirPass YuNJI");
+        println!("yunji: add bb.rs");
         // let bbs = mir.basic_blocks_mut();
         let bbs = mir_body.basic_blocks_mut();
         // let bbs = tcx.body().basic_blocks_mut();
@@ -58,8 +59,8 @@ impl<'tcx> MirPass<'tcx> for DummyYJ {
         let template = tcx.arena.alloc_from_iter(template);
 
         let asm_terminator_kind = TerminatorKind::InlineAsm {
-            template, 
-            operands: vec![], 
+            template,
+            operands: vec![],
             options: InlineAsmOptions::empty(),
             line_spans: &[],
             destination: Some(bbs.next_index()),

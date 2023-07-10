@@ -33,7 +33,7 @@ impl<'tcx> MirPass<'tcx> for Marker {
     }
 
     fn run_pass(&self, tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
-        println!("YuNJI: in mir dump");
+        println!("yunji: dump_mir");
         let def_id = body.source.def_id();
         if &tcx.def_path_str(def_id) == "fuzz_target" {
             println!("YuNJI: FUZZ target");
@@ -57,7 +57,7 @@ impl<'tcx> MirPass<'tcx> for Marker {
                     if is_cycle == true {
                         stop = false;
                         break_down_and_mark(tcx, body,
-                            scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map);
+                                            scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map);
                     }
                 }
                 println!("after break down graph = \n{:?}", Dot::with_config(&copy_graph, &[Config::EdgeIndexLabel]));
@@ -91,7 +91,7 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
 }
 
 fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<NodeIndex>, scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>)
-    -> Graph::<usize, String>{
+                         -> Graph::<usize, String>{
     let mut g = Graph::<usize, String>::new();
 
     let mut cnt: usize = 0;
@@ -171,8 +171,8 @@ fn _insert_dummy_block<'tcx>(body: &mut Body<'tcx>) {
     /// discr -> Operand<'tcx>
     /// targets = SwitchTargets -> new(target_iter, otherwise)
     /// target_iter -> values,targets
-        /// values -> SmallVec<[u128; 1]>
-        /// targets -> SmallVec<[BasicBlock; 2]>
+    /// values -> SmallVec<[u128; 1]>
+    /// targets -> SmallVec<[BasicBlock; 2]>
 
     let _bbs = body.basic_blocks_mut();
 
@@ -267,17 +267,17 @@ pub fn change_target_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'t
 
 
     /// method 2
-/*
-    if let Some(_) = bb_terminator.kind.as_goto() {
-        let new_goto_kind = TerminatorKind::Goto {
-            target: new_t,
-        };
-        bb_terminator.kind = new_goto_kind;
-    } else {
-        println!("Input Basic block is not Goto Type!");
-        unreachable!()
-    }
-*/
+    /*
+        if let Some(_) = bb_terminator.kind.as_goto() {
+            let new_goto_kind = TerminatorKind::Goto {
+                target: new_t,
+            };
+            bb_terminator.kind = new_goto_kind;
+        } else {
+            println!("Input Basic block is not Goto Type!");
+            unreachable!()
+        }
+    */
 
     println!("after change GOTO target = {:?}", bb_terminator);
 }
@@ -318,7 +318,7 @@ pub fn change_targets_switchint<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockD
     let new_targets = copy_targets.iter().map(|(value, block)| {
         /// TODO: for in header part condition 1, for other part condition 2
         // if block==BasicBlock::from_usize(header.index()) {
-            if value==0{
+        if value==0{
             (value, new_t1)
         } else {
             (value, block)
@@ -380,9 +380,9 @@ pub fn insert_switchint<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx
 
 
 pub fn _decide_and_change_target<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
-                                      change_bb: BasicBlock,
-                                      _t_goto: BasicBlock,
-                                      _new_t1: BasicBlock, _new_t2:BasicBlock, _keep_otherwise: bool) {
+                                       change_bb: BasicBlock,
+                                       _t_goto: BasicBlock,
+                                       _new_t1: BasicBlock, _new_t2:BasicBlock, _keep_otherwise: bool) {
     // let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
     /// bb == bbs[change_bb]
     let bb_terminator = bbs[change_bb].terminator.as_ref().expect("terminator kind check only").clone();
@@ -401,12 +401,12 @@ pub fn _decide_and_change_target<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlock
 
 
 pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
-                        headers: Vec<NodeIndex>,
-                        g: &mut Graph<usize, String>,
-                        scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-                        arr: &mut Vec<NodeIndex>,
-                                  _tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>)
-                        -> NodeIndex {
+                                        headers: Vec<NodeIndex>,
+                                        g: &mut Graph<usize, String>,
+                                        scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
+                                        arr: &mut Vec<NodeIndex>,
+                                        _tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>)
+                                        -> NodeIndex {
     /// add to petgraph
     let new_node = g.add_node(777);
     scc.push(new_node);
@@ -437,10 +437,10 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
 
             // MIR
             // TODO: [fix] remove temp
-        //     decide_and_change_target(bbs,
-        //                              BasicBlock::from_usize(pred.index()),
-        //                              BasicBlock::from_usize(8),
-        //                              BasicBlock::from_usize(8), BasicBlock::from_usize(8), true);
+            //     decide_and_change_target(bbs,
+            //                              BasicBlock::from_usize(pred.index()),
+            //                              BasicBlock::from_usize(8),
+            //                              BasicBlock::from_usize(8), BasicBlock::from_usize(8), true);
         }
 
         print_bbs_mut(bbs, "Get single hedaer");
@@ -453,12 +453,12 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
 
 
 pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
-                        header: NodeIndex,
-                        g: &mut Graph<usize, String>,
-                        scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-                        arr: &mut Vec<NodeIndex>,
-                                 body: &mut Body<'tcx>   )
-                        -> NodeIndex {
+                                       header: NodeIndex,
+                                       g: &mut Graph<usize, String>,
+                                       scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
+                                       arr: &mut Vec<NodeIndex>,
+                                       body: &mut Body<'tcx>   )
+                                       -> NodeIndex {
     println!("SCC in get back edges {:?}", scc);
 
     let mut back_edges :Vec<(NodeIndex, NodeIndex)> = vec!();
@@ -585,21 +585,21 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
 
 /// TODO: need to check
 // pub fn _mir_get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<NodeIndex> {
-    // get predecessors using mir
-    // let mut predecessors2: Vec<BasicBlock>= Vec::new();
-    // for (bb, bb_data) in bbs.iter_enumerated() {
-    //     let Terminator {kind, ..} = bb_data.terminator();
-    //         if let Some(tmp) = kind.as_goto() { // i should consider both "goto" and "switchInt"
-    //         // if kind.as_goto() == h{
-    //         //     if bbs[tmp] == h.clone() {
-    //             if tmp == BasicBlock::from_usize(header.index().clone()) {
-    //                 predecessors2.push(bb);
-    //             }
-    //         // if let Some(TerminatorKind::Goto {target}) = kind.as_goto() {
-    //         //     if target == h {
-    //         }
-    // }
-    // println!("predecessors {:?}", predecessors2);
+// get predecessors using mir
+// let mut predecessors2: Vec<BasicBlock>= Vec::new();
+// for (bb, bb_data) in bbs.iter_enumerated() {
+//     let Terminator {kind, ..} = bb_data.terminator();
+//         if let Some(tmp) = kind.as_goto() { // i should consider both "goto" and "switchInt"
+//         // if kind.as_goto() == h{
+//         //     if bbs[tmp] == h.clone() {
+//             if tmp == BasicBlock::from_usize(header.index().clone()) {
+//                 predecessors2.push(bb);
+//             }
+//         // if let Some(TerminatorKind::Goto {target}) = kind.as_goto() {
+//         //     if target == h {
+//         }
+// }
+// println!("predecessors {:?}", predecessors2);
 // }
 
 
@@ -613,9 +613,9 @@ pub struct SccInfo {
 pub fn break_down_and_mark<'tcx>(
     tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>,
     scc: &mut Vec<NodeIndex>, scc_id: &mut i32,
-                           g: &mut Graph<usize, String>,
-                           scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-                           arr: &mut Vec<NodeIndex>) {
+    g: &mut Graph<usize, String>,
+    scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
+    arr: &mut Vec<NodeIndex>) {
 
     let loop_header;
     let single_latch;

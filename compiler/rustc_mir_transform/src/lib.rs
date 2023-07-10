@@ -119,7 +119,9 @@ mod unreachable_prop;
 use rustc_const_eval::transform::check_consts::{self, ConstCx};
 use rustc_const_eval::transform::promote_consts;
 use rustc_const_eval::transform::validate;
+// yunji
 use rustc_mir_dataflow::rustc_peek;
+// use std::cell::Ref;
 
 use rustc_errors::{DiagnosticMessage, SubdiagnosticMessage};
 use rustc_fluent_macro::fluent_messages;
@@ -135,6 +137,7 @@ pub fn provide(providers: &mut Providers) {
     *providers = Providers {
         mir_keys,
         mir_const,
+        // mir_yunji,
         mir_const_qualif,
         mir_promoted,
         mir_drops_elaborated_and_const_checked,
@@ -190,6 +193,7 @@ fn remap_mir_for_const_eval_select<'tcx>(
                                     local.into(),
                                     Rvalue::Use(tupled_args.clone()),
                                 ))),
+
                             });
                             (Operand::Move, local.into())
                         }
@@ -216,6 +220,7 @@ fn remap_mir_for_const_eval_select<'tcx>(
                     fn_span,
                 };
             }
+
             _ => {}
         }
     }
@@ -286,10 +291,19 @@ fn mir_const_qualif(tcx: TyCtxt<'_>, def: LocalDefId) -> ConstQualifs {
     validator.qualifs_in_return_place()
 }
 
+// pub fn mir_yunji(tcx: TyCtxt<'_>, def: LocalDefId) -> &mut Body<'_> {
+//     let mut body = tcx.mir_built(def).get_mut();
+//     body
+// }
+
+
 /// Make MIR ready for const evaluation. This is run on all MIR, not just on consts!
 /// FIXME(oli-obk): it's unclear whether we still need this phase (and its corresponding query).
 /// We used to have this for pre-miri MIR based const eval.
+// fn mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> &mut Body<'_> {
 fn mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
+// fn mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> Ref<'_, Body<'_>> {
+//     fn _mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> Ref<'_, Body<'_>> {
     // Unsafety check uses the raw mir, so make sure it is run.
     if !tcx.sess.opts.unstable_opts.thir_unsafeck {
         tcx.ensure_with_value().unsafety_check_result(def);
@@ -298,7 +312,10 @@ fn mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
     // has_ffi_unwind_calls query uses the raw mir, so make sure it is run.
     tcx.ensure_with_value().has_ffi_unwind_calls(def);
 
+    // let body = tcx.mir_built(def).borrow();
+    // body = body.map(|b| b).collect();
     let mut body = tcx.mir_built(def).steal();
+    // let mut body = tcx.mir_built(def).get_mut();
 
     pass_manager::dump_mir_for_phase_change(tcx, &body);
 
@@ -316,7 +333,9 @@ fn mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
         ],
         None,
     );
+
     tcx.alloc_steal_mir(body)
+    // body
 }
 
 /// Compute the main MIR body and the list of MIR bodies of the promoteds.
@@ -579,7 +598,7 @@ fn run_optimization_passes<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
             &o1(simplify::SimplifyCfg::AfterUninhabitedEnumBranching),
             &remove_storage_markers::RemoveStorageMarkers,
             // yunji
-            &add_bb::DummyYJ,
+            &add_bb::DummyYJ(),
             // &add_bb::DummyYJ::run_pass(,tcx, body),
             &remove_zsts::RemoveZsts,
             &normalize_array_len::NormalizeArrayLen, // has to run after `slice::len` lowering
@@ -669,7 +688,7 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
     }
 
     run_optimization_passes(tcx, &mut body);
-        // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
+    // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
     // if let Err(error) = rustc_mir_transform::add_bb::run_pass(tcx, &mut body) {
     //     // tcx.sess.emit_err(errors::CantEmitMIR { error });
     //     // tcx.sess.abort_if_errors();
