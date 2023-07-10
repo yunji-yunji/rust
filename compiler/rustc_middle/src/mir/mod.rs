@@ -249,8 +249,16 @@ impl<'tcx> MirSource<'tcx> {
 }
 #[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
 pub struct SccInfo {
-    _id: usize,
-    _n_type: usize,// H: 1, L: 2, X: 3
+    pub id: usize,
+    pub node_type: usize,   // H: 1, L: 2, X: 3
+}
+impl SccInfo {
+    pub fn new(id: usize, node_type: usize) -> Self {
+        Self {
+            id: id,
+            node_type: node_type,
+        }
+    }
 }
 // pub enum SccInfo {
 //     ID(usize),

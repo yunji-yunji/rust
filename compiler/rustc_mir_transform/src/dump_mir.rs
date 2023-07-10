@@ -261,7 +261,8 @@ fn _insert_inline_asm<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
 
 
 
-pub fn change_target_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, change_bb: BasicBlock, new_t: BasicBlock) {
+pub fn change_target_goto<'tcx>(body: &mut Body<'tcx>, change_bb: BasicBlock, new_t: BasicBlock) {
+    let bbs = body.basic_blocks_mut();
     let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
     let bb_terminator = bb.terminator.as_mut().expect("terminator");
 
@@ -289,7 +290,8 @@ pub fn change_target_goto<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'t
 }
 
 /// copy, modify target, insert
-pub fn insert_latch<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, header: BasicBlock) {
+pub fn insert_latch<'tcx>(body: &mut Body<'tcx>, header: BasicBlock) {
+    let bbs = body.basic_blocks_mut();
     let bbd = BasicBlockData::new(Some(Terminator {
         source_info: bbs[header].terminator().source_info,
         kind: TerminatorKind::Goto {
@@ -418,6 +420,9 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
     scc.push(new_node);
     arr.push(new_node);
     scc_info_stk.insert(new_node, vec!());
+    let index = body.scc_info.push(vec![]);
+    println!("add new single header node {:?} == {:?}, {:?}", new_node.index(), index, body.scc_info);
+    assert_eq!(new_node.index(), index);
 
     let bbs = body.basic_blocks_mut();
 
@@ -510,14 +515,16 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         println!("there is no proper outer back edges, instead both can be latches {:?}", inner_edges);
         back_edges = inner_edges;
     }
-    let bbs = body.basic_blocks_mut();
+    // let bbs = body.basic_blocks_mut();
 
     /// ============================== add dummy back edge to 8 to make multiple latches
     /// copy block not needed
     /// copy source_info from HEADER and create goto block to header
     // println!("copy header source info {:?}", BasicBlock::from_usize(header.index()) );
-    insert_latch(bbs,BasicBlock::from_usize(header.index()));
-    let new_latch_idx = bbs.len() - 1;
+    // insert_latch(bbs,BasicBlock::from_usize(header.index()));
+    insert_latch(body,BasicBlock::from_usize(header.index()));
+    // let new_latch_idx = bbs.len() - 1;
+    let new_latch_idx = body.basic_blocks.len() - 1;
 
     /// change_bb MUST BE SwtichInt kind
     /// TODO: remove temporarily
@@ -535,6 +542,9 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         arr.push(new_node);
         scc_info_stk.insert(new_node, vec!());
 
+        let index = body.scc_info.push(vec![]);
+        println!("add new single latch node {:?} == {:?}, {:?}", new_node.index(), index, body.scc_info);
+        assert_eq!(new_node.index(), index);
 
         /// ====================== create new basic block (add new sinlge latchnode)
         // pick a random latch to be copied
@@ -562,7 +572,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
             // TODO: remove dummy things
             /// Assumption: one edge of the branch is backedge and other one is normal edge -> not possible
             /// Assumption: every latch's terminator type is GOTO
-            change_target_goto(bbs, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx));
+            change_target_goto(body, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx));
         }
 
         print_bbs(body.clone().basic_blocks, "In get single latch");
@@ -608,13 +618,14 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
 // println!("predecessors {:?}", predecessors2);
 // }
 
+use rustc_middle::mir::SccInfo;
+//
+// #[derive(Debug, Clone)]
+// pub struct SccInfo {
+//     _id: i32,
+//     _n_type: usize,
+// }
 
-
-#[derive(Debug)]
-pub struct SccInfo {
-    _id: i32,
-    _n_type: char,
-}
 // pub enum SccInfo {
 //     ID(usize),
 //     NodeType(usize),    // H: 1, L: 2, X: 3
@@ -641,32 +652,33 @@ pub fn break_down_and_mark<'tcx>(
         loop_header = transform_to_single_header(scc, headers, g, scc_info_stk, arr, tcx, body);
         // transform_mir_header(tcx, body)
     }
-    // let scc_info = SccInfo::ID(*scc_id)
-    let scc_info = SccInfo {
-        _id: *scc_id,
-        _n_type: 'H',
-    };
+    // H: 1, L: 2, X: 3
+    let scc_info = SccInfo::new(*scc_id as usize, 1);
+    let scc_info2 = SccInfo::new(*scc_id as usize, 1);
     scc_info_stk.get_mut(&loop_header).map(|stk| stk.push(scc_info));
+    body.scc_info[loop_header.index()].push(scc_info2);
 
     // 2. mark latch
     single_latch = transform_to_single_latch(scc, loop_header, g, scc_info_stk, arr, body);
     if scc.len() != 1 {
         // only if it is not a self loop, mark as Latch
-        let scc_info = SccInfo {
-            _id: *scc_id,
-            _n_type: 'L',
-        };
+        // let scc_info = SccInfo {
+        //     _id: *scc_id,
+        //     _n_type: 2,
+        // };
+        let scc_info = SccInfo::new(*scc_id as usize, 2);
+        let scc_info2 = SccInfo::new(*scc_id as usize, 2);
         scc_info_stk.get_mut(&single_latch).map(|stk| stk.push(scc_info));
+        body.scc_info[single_latch.index()].push(scc_info2);
     }
 
     // 3. mark 'X'
     for node in scc.clone() {
         if node != loop_header && node != single_latch {
-            let scc_info = SccInfo {
-                _id: *scc_id,
-                _n_type: 'X',
-            };
+            let scc_info = SccInfo::new(*scc_id as usize, 3);
+            let scc_info2 = SccInfo::new(*scc_id as usize, 3);
             scc_info_stk.get_mut(&node).map(|stk| stk.push(scc_info));
+            body.scc_info[node.index()].push(scc_info2);
         }
     }
 

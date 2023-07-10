@@ -815,7 +815,10 @@ pub fn eval_entry<'tcx>(
         // TODO: remove this function
         // my_app(tcx, mir);
         if &tcx.def_path_str(def_id) == "fuzz_target" {
-            println!("yunji variable {:?}", mir.scc_info);
+            // println!("yunji variable {:?}", mir.scc_info);
+            for (index, value) in mir.scc_info.clone().into_iter_enumerated() {
+                println!("yunji res: {:?} : {:?}", index, value);
+            }
             println!("(scc_info_stack) {:?} ", def_id);
             mark_scc_info(tcx,&mut index_map, &mut scc_info_stk, mir);
         }
