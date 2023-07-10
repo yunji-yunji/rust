@@ -801,7 +801,6 @@ pub fn eval_entry<'tcx>(
         // } else {
         use rustc_middle::ty::InstanceDef;
         let mir = tcx.instance_mir(InstanceDef::Item(def_id));
-        // println!("yunji variable {:?}", mir.yunji_var);
         // if def_id.is_local() {
         //     let id = def_id.local_def_id();
         // }
@@ -816,6 +815,7 @@ pub fn eval_entry<'tcx>(
         // TODO: remove this function
         // my_app(tcx, mir);
         if &tcx.def_path_str(def_id) == "fuzz_target" {
+            println!("yunji variable {:?}", mir.scc_info);
             println!("(scc_info_stack) {:?} ", def_id);
             mark_scc_info(tcx,&mut index_map, &mut scc_info_stk, mir);
         }

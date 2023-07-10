@@ -3,9 +3,6 @@
 //! The main entry point is the `step` method.
 
 use either::Either;
-// yunji
-use std::io::Write;
-use std::fs;
 
 use rustc_middle::mir;
 use rustc_middle::mir::interpret::{InterpResult, Scalar};
@@ -25,35 +22,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn step(&mut self, path : &mut Vec<usize>) -> InterpResult<'tcx, bool> {
         if self.stack().is_empty() {
             return Ok(false);
-        } else {
-            // let _active_thread_id =  self.get_active_thread();
-            let stk = self.stack();
-            // let mut iterator = b.iter();
-            // loop {
-            //     match iterator.next() {
-            //         Some(k) =>{
-            //
-            //     },
-            //         _ => break,
-            //     }
-            // }
-            let stk_first = stk.get(0).map(|el| {
-                el.body
-            });
-            let def_id0 = stk_first.unwrap().source.def_id();
-            let _def_name1 = self.tcx.def_path_str(def_id0);
-            let _krate_name =  def_id0.krate;
-            // let _loc = stk_first.last().unwrap().loc;
-            // let last = def_id.last();
-            // let tmp = last.map(|l| {
-            //     l.loc
-            // });
-            // let _tmp2 = tmp.map(|ds| {
-            //     ds.left().map(|l| {
-            //         l.block
-            //     })
-            // });
-            // println!("step.rs1 {:?} {:?} {:?} ", f_name, self.tcx.def_path_str(self.body().source.def_id()), b.len());
         }
 
         let Either::Left(loc) = self.frame().loc else {
@@ -64,21 +32,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             return Ok(true);
         };
         let basic_block = &self.body().basic_blocks[loc.block];
-        
-        // let tmp = &self.body().basic_blocks;
-        // println!("IN step.rs file {:?}", tmp);
-        // yunji
-        
-        let def_id = self.body().source.def_id();
-        // let mut bb_number;
-        if self.tcx.def_path_str(def_id) == "fuzz_target" {
-            let bb_number = format!("{:?} ", loc.block);
-            let mut file = fs::OpenOptions::new().append(true).create(true)
-                .open("/home/y23kim/rust/fuzzer/output/res1").expect("Fail to write yunji");
-            file.write_all(bb_number.as_bytes()).expect("yunji: Fail to write.");
-            // file.write_all(loc.block.as_bytes()).expect("yunji: Fail to write.");
-            println!("step: {:?}", bb_number);
-        }
+
+        // yunji part
+        // let def_id = self.body().source.def_id();
+        // if self.tcx.def_path_str(def_id) == "fuzz_target" {
+        //     let bb_number = format!("{:?} ", loc.block);
+        //     // println!("fuzz_target in step: {:?}", bb_number);
+        // }
+
         if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
             let old_frames = self.frame_idx();
             self.statement(stmt)?;
@@ -355,17 +316,29 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         Ok(())
     }
-
+    // use rustc_middle::mir::{BasicBlock};
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
     fn terminator(&mut self, terminator: &mir::Terminator<'tcx>,  path : &mut Vec<usize>) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
+        let def_id = self.body().source.def_id();
+        if self.tcx.def_path_str(def_id) == "fuzz_target"{
+            let bb = self.frame().loc;
+            let _same_bb = self.stack().last().unwrap().body.terminator_loc(bb.left().unwrap().block);
+            let _bbs = self.body().basic_blocks.clone();
+            // let sss = self.body().basic_blocks[bb.left().unwrap().block].terminator().successors();
+            // for s in sss {
+            //     println!("ss {:?}", s);
+            // }
+            // self.body().span
+            println!("in terminator {:?} ", bb);
+            // self.basic_blocks[node].terminator().successors()
+        }
 
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
                 let def_id = self.body().source.def_id();
                 if self.tcx.def_path_str(def_id) == "fuzz_target" {
-                    println!("in terminator {:?}", loc.block);
 
                     path.push(loc.block.index());
                 }
@@ -374,4 +347,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
         Ok(())
     }
+
+
 }

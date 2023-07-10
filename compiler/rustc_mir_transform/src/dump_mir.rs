@@ -43,6 +43,7 @@ impl<'tcx> MirPass<'tcx> for Marker {
 
             let mut index_map: Vec<NodeIndex> = vec!();
             let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
+
             let g = mir_to_petgraph(tcx, body, &mut index_map, &mut scc_info_stk);
             print_bbs(body.clone().basic_blocks, "Initial MIR");
 
@@ -90,7 +91,7 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
     Ok(())
 }
 
-fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<NodeIndex>, scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>)
+fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>, arr: &mut Vec<NodeIndex>, scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>)
                          -> Graph::<usize, String>{
     let mut g = Graph::<usize, String>::new();
 
@@ -98,6 +99,11 @@ fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<No
     for _ in body.basic_blocks.iter() {
         let node = g.add_node(cnt);
         scc_info_stk.insert(node, vec!());
+        // node.index() should be index of IndexVector
+        let index = body.scc_info.push(vec![]);
+        println!("mir to petgraph {:?} == {:?}, {:?}", node.index(), index, body.scc_info);
+        assert_eq!(node.index(), index);
+
         arr.push(node);
         cnt = cnt + 1;
     }
@@ -609,13 +615,17 @@ pub struct SccInfo {
     _id: i32,
     _n_type: char,
 }
-
+// pub enum SccInfo {
+//     ID(usize),
+//     NodeType(usize),    // H: 1, L: 2, X: 3
+// }
 pub fn break_down_and_mark<'tcx>(
     tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>,
     scc: &mut Vec<NodeIndex>, scc_id: &mut i32,
     g: &mut Graph<usize, String>,
     scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
     arr: &mut Vec<NodeIndex>) {
+
 
     let loop_header;
     let single_latch;
@@ -631,6 +641,7 @@ pub fn break_down_and_mark<'tcx>(
         loop_header = transform_to_single_header(scc, headers, g, scc_info_stk, arr, tcx, body);
         // transform_mir_header(tcx, body)
     }
+    // let scc_info = SccInfo::ID(*scc_id)
     let scc_info = SccInfo {
         _id: *scc_id,
         _n_type: 'H',

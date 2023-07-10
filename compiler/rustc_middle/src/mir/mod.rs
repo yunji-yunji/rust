@@ -247,6 +247,15 @@ impl<'tcx> MirSource<'tcx> {
         self.instance.def_id()
     }
 }
+#[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
+pub struct SccInfo {
+    _id: usize,
+    _n_type: usize,// H: 1, L: 2, X: 3
+}
+// pub enum SccInfo {
+//     ID(usize),
+//     NodeType(usize),
+// }
 
 #[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
 pub struct CoroutineInfo<'tcx> {
@@ -356,6 +365,9 @@ pub struct Body<'tcx> {
     /// If `-Cinstrument-coverage` is not active, or if an individual function
     /// is not eligible for coverage, then this should always be `None`.
     pub function_coverage_info: Option<Box<coverage::FunctionCoverageInfo>>,
+
+    // yunji
+    pub scc_info: IndexVec<usize, Vec<SccInfo>>,
 }
 
 impl<'tcx> Body<'tcx> {
@@ -370,6 +382,7 @@ impl<'tcx> Body<'tcx> {
         span: Span,
         coroutine_kind: Option<CoroutineKind>,
         tainted_by_errors: Option<ErrorGuaranteed>,
+        // scc_info: IndexVec<usize, Vec<SccInfo>>,
     ) -> Self {
         // We need `arg_count` locals, and one for the return place.
         assert!(
@@ -404,6 +417,7 @@ impl<'tcx> Body<'tcx> {
             injection_phase: None,
             tainted_by_errors,
             function_coverage_info: None,
+            scc_info: IndexVec::new(),
         };
         body.is_polymorphic = body.has_non_region_param();
         body
@@ -433,6 +447,7 @@ impl<'tcx> Body<'tcx> {
             injection_phase: None,
             tainted_by_errors: None,
             function_coverage_info: None,
+            scc_info: IndexVec::new(),
         };
         body.is_polymorphic = body.has_non_region_param();
         body
