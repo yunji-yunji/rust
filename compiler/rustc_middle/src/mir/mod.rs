@@ -247,6 +247,16 @@ impl<'tcx> MirSource<'tcx> {
         self.instance.def_id()
     }
 }
+
+pub const REPEAT_LIMIT: usize = 3;
+
+#[derive(Debug)]
+pub struct PathInfo {
+    pub counts: FxHashMap<Vec<i32>, usize>,
+    pub temp_path: Vec<Vec<i32>>,
+    pub prefix: Vec<i32>,
+}
+
 #[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
 pub struct SccInfo {
     pub id: usize,
@@ -260,10 +270,7 @@ impl SccInfo {
         }
     }
 }
-// pub enum SccInfo {
-//     ID(usize),
-//     NodeType(usize),
-// }
+
 
 #[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
 pub struct CoroutineInfo<'tcx> {

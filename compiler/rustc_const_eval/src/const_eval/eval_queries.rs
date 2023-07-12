@@ -23,6 +23,8 @@ use crate::interpret::{
     InterpError, InterpResult, MPlaceTy, MemoryKind, OpTy, RefTracking, StackPopCleanup,
 };
 
+use rustc_middle::mir::{REPEAT_LIMIT, PathInfo};
+
 // Returns a pointer to where the result lives
 fn eval_body_using_ecx<'mir, 'tcx>(
     ecx: &mut CompileTimeEvalContext<'mir, 'tcx>,
@@ -65,9 +67,12 @@ fn eval_body_using_ecx<'mir, 'tcx>(
 
     // yunji
     let mut tmp_path : Vec<usize> = vec![];
+    let mut s: usize = 0;
+    let mut stk :Vec<PathInfo> = vec!()                                                                                                                                 ;
+    let mut is_loop = false;
 
     // The main interpreter loop.
-    while ecx.step(&mut tmp_path)? {}
+    while ecx.step(&mut tmp_path, &mut s, &mut stk, &mut is_loop, REPEAT_LIMIT)? {}
 
     // Intern the result
     let intern_kind = if cid.promoted.is_some() {

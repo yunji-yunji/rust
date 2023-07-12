@@ -334,281 +334,194 @@
 // }
 //
 //
-//
-// // ======= Generate final path (Discard repeated component) ============== //
-// pub fn generate_path3(_g: Graph::<usize, String>,
-//     scc_info_stk: &mut HashMap<NodeIndex, Vec<SccInfo>>,
-//     arr: Vec<NodeIndex>) -> Vec<i32> {
-//
-//     #[derive(Debug)]
-//     struct Ele {
-//         counts: HashMap<Vec<i32>, usize>,
-//         temp_path: Vec<Vec<i32>>,
-//         prefix: Vec<i32>,
-//     }
-//
-//     let mut fin : Vec<i32>;
-//     let limit : usize= 3;
-//     let mut stk :Vec<Ele> = vec!()                                                                                                                                 ;
-//     let mut is_loop = false;
-//
-//     // dummy path
-//     let case = 1;
-//     let path: Vec<i32>;
-//     if case ==1 {
-//         path = vec![
-//             // 0, 1, 2, 7,  3,3, 3,3, 3, 3,3, 3, 7, 4, 7, 3, 7, 3, 7, 3,3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 5, 6];
-//             // [, 1, 2, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 3, 7, 3, 7, 4, 7, 4, 5, 6]
-//             0, 1, 2, 7, 3, 3,3 , 3, 3, 3, 3,3, 8, 7, 4, 8, 7, 3, 8, 7, 3, 8, 7, 4, 8, 7, 3, 8, 7, 3, 8, 7, 4, 8, 7, 4, 5, 6];
-//     } else {
-//         path = vec![0, 1, 2, 3,
-//         5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//          9, 10, 14, 1,2,3,
-//
-//          5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//          9, 10, 11, 14, 1, 2, 3,
-//
-//          5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//          9, 10, 11, 14, 1, 2, 3,
-//
-//          5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//          9, 10, 11, 14, 1, 2, 3,
-//
-//          5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//          9, 10, 11, 14, 1, 2, 3,
-//
-//          5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//          9, 10, 14,
-//
-//          1,2,3,
-//          5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//         9, 9, 9, 9, 9, 9 ,9,
-//         10, 11, 10, 11, 10,  11, 10, 11, 10, 11,
-//         12, 13];
-//
-//
-//         // [0,
-//
-//         // 1, 2, 3,
-//         // 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//         // 9, 10, 14,
-//
-//         // 1, 2, 3,
-//         // 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//         // 9, 10, 11, 14,
-//
-//         // 1, 2, 3,
-//         // 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//         // 9, 10, 11, 14,
-//
-//         // 1, 2, 3,
-//         // 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//         // 9, 10, 14,
-//
-//         // 1, 2, 3,
-//         // 5, 6, 7, 8, 5, 6, 7, 8, 5, 6, 7,
-//         // 9,
-//
-//         // 10, 11, 10, 11, 10, 11,
-//         // 12, 13]
-//
-//
-//
-//         // expected
-//         // 0
-//         // 1 2 3 "3" 9 10 14
-//         // 1 2 3 "3" 9 10 11 14
-//         // 1 2 3 "3" 9 10 11 14
-//         // 1 2 3 "3" 9 10 11 14
-//         // 1 2 3 "3" 9 10 14
-//         // 1 2 3 "3"
-//         // 9
-//         // "4"
-//         // 12
-//         // 13
-//         // =>
-//         // 0
-//         // 1 2 3 "3" 9 10 14
-//         // 1 2 3 "3" 9 10 11 14
-//         // 1 2 3 "3" 9 10 11 14
-//         // 1 2 3 "3" 9 10 11 14
-//         // 1 2 3 "3" 9 10 14
-//         // 1 2 3 "3"
-//         // 9
-//         // "4"
-//         // 12
-//         // 13
-//
-//     }
-//
-//     println!("============= Generate Path ================");
-//     println!("dummy path INFO: {:?} {:?} ", path.len(), path.clone());
-//     fin = vec!();
-//     fin.push(path[0]);
-//
-//     for idx in 0..path.len()-1 {
-//         let s : usize = path[idx] as usize;   // bb_n in i32 (todo => usize)
-//         let t : usize = path[idx+1].try_into().unwrap();
-//         println!("---------{:?} -> {:?}--------", s, t);
-//         let mut recorded = false;
-//
-//         // ============= Exiting edge ============= //
-//         let mut s_idx = 0;
-//         let mut t_idx = 0;
-//
-//         while s_idx < scc_info_stk[&arr[s]].len()
-//             && t_idx < scc_info_stk[&arr[t]].len()
-//             && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
-//                 s_idx += 1;
-//                 t_idx += 1;
-//         }
-//
-//         while s_idx < scc_info_stk[&arr[s]].len() {
-//             if let Some(mut prev) = stk.pop() {
-//                 prev.temp_path.push(prev.prefix.clone());
-//
-//                 let sccid : i32 = scc_info_stk[&arr[s]][s_idx]._id * -1;
-//                 if let Some(last) = stk.last_mut() {
-//                     last.prefix.push(sccid.try_into().unwrap());
-//                     for p in prev.temp_path {
-//                         for pp in p {
-//                             last.prefix.push(pp);
-//                         }
-//                     }
-//                     last.prefix.push(sccid.try_into().unwrap());
-//                 } else {
-//                     // fin.push(sccid.try_into().unwrap()); // for debugging
-//                     for p in prev.temp_path {
-//                         for pp in p {
-//                             fin.push(pp);
-//                         }
-//                     }
-//                     // fin.push(sccid.try_into().unwrap()); // for debugging
-//                 }
-//             }
-//             println!("[1] Exit edge");
-//             for e in &stk {
-//                 println!("  * {:?}", e);
-//             }
-//             s_idx += 1;
-//             is_loop=false;
-//         }
-//
-//         // ============= Normal & Back edge ============= //
-//
-//         s_idx = 0;
-//         t_idx = 0;
-//         while s_idx < scc_info_stk[&arr[s]].len()
-//         && t_idx < scc_info_stk[&arr[t]].len()
-//         && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
-//             is_loop=true;
-//
-//             if s==t || (scc_info_stk[&arr[s]][s_idx]._n_type == 'L' && scc_info_stk[&arr[t]][t_idx]._n_type == 'H') {
-//                 if let Some(last) = stk.last_mut() {
-//                     if recorded==false {
-//                         last.prefix.push(t as i32);
-//                         recorded=true;
-//                     }
-//                     let mut content :Vec<i32> = vec!();
-//                     let mut prefix_to_key :Vec<i32> = vec!();
-//                     let mut k:i32;
-//                     let mut i=0;
-//                     while i<last.prefix.len() {
-//                         k = last.prefix[i];
-//                         while k < 0 {
-//                             i += 1;
-//                             if last.prefix[i] < 0 { break;}
-//                             content.push(last.prefix[i].try_into().unwrap());
-//                         }
-//                         content.push(last.prefix[i].try_into().unwrap());
-//                         prefix_to_key.push(k.try_into().unwrap());
-//                         i += 1;
-//                     }
-//                     println!("content {:?}", content);
-//                     let mut flag = true;
-//                     if let Some(val) = last.counts.get_mut(&prefix_to_key) {
-//                         *val += 1;
-//                         if *val >= limit { flag = false;}
-//                     } else {
-//                         last.counts.insert(prefix_to_key, 1);
-//                     }
-//                     if flag {
-//                         last.temp_path.push(content);
-//                     }
-//                     last.prefix = vec!();
-//                 }
-//
-//                 println!("[2] back edge" );
-//                 for e in &stk {
-//                     println!("  * {:?}", e);
-//                 }
-//                 if s==t {
-//                     t_idx = scc_info_stk[&arr[t]].len();
-//                     println!("[2-1] self loop back edge" );
-//                     break;
-//                 }
-//
-//             }
-//             else {
-//                 if recorded==false {
-//                     stk.last_mut().unwrap().prefix.push(t as i32);
-//                     recorded=true;
-//                 }
-//                 println!("[3] normal edge" );
-//                 for e in &stk {
-//                     println!("  * {:?}", e);
-//                 }
-//
-//             }
-//             s_idx += 1;
-//             t_idx += 1;
-//         }
-//
-//         // ============= Entering edge (Header node) ============= //
-//         while t_idx < scc_info_stk[&arr[t]].len() {
-//             is_loop = true;
-//
-//             let tmp;
-//             if recorded {
-//                 tmp = vec!(vec!());
-//             } else {        // in case it never met back edge, push header node
-//                 tmp = vec!(vec!(t as i32));
-//             }
-//             let el = Ele {
-//                 counts: HashMap::new(),
-//                 temp_path: tmp,
-//                 prefix: vec!(),
-//             };
-//
-//             stk.push(el);
-//             t_idx += 1;
-//
-//             println!("[4] Entering edge (Push)" );
-//             for e in &stk {
-//                 println!("  * {:?}", e);
-//             }
-//         }
-//
-//         if is_loop == false {
-//             fin.push(t.try_into().unwrap());
-//             println!("[5] Not loop" );
-//             for e in &stk {
-//                 println!("  * {:?}", e);
-//             }
-//         }
-//     }
-//     println!("\n");
-//
-//     println!("Before remove markers: {:?} {:?}", fin.len(), fin);
-//     let mut res : Vec<i32> = vec![];
-//     for f in fin {
-//         if f>=0 {
-//             res.push(f);
-//         }
-//     }
-//     println!("RES: {:?} {:?}", res.len(), res);
-//     return res;
-// }
+/*
+// ======= Generate final path (Discard repeated component) ============== //
+pub fn generate_path3(_g: Graph::<usize, String>,
+    scc_info_stk: &mut HashMap<NodeIndex, Vec<SccInfo>>,
+    arr: Vec<NodeIndex>) -> Vec<i32> {
+
+    #[derive(Debug)]
+    struct Ele {
+        counts: HashMap<Vec<i32>, usize>,
+        temp_path: Vec<Vec<i32>>,
+        prefix: Vec<i32>,
+    }
+
+    let mut fin : Vec<i32>;
+    let limit : usize= 3;
+    let mut stk :Vec<Ele> = vec!()                                                                                                                                 ;
+    let mut is_loop = false;
+
+    println!("============= Generate Path ================");
+    println!("dummy path INFO: {:?} {:?} ", path.len(), path.clone());
+    fin = vec!();
+    fin.push(path[0]);
+
+    for idx in 0..path.len()-1 {
+        let s : usize = path[idx] as usize;   // bb_n in i32 (todo => usize)
+        let t : usize = path[idx+1].try_into().unwrap();
+        println!("---------{:?} -> {:?}--------", s, t);
+        let mut recorded = false;
+
+        // ============= Exiting edge ============= //
+        let mut s_idx = 0;
+        let mut t_idx = 0;
+
+        while s_idx < scc_info_stk[&arr[s]].len()
+            && t_idx < scc_info_stk[&arr[t]].len()
+            && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
+                s_idx += 1;
+                t_idx += 1;
+        }
+
+        while s_idx < scc_info_stk[&arr[s]].len() {
+            if let Some(mut prev) = stk.pop() {
+                prev.temp_path.push(prev.prefix.clone());
+
+                let sccid : i32 = scc_info_stk[&arr[s]][s_idx]._id * -1;
+                if let Some(last) = stk.last_mut() {
+                    last.prefix.push(sccid.try_into().unwrap());
+                    for p in prev.temp_path {
+                        for pp in p {
+                            last.prefix.push(pp);
+                        }
+                    }
+                    last.prefix.push(sccid.try_into().unwrap());
+                } else {
+                    // fin.push(sccid.try_into().unwrap()); // for debugging
+                    for p in prev.temp_path {
+                        for pp in p {
+                            fin.push(pp);
+                        }
+                    }
+                    // fin.push(sccid.try_into().unwrap()); // for debugging
+                }
+            }
+            println!("[1] Exit edge");
+            for e in &stk {
+                println!("  * {:?}", e);
+            }
+            s_idx += 1;
+            is_loop=false;
+        }
+
+        // ============= Normal & Back edge ============= //
+
+        s_idx = 0;
+        t_idx = 0;
+        while s_idx < scc_info_stk[&arr[s]].len()
+        && t_idx < scc_info_stk[&arr[t]].len()
+        && scc_info_stk[&arr[s]][s_idx]._id == scc_info_stk[&arr[t]][t_idx]._id {
+            is_loop=true;
+
+            if s==t || (scc_info_stk[&arr[s]][s_idx]._n_type == 'L' && scc_info_stk[&arr[t]][t_idx]._n_type == 'H') {
+                if let Some(last) = stk.last_mut() {
+                    if recorded==false {
+                        last.prefix.push(t as i32);
+                        recorded=true;
+                    }
+                    let mut content :Vec<i32> = vec!();
+                    let mut prefix_to_key :Vec<i32> = vec!();
+                    let mut k:i32;
+                    let mut i=0;
+                    while i<last.prefix.len() {
+                        k = last.prefix[i];
+                        while k < 0 {
+                            i += 1;
+                            if last.prefix[i] < 0 { break;}
+                            content.push(last.prefix[i].try_into().unwrap());
+                        }
+                        content.push(last.prefix[i].try_into().unwrap());
+                        prefix_to_key.push(k.try_into().unwrap());
+                        i += 1;
+                    }
+                    println!("content {:?}", content);
+                    let mut flag = true;
+                    if let Some(val) = last.counts.get_mut(&prefix_to_key) {
+                        *val += 1;
+                        if *val >= limit { flag = false;}
+                    } else {
+                        last.counts.insert(prefix_to_key, 1);
+                    }
+                    if flag {
+                        last.temp_path.push(content);
+                    }
+                    last.prefix = vec!();
+                }
+
+                println!("[2] back edge" );
+                for e in &stk {
+                    println!("  * {:?}", e);
+                }
+                if s==t {
+                    t_idx = scc_info_stk[&arr[t]].len();
+                    println!("[2-1] self loop back edge" );
+                    break;
+                }
+
+            }
+            else {
+                if recorded==false {
+                    stk.last_mut().unwrap().prefix.push(t as i32);
+                    recorded=true;
+                }
+                println!("[3] normal edge" );
+                for e in &stk {
+                    println!("  * {:?}", e);
+                }
+
+            }
+            s_idx += 1;
+            t_idx += 1;
+        }
+
+        // ============= Entering edge (Header node) ============= //
+        while t_idx < scc_info_stk[&arr[t]].len() {
+            is_loop = true;
+
+            let tmp;
+            if recorded {
+                tmp = vec!(vec!());
+            } else {        // in case it never met back edge, push header node
+                tmp = vec!(vec!(t as i32));
+            }
+            let el = Ele {
+                counts: HashMap::new(),
+                temp_path: tmp,
+                prefix: vec!(),
+            };
+
+            stk.push(el);
+            t_idx += 1;
+
+            println!("[4] Entering edge (Push)" );
+            for e in &stk {
+                println!("  * {:?}", e);
+            }
+        }
+
+        if is_loop == false {
+            fin.push(t.try_into().unwrap());
+            println!("[5] Not loop" );
+            for e in &stk {
+                println!("  * {:?}", e);
+            }
+        }
+    }
+    println!("\n");
+
+    println!("Before remove markers: {:?} {:?}", fin.len(), fin);
+    let mut res : Vec<i32> = vec![];
+    for f in fin {
+        if f>=0 {
+            res.push(f);
+        }
+    }
+    println!("RES: {:?} {:?}", res.len(), res);
+    return res;
+}
+*/
+
 //
 //
 /*

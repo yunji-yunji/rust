@@ -23,6 +23,8 @@ use crate::concurrency::sync::SynchronizationState;
 use crate::shims::tls;
 use crate::*;
 
+use rustc_middle::mir::{REPEAT_LIMIT, PathInfo};
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SchedulingAction {
     /// Execute step on the active thread.
@@ -1072,6 +1074,11 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             // }
         }
 
+
+        let mut s: usize = 0;
+        let mut stk :Vec<PathInfo> = vec!()                                                                                                                                 ;
+        let mut is_loop = false;
+
         loop {
             if SIGNALED.load(Relaxed) {
                 this.machine.handle_abnormal_termination();
@@ -1083,7 +1090,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
                     // this.my_f();
                     // println!("execute");
 
-                    if !this.step(path)? {
+                    if !this.step(path, &mut s, &mut stk, &mut is_loop, REPEAT_LIMIT)? {
                         // See if this thread can do something else.
                         match this.run_on_stack_empty()? {
                             Poll::Pending => {} // keep going

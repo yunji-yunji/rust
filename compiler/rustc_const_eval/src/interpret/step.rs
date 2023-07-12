@@ -3,6 +3,7 @@
 //! The main entry point is the `step` method.
 
 use either::Either;
+use rustc_index::IndexVec;
 
 use rustc_middle::mir;
 use rustc_middle::mir::interpret::{InterpResult, Scalar};
@@ -19,7 +20,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// This is marked `#inline(always)` to work around adversarial codegen when `opt-level = 3`
 
     #[inline(always)]
-    pub fn step(&mut self, path : &mut Vec<usize>) -> InterpResult<'tcx, bool> {
+    pub fn step(&mut self,
+                path : &mut Vec<usize>, s: &mut usize, stk: &mut Vec<PathInfo>, is_loop: &mut bool, limit: usize)
+        -> InterpResult<'tcx, bool> {
         if self.stack().is_empty() {
             return Ok(false);
         }
@@ -55,7 +58,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         // path.push(loc.block);
 
         let terminator = basic_block.terminator();
-        self.terminator(terminator, path)?;
+
+        self.terminator(terminator, path, s, stk, is_loop, limit)?;
         Ok(true)
     }
 
@@ -318,21 +322,26 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     }
     // use rustc_middle::mir::{BasicBlock};
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
-    fn terminator(&mut self, terminator: &mir::Terminator<'tcx>,  path : &mut Vec<usize>) -> InterpResult<'tcx> {
+    fn terminator(&mut self, terminator: &mir::Terminator<'tcx>,
+                  path : &mut Vec<usize>,
+                  s: &mut usize,
+                  stk:&mut Vec<PathInfo>, is_loop: &mut bool, limit:usize) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
-        let def_id = self.body().source.def_id();
-        if self.tcx.def_path_str(def_id) == "fuzz_target"{
-            let bb = self.frame().loc;
-            let _same_bb = self.stack().last().unwrap().body.terminator_loc(bb.left().unwrap().block);
-            let _bbs = self.body().basic_blocks.clone();
-            // let sss = self.body().basic_blocks[bb.left().unwrap().block].terminator().successors();
-            // for s in sss {
-            //     println!("ss {:?}", s);
-            // }
-            // self.body().span
-            println!("in terminator {:?} ", bb);
-            // self.basic_blocks[node].terminator().successors()
-        }
+        // CODE for Test
+ //        let def_id = self.body().source.def_id();
+ //        if self.tcx.def_path_str(def_id) == "fuzz_target"{
+ //            let bb = self.frame().loc;
+ //             _same_bb = self.stack().last().unwrap().body.terminator_loc(bb.left().unwrap().block);
+ //            let _bbs = self.body().basic_blocks.clone();
+ //            // let sss = self.body().basic_blocks[bb.left().unwrap().block].terminator().successors();
+ //            // for s in sss {
+ //            //     println!("ss {:?}", s);
+ //            // }
+ //            // self.body().span
+ //            println!("in terminator {:?} {:?} ",  bb.left().unwrap().block, bb);
+ //
+ //            // self.basic_blocks[node].terminator().successors()
+ //        }
 
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
@@ -340,7 +349,22 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let def_id = self.body().source.def_id();
                 if self.tcx.def_path_str(def_id) == "fuzz_target" {
 
-                    path.push(loc.block.index());
+                    // let s : usize;
+                    let t : usize = loc.block.index();
+
+                    // if *s == 0 as usize {
+                    //     // first basic block
+                    //     path.push(t);
+                    // } else {
+                    println!("s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
+                    decide_push_t(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
+                    // }
+
+                    // for (index, value) in self.body().scc_info.clone().into_iter_enumerated() {
+                    //     println!("in step.rs : {:?} : {:?}", index, value);
+                    // }
+                    println!("path = {:?}: {:?} {:?}", *s,  t, self.body().scc_info.clone()[t]);
+                    *s = t;
                 }
                 info!("// executing {:?}", loc.block);
             }
@@ -348,5 +372,170 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         Ok(())
     }
 
+}
 
+
+use rustc_middle::mir::{SccInfo, PathInfo};
+use std::default::Default as HashDefault;
+
+fn decide_push_t(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
+                 s:usize, t:usize,
+                 stk:&mut Vec<PathInfo>, is_loop: &mut bool, limit: usize,
+                path: &mut Vec<usize>,
+) {
+    let mut recorded = false;
+
+    // ============= Exiting edge ============= //
+    let mut s_idx = 0;
+    let mut t_idx = 0;
+
+    while s_idx < scc_info_stk[s].len()
+        && t_idx < scc_info_stk[t].len()
+        && scc_info_stk[s][s_idx].id == scc_info_stk[t][t_idx].id {
+        s_idx += 1;
+        t_idx += 1;
+    }
+
+    while s_idx < scc_info_stk[s].len() {
+        if let Some(mut prev) = stk.pop() {
+            prev.temp_path.push(prev.prefix.clone());
+
+            let sccid : i32 = scc_info_stk[s][s_idx].id as i32 * -1;
+            if let Some(last) = stk.last_mut() {
+                last.prefix.push(sccid.try_into().unwrap());
+                for p in prev.temp_path {
+                    for pp in p {
+                        last.prefix.push(pp);
+                    }
+                }
+                last.prefix.push(sccid.try_into().unwrap());
+            } else {
+                // fin.push(sccid.try_into().unwrap()); // for debugging
+
+                for p in prev.temp_path {
+                    for pp in p {
+                        // fin.push(pp);
+                        path.push(pp as usize);
+
+                        println!("push to final path {:?}", pp);
+                    }
+                }
+                // fin.push(sccid.try_into().unwrap()); // for debugging
+            }
+        }
+        println!("[1] Exit edge");
+        for e in stk.iter() {
+            println!("  * {:?}", e);
+        }
+        s_idx += 1;
+        *is_loop = false;
+    }
+
+    // ============= Normal & Back edge ============= //
+
+    s_idx = 0;
+    t_idx = 0;
+    while s_idx < scc_info_stk[s].len()
+        && t_idx < scc_info_stk[t].len()
+        && scc_info_stk[s][s_idx].id == scc_info_stk[t][t_idx].id {
+        *is_loop=true;
+
+        // h1, l2, x3
+        if s==t || (scc_info_stk[s][s_idx].node_type == 2 && scc_info_stk[t][t_idx].node_type == 1) {
+            if let Some(last) = stk.last_mut() {
+                if recorded==false {
+                    last.prefix.push(t as i32);
+                    recorded=true;
+                }
+                let mut content :Vec<i32> = vec!();
+                let mut prefix_to_key :Vec<i32> = vec!();
+                let mut k:i32;
+                let mut i=0;
+                while i<last.prefix.len() {
+                    k = last.prefix[i];
+                    while k < 0 {
+                        i += 1;
+                        if last.prefix[i] < 0 { break;}
+                        content.push(last.prefix[i].try_into().unwrap());
+                    }
+                    content.push(last.prefix[i].try_into().unwrap());
+                    prefix_to_key.push(k.try_into().unwrap());
+                    i += 1;
+                }
+                println!("content {:?}", content);
+                let mut flag = true;
+                if let Some(val) = last.counts.get_mut(&prefix_to_key) {
+                    *val += 1;
+                    if *val >= limit { flag = false;}
+                } else {
+                    last.counts.insert(prefix_to_key, 1);
+                }
+                if flag {
+                    last.temp_path.push(content);
+                }
+                last.prefix = vec!();
+            }
+
+            println!("[2] back edge" );
+            for e in stk.iter() {
+                println!("  * {:?}", e);
+            }
+            if s==t {
+                t_idx = scc_info_stk[t].len();
+                println!("[2-1] self loop back edge" );
+                break;
+            }
+
+        }
+        else {
+            println!("[3] normal edge" );
+            // for e in stk.iter() {
+            //     println!("  * {:?}", e);
+            // }
+            if recorded==false {
+                stk.last_mut().unwrap().prefix.push(t as i32);
+                recorded=true;
+            }
+
+
+        }
+        s_idx += 1;
+        t_idx += 1;
+    }
+
+    // ============= Entering edge (Header node) ============= //
+    while t_idx < scc_info_stk[t].len() {
+        *is_loop = true;
+
+        let tmp;
+        if recorded {
+            tmp = vec!(vec!());
+        } else {        // in case it never met back edge, push header node
+            tmp = vec!(vec!(t as i32));
+        }
+        let el = PathInfo {
+            counts: HashDefault::default(),
+            temp_path: tmp,
+            prefix: vec!(),
+        };
+
+        stk.push(el);
+        t_idx += 1;
+
+        println!("[4] Entering edge (Push)" );
+        for e in stk.iter() {
+            println!("  * {:?}", e);
+        }
+    }
+
+    if *is_loop == false {
+        println!("push to final path {:?}", t);
+        path.push(t);
+        // fin.push(t.try_into().unwrap());
+        println!("[5] Not loop" );
+        for e in stk.iter() {
+            println!("  * {:?}", e);
+        }
+    }
+    // println!("at last stk={:?}", stk);
 }
