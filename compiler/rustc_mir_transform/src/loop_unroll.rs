@@ -21,8 +21,8 @@ use rustc_middle::mir::{BasicBlock, Body, TerminatorKind, BasicBlockData, };
 
 use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
 
-pub struct DummyYJ();
-impl<'tcx> MirPass<'tcx> for DummyYJ {
+pub struct LoopUnroll();
+impl<'tcx> MirPass<'tcx> for LoopUnroll {
     fn is_enabled(&self, sess: &rustc_session::Session) -> bool {
         // sess.instrument_coverage()
         // sess.mir_opt_level() > 0
@@ -31,7 +31,7 @@ impl<'tcx> MirPass<'tcx> for DummyYJ {
     }
     // #[instrument(skip(self, tcx, body))]
     fn run_pass(&self, tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
-        println!("RUn add_bb.rs file");
+        println!("RUn roop_unroll.rs file");
         let def_id = body.source.def_id();
         if &tcx.def_path_str(def_id) == "fuzz_target" {
             println!("YuNJI: FUZZ target");

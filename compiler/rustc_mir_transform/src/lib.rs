@@ -98,7 +98,7 @@ mod ref_prop;
 mod remove_noop_landing_pads;
 mod remove_storage_markers;
 // yunji
-mod add_bb;
+mod loop_unroll;
 mod remove_uninit_drops;
 mod remove_unneeded_drops;
 mod remove_zsts;
@@ -598,8 +598,7 @@ fn run_optimization_passes<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
             &o1(simplify::SimplifyCfg::AfterUninhabitedEnumBranching),
             &remove_storage_markers::RemoveStorageMarkers,
             // yunji
-            &add_bb::DummyYJ(),
-            // &add_bb::DummyYJ::run_pass(,tcx, body),
+            &loop_unroll::LoopUnroll(),
             &remove_zsts::RemoveZsts,
             &normalize_array_len::NormalizeArrayLen, // has to run after `slice::len` lowering
             &const_goto::ConstGoto,
@@ -689,7 +688,7 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
 
     run_optimization_passes(tcx, &mut body);
     // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
-    // if let Err(error) = rustc_mir_transform::add_bb::run_pass(tcx, &mut body) {
+    // if let Err(error) = rustc_mir_transform::loop_unroll::run_pass(tcx, &mut body) {
     //     // tcx.sess.emit_err(errors::CantEmitMIR { error });
     //     // tcx.sess.abort_if_errors();
     // }

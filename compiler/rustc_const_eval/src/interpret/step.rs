@@ -327,21 +327,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                   s: &mut usize,
                   stk:&mut Vec<PathInfo>, is_loop: &mut bool, limit:usize) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
-        // CODE for Test
- //        let def_id = self.body().source.def_id();
- //        if self.tcx.def_path_str(def_id) == "fuzz_target"{
- //            let bb = self.frame().loc;
- //             _same_bb = self.stack().last().unwrap().body.terminator_loc(bb.left().unwrap().block);
- //            let _bbs = self.body().basic_blocks.clone();
- //            // let sss = self.body().basic_blocks[bb.left().unwrap().block].terminator().successors();
- //            // for s in sss {
- //            //     println!("ss {:?}", s);
- //            // }
- //            // self.body().span
- //            println!("in terminator {:?} {:?} ",  bb.left().unwrap().block, bb);
- //
- //            // self.basic_blocks[node].terminator().successors()
- //        }
 
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
@@ -349,21 +334,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let def_id = self.body().source.def_id();
                 if self.tcx.def_path_str(def_id) == "fuzz_target" {
 
-                    // let s : usize;
                     let t : usize = loc.block.index();
 
-                    // if *s == 0 as usize {
-                    //     // first basic block
-                    //     path.push(t);
-                    // } else {
-                    println!("s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
-                    decide_push_t(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
-                    // }
-
-                    // for (index, value) in self.body().scc_info.clone().into_iter_enumerated() {
-                    //     println!("in step.rs : {:?} : {:?}", index, value);
-                    // }
-                    println!("path = {:?}: {:?} {:?}", *s,  t, self.body().scc_info.clone()[t]);
+                    println!("[DEBUG] s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
+                    generate_path(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
+                    println!("[DEBUG] s= {:?} t= {:?} scc_info = {:?}", *s,  t, self.body().scc_info.clone()[t]);
                     *s = t;
                 }
                 info!("// executing {:?}", loc.block);
@@ -378,7 +353,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 use rustc_middle::mir::{SccInfo, PathInfo};
 use std::default::Default as HashDefault;
 
-fn decide_push_t(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
+fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                  s:usize, t:usize,
                  stk:&mut Vec<PathInfo>, is_loop: &mut bool, limit: usize,
                 path: &mut Vec<usize>,

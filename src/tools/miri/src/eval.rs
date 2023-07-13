@@ -500,25 +500,8 @@ pub fn eval_entry<'tcx>(
         Ok(never) => match never {},
     };
 
-    // yunji: post-processing after run_trheads() =====================
-    println!("after run threads path = {:?}", path);
-    // generate_path4(path);
-    // generate_path3(copy_graph.clone(), &mut scc_info_stk, arr0.clone())
-    // let mut start : usize = 0;
-    // let my_path = generate_path(&mut my_graph,&mut new_graph, &mut start, bb_arr);
-    // println!("[TO DO FIX] tmp path={:?} and arr= ", my_path);
-
-    // generate_path4()
-    // for def_id in dump_mir_def_ids(tcx, None) {
-    //     if tcx.is_const_fn_raw(def_id) {
-    //         println!("here1");
-    //     } else {
-    //         let mir = tcx.instance_mir(InstanceDef::Item(def_id));
-    //         my_app(tcx, mir);
-    //
-    //     }
-    // }
-
+    // yunji: result of run_trheads() =====================
+    println!("Final path = {:?}", path);
 
 
     // Machine cleanup. Only do this if all threads have terminated; threads that are still running
