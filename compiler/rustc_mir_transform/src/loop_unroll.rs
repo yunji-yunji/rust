@@ -31,10 +31,9 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
     }
     // #[instrument(skip(self, tcx, body))]
     fn run_pass(&self, tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
-        println!("RUn roop_unroll.rs file");
         let def_id = body.source.def_id();
         if &tcx.def_path_str(def_id) == "fuzz_target" {
-            println!("YuNJI: FUZZ target");
+            println!("RUn roop_unroll.rs file, run fuzz_target function");
 
             // let bbs=body.basic_blocks_mut();
             // insert_dummy_block(body);
@@ -149,6 +148,8 @@ pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> Vec<Node
             }
         }
     }
+    /// Assumption: only a single header possible
+    assert_eq!(headers.len(), 1);
     return headers;
 }
 
