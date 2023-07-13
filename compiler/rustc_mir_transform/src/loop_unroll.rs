@@ -246,11 +246,11 @@ fn _insert_inline_asm<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
 
 
 
-pub fn change_target_goto<'tcx>(body: &mut Body<'tcx>, change_bb: BasicBlock, new_t: BasicBlock) {
+pub fn _change_target_goto<'tcx>(body: &mut Body<'tcx>, change_bb: BasicBlock, new_t: BasicBlock) {
     let bbs = body.basic_blocks_mut();
     let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
     let bb_terminator = bb.terminator.as_mut().expect("terminator");
-
+    println!("go to");
     /// method 1
     let new_goto_kind = TerminatorKind::Goto {
         target: new_t,
@@ -274,6 +274,53 @@ pub fn change_target_goto<'tcx>(body: &mut Body<'tcx>, change_bb: BasicBlock, ne
     println!("after change GOTO target = {:?}", bb_terminator);
 }
 
+// pub fn _change_target_switchint<'tcx>(body: &mut Body<'tcx>,
+//                                      change_bb: BasicBlock,
+//                                      new_t: BasicBlock, header:BasicBlock) {
+//     let bbs = body.basic_blocks_mut();
+//
+//     let bb = bbs.get_mut(change_bb).expect("Get basic block to be changed");
+//     let bb_terminator = bb.terminator.as_mut().expect("Get terminator of the BB");
+//     let TerminatorKind::SwitchInt {
+//         discr: copy_op,
+//         targets: copy_targets
+//     } = &bb_terminator.kind else {
+//         println!("Terminator kind of change_bb should be SwitchInt");
+//         unreachable!()
+//     };
+//
+//     println!("switch int");
+//     /// otherwise
+//     let otherwise;
+//     if keep_otherwise {
+//         otherwise = copy_targets.otherwise();
+//     } else {
+//         otherwise = new_t2;
+//     }
+//
+//     /// change targets : condition can be changed
+//     let new_targets = copy_targets.iter().map(|(value, block)| {
+//         /// TODO: for in header part condition 1, for other part condition 2
+//         // if block==BasicBlock::from_usize(header.index()) {
+//         if value==0{
+//             (value, new_t1)
+//         } else {
+//             (value, block)
+//         }
+//     });
+//     let switch_targets = SwitchTargets::new(new_targets, otherwise);
+//
+//     /// new terminator kind
+//     let new_target_terminator_kind = TerminatorKind::SwitchInt {
+//         discr: copy_op.to_copy(),
+//         targets: switch_targets,
+//     };
+//
+//     // a update terminator kind
+//     bb_terminator.kind = new_target_terminator_kind;
+// }
+//
+
 /// copy, modify target, insert
 pub fn insert_latch<'tcx>(body: &mut Body<'tcx>, header: BasicBlock) {
     let bbs = body.basic_blocks_mut();
@@ -287,47 +334,6 @@ pub fn insert_latch<'tcx>(body: &mut Body<'tcx>, header: BasicBlock) {
     bbs.push(bbd);
 }
 
-pub fn _change_targets_switchint<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, change_bb: BasicBlock, new_t1: BasicBlock, new_t2:BasicBlock, keep_otherwise: bool) {
-
-    let bb = bbs.get_mut(change_bb).expect("Get basic block to be changed");
-    let bb_terminator = bb.terminator.as_mut().expect("Get terminator of the BB");
-    let TerminatorKind::SwitchInt {
-        discr: copy_op,
-        targets: copy_targets
-    } = &bb_terminator.kind else {
-        println!("Terminator kind of change_bb should be SwitchInt");
-        unreachable!()
-    };
-
-    /// otherwise
-    let otherwise;
-    if keep_otherwise {
-        otherwise = copy_targets.otherwise();
-    } else {
-        otherwise = new_t2;
-    }
-
-    /// change targets : condition can be changed
-    let new_targets = copy_targets.iter().map(|(value, block)| {
-        /// TODO: for in header part condition 1, for other part condition 2
-        // if block==BasicBlock::from_usize(header.index()) {
-        if value==0{
-            (value, new_t1)
-        } else {
-            (value, block)
-        }
-    });
-    let switch_targets = SwitchTargets::new(new_targets, otherwise);
-
-    /// new terminator kind
-    let new_target_terminator_kind = TerminatorKind::SwitchInt {
-        discr: copy_op.to_copy(),
-        targets: switch_targets,
-    };
-
-    // a update terminator kind
-    bb_terminator.kind = new_target_terminator_kind;
-}
 
 
 /// copy, modify targets, insert
@@ -453,7 +459,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
                                        g: &mut Graph<usize, String>,
                                        scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
                                        arr: &mut Vec<NodeIndex>,
-                                       body: &mut Body<'tcx>   )
+                                       body: &mut Body<'tcx>)
                                        -> NodeIndex {
     println!("SCC in get back edges {:?}", scc);
 
@@ -539,6 +545,82 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         /// remove temporarily
         // insert_goto(bbs, BasicBlock::from_usize(back_edges[0].0.index()),BasicBlock::from_usize(header.index()));
 
+
+        // let terminator2 = &body.basic_blocks()
+            // .get_mut(BasicBlock::from_usize(6)).expect("basic block data").terminator.as_mut().expect("").kind;
+
+        let terminator3 = &mut body.basic_blocks_mut().get_mut(BasicBlock::from_usize(6)).expect("").terminator_mut().kind;
+        let TerminatorKind::SwitchInt {
+            discr: old_op,
+            targets: old_targets
+        } = &terminator3 else {
+            println!("Terminator kind of change_bb should be SwitchInt");
+            unreachable!()
+        };
+        let new_otherwise;
+        if old_targets.otherwise().index() == 7{
+            new_otherwise = BasicBlock::from_usize(new_latch_idx);
+        } else {
+            new_otherwise = old_targets.otherwise();
+        }
+
+        let new_targets = old_targets.iter().map(|(value, target)| {
+            if target.index() == 7 {
+                (value, BasicBlock::from_usize(new_latch_idx))
+            } else {
+                (value, target)
+            }
+        });
+        let new_switch_targets =  SwitchTargets::new(new_targets, new_otherwise);
+        let new_si_kind = TerminatorKind::SwitchInt {
+            discr: old_op.to_copy(),
+            targets: new_switch_targets,
+        };
+
+        // for a in terminator3.as_switch().iter_mut() {
+        //     let (_op, targets) = a;
+        //     println!("termina test {:?} {:?}", targets, targets.otherwise());
+        //     if targets.otherwise().index() == header.index() {
+        //         targets.otherwise() = new_latch_idx;
+        //     }
+        //     // for target in targets.all_targets_mut() {
+        //     //     println!("termina test {:?}", target.cloned() );
+        //     //     if target == header {
+        //     //         target = new_latch_idx;
+        //     //     }
+        //     // }
+        // }
+
+        *terminator3 = new_si_kind;
+        // terminator3.ne
+        // let mut iter = terminator3.as_switch().iter_mut();
+        // while let Some(t)= iter.next() {
+        //     println!("termina test 2 {:?}", t.clone().1.all_targets_mut());
+
+        // }
+        // let mut targets = terminator2.kind.as_switch().iter_mut();
+        // let mut targets = terminator2.kind.as_switch().as_mut().iter_mut();
+        println!("termina test {:?}", terminator3);
+        // let mut targets = terminator3.as_switch().iter_mut();
+        // while let Some((op, target)) = targets.next() {
+        //     println!("op t {:?} {:?}", op, target);
+        //
+        // }
+
+        // for Some(target) in targets {
+        //     target.S
+        // }
+        // let targets = terminator2.kind.as_switch().as_mut().;
+
+        // let targets = terminator.kind.as_switch().expect("get switch int").1.all_targets();
+        // for t in targets {
+        //     println!("switch in t = {:?}", t);
+        //     if t.index() == header {
+        //         println!("target it header {:?}", t);
+        //     }
+        // }
+
+
         /// for all latches
         for back_edge in back_edges {
             // redirect
@@ -554,11 +636,42 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
             // TODO: decide if bb kind is goto or switchInt
             // now assuming it's goto
             // change edge latch->header to latch->new_single_latch
-            // TODO: remove dummy things
             /// Assumption: one edge of the branch is backedge and other one is normal edge -> not possible
             /// Assumption: every latch's terminator type is GOTO
-            change_target_goto(body, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx));
+            // change_target_goto(body, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx)),
+            // change_target_switchint(body,
+            //                         BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx), header)
+            println!("tmp tmp {:?}", new_latch_idx);
+            // let terminator = body.basic_blocks_mut()
+            //     .get_mut(latch.index().into()).expect("basic block data")
+            //     .terminator.as_mut().expect("terminator");
+            // match terminator.kind {
+            //     TerminatorKind::Goto {..} => {
+            //         let new_goto_kind = TerminatorKind::Goto {
+            //             target: BasicBlock::from_usize(new_latch_idx),
+            //         };
+            //         terminator.kind = new_goto_kind;
+            //         println!("[T KIND] after change GOTO target = {:?}", terminator);
+            //     },
+            //     TerminatorKind::SwitchInt {..} => {
+            //         println!("[T KIND] switch int");
+            //         let mut iter = terminator.kind.as_switch().iter_mut();
+            //         while let Some((op, target)) = iter.next() {
+            //             println!("op t {:?} {:?}", op, target);
+            //
+            //         }
+            //
+            //             // expect("get switch int").1.all_targets();
+            //         // for t in targets {
+            //         //     println!("switch {:?}", t);
+            //         // }
+            //         // let new_switchint_kind = TerminatorKind::SwitchInt {
+            //
+            //     },
+            //     _ => panic!("[T KIND] terminator kind of latch is not Goto or SwitchInt"),
+            // }
         }
+
 
         print_bbs(body.clone().basic_blocks, "In get single latch");
 
