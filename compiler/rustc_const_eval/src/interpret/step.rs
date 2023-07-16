@@ -350,7 +350,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 }
 
 
-use rustc_middle::mir::{SccInfo, PathInfo};
+use rustc_middle::mir::{SccInfo, PathInfo, NodeType};
 use std::default::Default as HashDefault;
 
 fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
@@ -416,7 +416,7 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
         *is_loop=true;
 
         // h1, l2, x3
-        if s==t || (scc_info_stk[s][s_idx].node_type == 2 && scc_info_stk[t][t_idx].node_type == 1) {
+        if s==t || (scc_info_stk[s][s_idx].node_type == NodeType::Latch && scc_info_stk[t][t_idx].node_type == NodeType::Header) {
             if let Some(last) = stk.last_mut() {
                 if recorded==false {
                     last.prefix.push(t as i32);

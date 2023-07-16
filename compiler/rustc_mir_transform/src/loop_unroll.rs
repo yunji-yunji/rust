@@ -19,7 +19,7 @@ use rustc_index::vec::IndexVec;
 // use rustc_middle::mir::MirPass;
 use rustc_middle::mir::{BasicBlock, Body, TerminatorKind, BasicBlockData, };
 
-use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
+// use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
 
 pub struct LoopUnroll();
 impl<'tcx> MirPass<'tcx> for LoopUnroll {
@@ -153,30 +153,6 @@ pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> Vec<Node
     return headers;
 }
 
-
-fn _insert_dummy_block<'tcx>(body: &mut Body<'tcx>) {
-    /// basicblock-> statements, "terminator", is_cleanup
-    /// terminator-> source_info, kind
-    /// kind (TerminatorKind) -> Goto | SwitchInt
-    /// SwitchInt -> discr, targets
-    /// discr -> Operand<'tcx>
-    /// targets = SwitchTargets -> new(target_iter, otherwise)
-    /// target_iter -> values,targets
-    /// values -> SmallVec<[u128; 1]>
-    /// targets -> SmallVec<[BasicBlock; 2]>
-
-    let _bbs = body.basic_blocks_mut();
-
-    // 1. add Dummy basic block(node 7) branch to b1 and b4
-    // TODO: fix
-    // insert_switchint(bbs, BasicBlock::from_usize(1), BasicBlock::from_usize(1), BasicBlock::from_usize(4));
-
-    // 2. change edge 0->1 to 0->7(new node)
-    // TODO: remove all dummy insert things..
-    // change_target_goto(bbs, BasicBlock::from_usize(0), BasicBlock::from_usize(7));
-
-}
-
 pub fn print_bbs<'tcx>(bbs: BasicBlocks<'tcx>, title: &str) {
     println!("\n\n=====  {} ({:?})  =====", title, bbs.len());
     for i in 0..bbs.len() {
@@ -197,7 +173,6 @@ pub fn print_bbs_mut<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
     }
 }
 
-
 pub fn printpg(g: Graph<usize, String>, title: &str) {
     println!("\n\n===== PetGraph ({})   =====", title);
     for edge in g.clone().raw_edges() {
@@ -208,54 +183,17 @@ pub fn printpg(g: Graph<usize, String>, title: &str) {
     }
 }
 
-/// insert inline assembly kind basic block
-fn _insert_inline_asm<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
-    let bbs = body.basic_blocks_mut();
-
-    let template_piece = InlineAsmTemplatePiece::String(String::from("yunji mir pass test"));
-    let template = [template_piece];
-    // let template = tcx.arena.alloc(&template);
-    // let template = tcx.arena.alloc([template_piece]);
-    let template = tcx.arena.alloc_from_iter(template);
-
-    let asm_terminator_kind = TerminatorKind::InlineAsm {
-        template,
-        operands: vec![],
-        options: InlineAsmOptions::empty(),
-        line_spans: &[],
-        destination: Some(bbs.next_index()),
-        unwind: UnwindAction::Unreachable,
-        // cleanup: None,
-    };
-
-    let len = bbs.len();
-    let original_last_block = bbs.get_mut(BasicBlock::from_usize(len-1)).expect("No last block!");
-
-    let mut new_terminator = original_last_block.terminator.as_ref().expect("no terminator").clone();
-    let original_last_block_terminator = original_last_block.terminator_mut();
-    new_terminator.kind = asm_terminator_kind;
-
-    let new_bb = BasicBlockData {
-        statements: vec![],
-        terminator: Some(original_last_block_terminator.to_owned()),
-        is_cleanup: false,
-    };
-
-    bbs.push(new_bb);
-}
 
 
-
-pub fn _change_target_goto<'tcx>(body: &mut Body<'tcx>, change_bb: BasicBlock, new_t: BasicBlock) {
+pub fn change_target_goto<'tcx>(body: &mut Body<'tcx>, change_bb: BasicBlock, new_t: BasicBlock) {
     let bbs = body.basic_blocks_mut();
     let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
-    let bb_terminator = bb.terminator.as_mut().expect("terminator");
-    println!("go to");
+    let terminator = bb.terminator.as_mut().expect("terminator");
     /// method 1
     let new_goto_kind = TerminatorKind::Goto {
         target: new_t,
     };
-    bb_terminator.kind = new_goto_kind;
+    terminator.kind = new_goto_kind;
 
 
     /// method 2
@@ -271,55 +209,50 @@ pub fn _change_target_goto<'tcx>(body: &mut Body<'tcx>, change_bb: BasicBlock, n
         }
     */
 
-    println!("after change GOTO target = {:?}", bb_terminator);
+    println!("[T KIND] after change GOTO target = {:?}", terminator);
 }
 
-// pub fn _change_target_switchint<'tcx>(body: &mut Body<'tcx>,
-//                                      change_bb: BasicBlock,
-//                                      new_t: BasicBlock, header:BasicBlock) {
-//     let bbs = body.basic_blocks_mut();
-//
-//     let bb = bbs.get_mut(change_bb).expect("Get basic block to be changed");
-//     let bb_terminator = bb.terminator.as_mut().expect("Get terminator of the BB");
-//     let TerminatorKind::SwitchInt {
-//         discr: copy_op,
-//         targets: copy_targets
-//     } = &bb_terminator.kind else {
-//         println!("Terminator kind of change_bb should be SwitchInt");
-//         unreachable!()
-//     };
-//
-//     println!("switch int");
-//     /// otherwise
-//     let otherwise;
-//     if keep_otherwise {
-//         otherwise = copy_targets.otherwise();
-//     } else {
-//         otherwise = new_t2;
-//     }
-//
-//     /// change targets : condition can be changed
-//     let new_targets = copy_targets.iter().map(|(value, block)| {
-//         /// TODO: for in header part condition 1, for other part condition 2
-//         // if block==BasicBlock::from_usize(header.index()) {
-//         if value==0{
-//             (value, new_t1)
-//         } else {
-//             (value, block)
-//         }
-//     });
-//     let switch_targets = SwitchTargets::new(new_targets, otherwise);
-//
-//     /// new terminator kind
-//     let new_target_terminator_kind = TerminatorKind::SwitchInt {
-//         discr: copy_op.to_copy(),
-//         targets: switch_targets,
-//     };
-//
-//     // a update terminator kind
-//     bb_terminator.kind = new_target_terminator_kind;
-// }
-//
+pub fn change_target_switchint<'tcx>(body: &mut Body<'tcx>,
+                                     orig_bb: BasicBlock, new_t: BasicBlock, header_idx: usize) {
+
+    let terminator = &mut body.basic_blocks_mut().get_mut(orig_bb).expect("").terminator_mut().kind;
+    let TerminatorKind::SwitchInt {
+        discr: old_op,
+        targets: old_targets
+    } = &terminator else {
+        println!("Terminator kind of change_bb should be SwitchInt");
+        unreachable!()
+    };
+
+    /// 1. check otherwise
+    let new_otherwise;
+    if old_targets.otherwise().index() == header_idx {
+        new_otherwise = new_t;
+    } else {
+        new_otherwise = old_targets.otherwise();
+    }
+
+    /// 1. check targets
+    let new_targets = old_targets.iter().map(|(value, target)| {
+        if target.index() == header_idx {
+            (value, new_t)
+        } else {
+            (value, target)
+        }
+    });
+
+    let new_switch_targets =  SwitchTargets::new(new_targets, new_otherwise);
+    let new_switchint_kind = TerminatorKind::SwitchInt {
+        discr: old_op.to_copy(),
+        targets: new_switch_targets,
+    };
+
+    *terminator = new_switchint_kind;
+
+    println!("[T KIND] after change switch int {:?}", terminator);
+
+}
+
 
 /// copy, modify target, insert
 pub fn insert_latch<'tcx>(body: &mut Body<'tcx>, header: BasicBlock) {
@@ -333,71 +266,6 @@ pub fn insert_latch<'tcx>(body: &mut Body<'tcx>, header: BasicBlock) {
     // println!("copy header source info {:?}", bbd.terminator.clone().unwrap().source_info );
     bbs.push(bbd);
 }
-
-
-
-/// copy, modify targets, insert
-pub fn _insert_switchint<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, copy: BasicBlock, t1: BasicBlock, t2:BasicBlock) {
-
-    let TerminatorKind::SwitchInt {
-        discr: copy_op,
-        targets: copy_targets
-    } = &bbs[copy].terminator().kind else {
-        println!("Terminator kind of copy is not SwitchInt");
-        unreachable!()
-    };
-
-    /// SwitchTargets
-    let new_targets = copy_targets.iter().map(|(value, block)| {
-        if value==0 {
-            println!("value is 0 {:?} {:?} {:?}", value, block, bbs[block].terminator().kind);
-            (value, t1)
-        } else {
-            (value, block)
-        }
-    });
-    let new_switch_targets = SwitchTargets::new(new_targets, t2);
-
-    /// discr
-    let copy_op = match copy_op {
-        Operand::Move(x) => Operand::Copy(*x),
-        Operand::Copy(x) => Operand::Copy(*x),
-        Operand::Constant(x) => Operand::Constant(x.clone()),
-    };
-
-    /// BasicBlockData with SwitchInt kind
-    let new_bbd = BasicBlockData::new(Some(Terminator {
-        source_info: bbs[copy].terminator().source_info,
-        kind: TerminatorKind::SwitchInt {
-            discr: copy_op,
-            targets: new_switch_targets,
-        },
-    }));
-
-    bbs.push(new_bbd);
-}
-
-
-pub fn _decide_and_change_target<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
-                                       change_bb: BasicBlock,
-                                       _t_goto: BasicBlock,
-                                       _new_t1: BasicBlock, _new_t2:BasicBlock, _keep_otherwise: bool) {
-    // let bb = bbs.get_mut(change_bb).expect("get bb to be changed.");
-    /// bb == bbs[change_bb]
-    let bb_terminator = bbs[change_bb].terminator.as_ref().expect("terminator kind check only").clone();
-
-    if let Some(_) = bb_terminator.kind.as_goto() {
-        println!("Input Basic block is Goto Type!");
-        // TODO: [fix] remove temporarily
-        // change_target_goto(bbs, change_bb, t_goto);
-    } else {
-        // TODO: [fix] assume if it's not goto, it is SwitchInt
-        println!("Input Basic block is not Goto Type! It is SwitchInt");
-        // TODO: [fix] remove temporarily
-        // change_targets_switchint(bbs, change_bb, new_t1, new_t2, keep_otherwise);
-    }
-}
-
 
 pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
                                         headers: Vec<NodeIndex>,
@@ -541,85 +409,13 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         // pick a random latch to be copied
         // copy any latch(any random goto type) (assume latch is go to)
         // target should be header
-        /// TODO: fix
-        /// remove temporarily
         // insert_goto(bbs, BasicBlock::from_usize(back_edges[0].0.index()),BasicBlock::from_usize(header.index()));
 
-
-        // let terminator2 = &body.basic_blocks()
-            // .get_mut(BasicBlock::from_usize(6)).expect("basic block data").terminator.as_mut().expect("").kind;
-
-        let terminator3 = &mut body.basic_blocks_mut().get_mut(BasicBlock::from_usize(6)).expect("").terminator_mut().kind;
-        let TerminatorKind::SwitchInt {
-            discr: old_op,
-            targets: old_targets
-        } = &terminator3 else {
-            println!("Terminator kind of change_bb should be SwitchInt");
-            unreachable!()
-        };
-        let new_otherwise;
-        if old_targets.otherwise().index() == 7{
-            new_otherwise = BasicBlock::from_usize(new_latch_idx);
-        } else {
-            new_otherwise = old_targets.otherwise();
-        }
-
-        let new_targets = old_targets.iter().map(|(value, target)| {
-            if target.index() == 7 {
-                (value, BasicBlock::from_usize(new_latch_idx))
-            } else {
-                (value, target)
-            }
-        });
-        let new_switch_targets =  SwitchTargets::new(new_targets, new_otherwise);
-        let new_si_kind = TerminatorKind::SwitchInt {
-            discr: old_op.to_copy(),
-            targets: new_switch_targets,
-        };
-
-        // for a in terminator3.as_switch().iter_mut() {
-        //     let (_op, targets) = a;
-        //     println!("termina test {:?} {:?}", targets, targets.otherwise());
-        //     if targets.otherwise().index() == header.index() {
-        //         targets.otherwise() = new_latch_idx;
-        //     }
-        //     // for target in targets.all_targets_mut() {
-        //     //     println!("termina test {:?}", target.cloned() );
-        //     //     if target == header {
-        //     //         target = new_latch_idx;
-        //     //     }
-        //     // }
-        // }
-
-        *terminator3 = new_si_kind;
-        // terminator3.ne
-        // let mut iter = terminator3.as_switch().iter_mut();
-        // while let Some(t)= iter.next() {
-        //     println!("termina test 2 {:?}", t.clone().1.all_targets_mut());
-
-        // }
-        // let mut targets = terminator2.kind.as_switch().iter_mut();
-        // let mut targets = terminator2.kind.as_switch().as_mut().iter_mut();
-        println!("termina test {:?}", terminator3);
-        // let mut targets = terminator3.as_switch().iter_mut();
-        // while let Some((op, target)) = targets.next() {
-        //     println!("op t {:?} {:?}", op, target);
-        //
-        // }
-
-        // for Some(target) in targets {
-        //     target.S
-        // }
-        // let targets = terminator2.kind.as_switch().as_mut().;
-
-        // let targets = terminator.kind.as_switch().expect("get switch int").1.all_targets();
-        // for t in targets {
-        //     println!("switch in t = {:?}", t);
-        //     if t.index() == header {
-        //         println!("target it header {:?}", t);
-        //     }
-        // }
-
+        /// TEMP: test function.
+        // change_target_switchint(body,
+        //                         BasicBlock::from_usize(6),
+        //                         BasicBlock::from_usize(new_latch_idx),
+        //                         BasicBlock::from_usize(header.index()));
 
         /// for all latches
         for back_edge in back_edges {
@@ -633,43 +429,29 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
             g.update_edge(new_node, header, String::from("LATCH"));
 
             // ==================== MIR part
-            // TODO: decide if bb kind is goto or switchInt
-            // now assuming it's goto
-            // change edge latch->header to latch->new_single_latch
-            /// Assumption: one edge of the branch is backedge and other one is normal edge -> not possible
-            /// Assumption: every latch's terminator type is GOTO
+            /// FIXED: decide if bb kind is goto or switchInt
+            /// change edge latch->header to latch->new_single_latch
             // change_target_goto(body, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx)),
-            // change_target_switchint(body,
-            //                         BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx), header)
+
             println!("tmp tmp {:?}", new_latch_idx);
-            // let terminator = body.basic_blocks_mut()
-            //     .get_mut(latch.index().into()).expect("basic block data")
-            //     .terminator.as_mut().expect("terminator");
-            // match terminator.kind {
-            //     TerminatorKind::Goto {..} => {
-            //         let new_goto_kind = TerminatorKind::Goto {
-            //             target: BasicBlock::from_usize(new_latch_idx),
-            //         };
-            //         terminator.kind = new_goto_kind;
-            //         println!("[T KIND] after change GOTO target = {:?}", terminator);
-            //     },
-            //     TerminatorKind::SwitchInt {..} => {
-            //         println!("[T KIND] switch int");
-            //         let mut iter = terminator.kind.as_switch().iter_mut();
-            //         while let Some((op, target)) = iter.next() {
-            //             println!("op t {:?} {:?}", op, target);
-            //
-            //         }
-            //
-            //             // expect("get switch int").1.all_targets();
-            //         // for t in targets {
-            //         //     println!("switch {:?}", t);
-            //         // }
-            //         // let new_switchint_kind = TerminatorKind::SwitchInt {
-            //
-            //     },
-            //     _ => panic!("[T KIND] terminator kind of latch is not Goto or SwitchInt"),
-            // }
+            let terminator = body.basic_blocks_mut()
+                .get_mut(latch.index().into()).expect("basic block data")
+                .terminator.as_mut().expect("terminator");
+            match terminator.kind {
+                TerminatorKind::Goto {..} => {
+                    change_target_goto(body,
+                                       BasicBlock::from_usize(latch.index().into()),
+                                       BasicBlock::from_usize(new_latch_idx),
+                    );
+                },
+                TerminatorKind::SwitchInt {..} => {
+                    change_target_switchint(body,
+                                            BasicBlock::from_usize(latch.index().into()),
+                                            BasicBlock::from_usize(new_latch_idx),
+                                            header.index());
+                },
+                _ => panic!("[T KIND] terminator kind of latch is not Goto or SwitchInt"),
+            }
         }
 
 
@@ -697,37 +479,8 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
 
 }
 
-/// TODO: need to check
-// pub fn _mir_get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<NodeIndex> {
-// get predecessors using mir
-// let mut predecessors2: Vec<BasicBlock>= Vec::new();
-// for (bb, bb_data) in bbs.iter_enumerated() {
-//     let Terminator {kind, ..} = bb_data.terminator();
-//         if let Some(tmp) = kind.as_goto() { // i should consider both "goto" and "switchInt"
-//         // if kind.as_goto() == h{
-//         //     if bbs[tmp] == h.clone() {
-//             if tmp == BasicBlock::from_usize(header.index().clone()) {
-//                 predecessors2.push(bb);
-//             }
-//         // if let Some(TerminatorKind::Goto {target}) = kind.as_goto() {
-//         //     if target == h {
-//         }
-// }
-// println!("predecessors {:?}", predecessors2);
-// }
-
 use rustc_middle::mir::SccInfo;
-//
-// #[derive(Debug, Clone)]
-// pub struct SccInfo {
-//     _id: i32,
-//     _n_type: usize,
-// }
 
-// pub enum SccInfo {
-//     ID(usize),
-//     NodeType(usize),    // H: 1, L: 2, X: 3
-// }
 pub fn break_down_and_mark<'tcx>(
     tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>,
     scc: &mut Vec<NodeIndex>, scc_id: &mut i32,
@@ -751,8 +504,8 @@ pub fn break_down_and_mark<'tcx>(
         // transform_mir_header(tcx, body)
     }
     // H: 1, L: 2, X: 3
-    let scc_info = SccInfo::new(*scc_id as usize, 1);
-    let scc_info2 = SccInfo::new(*scc_id as usize, 1);
+    let scc_info = SccInfo::new(*scc_id as usize, NodeType::Header);
+    let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Header);
     scc_info_stk.get_mut(&loop_header).map(|stk| stk.push(scc_info));
     body.scc_info[loop_header.index()].push(scc_info2);
 
@@ -764,8 +517,8 @@ pub fn break_down_and_mark<'tcx>(
         //     _id: *scc_id,
         //     _n_type: 2,
         // };
-        let scc_info = SccInfo::new(*scc_id as usize, 2);
-        let scc_info2 = SccInfo::new(*scc_id as usize, 2);
+        let scc_info = SccInfo::new(*scc_id as usize, NodeType::Latch);
+        let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Latch);
         scc_info_stk.get_mut(&single_latch).map(|stk| stk.push(scc_info));
         body.scc_info[single_latch.index()].push(scc_info2);
     }
@@ -773,8 +526,8 @@ pub fn break_down_and_mark<'tcx>(
     // 3. mark 'X'
     for node in scc.clone() {
         if node != loop_header && node != single_latch {
-            let scc_info = SccInfo::new(*scc_id as usize, 3);
-            let scc_info2 = SccInfo::new(*scc_id as usize, 3);
+            let scc_info = SccInfo::new(*scc_id as usize, NodeType::Normal);
+            let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Normal);
             scc_info_stk.get_mut(&node).map(|stk| stk.push(scc_info));
             body.scc_info[node.index()].push(scc_info2);
         }
@@ -789,23 +542,4 @@ pub fn break_down_and_mark<'tcx>(
     g.remove_edge(edge_idx);
 
     *scc_id += 1;
-}
-
-// ========================================
-
-// rustc_middle::mir::traversal::Preorder
-use rustc_middle::mir::traversal::preorder;
-
-fn _find_scc<'tcx>(_tcx: TyCtxt<'tcx>, body: &Body<'tcx> /*body: &mut Body<'tcx>*/) {
-
-    let mut res = preorder(body);
-    // for p in res.iter() {
-    //     println!("preorder res {:?}", p.Item);
-
-    // }
-    let mut v = vec!();
-    while let Some(visited) = res.next() {
-        v.push(visited.0);
-    }
-    println!("{:?}", v);
 }

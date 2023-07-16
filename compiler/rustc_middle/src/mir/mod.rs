@@ -250,6 +250,11 @@ impl<'tcx> MirSource<'tcx> {
 
 pub const REPEAT_LIMIT: usize = 3;
 
+#[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable, PartialEq, Eq)]
+pub enum NodeType {
+    Header, Latch, Normal,
+}
+
 #[derive(Debug)]
 pub struct PathInfo {
     pub counts: FxHashMap<Vec<i32>, usize>,
@@ -260,10 +265,10 @@ pub struct PathInfo {
 #[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
 pub struct SccInfo {
     pub id: usize,
-    pub node_type: usize,   // H: 1, L: 2, X: 3
+    pub node_type: NodeType,   // H: 1, L: 2, X: 3
 }
 impl SccInfo {
-    pub fn new(id: usize, node_type: usize) -> Self {
+    pub fn new(id: usize, node_type: NodeType) -> Self {
         Self {
             id: id,
             node_type: node_type,
