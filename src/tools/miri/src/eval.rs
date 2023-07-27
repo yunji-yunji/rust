@@ -160,6 +160,10 @@ pub struct MiriConfig {
     pub page_size: Option<u64>,
     /// Whether to collect a backtrace when each allocation is created, just in case it leaks.
     pub collect_leak_backtraces: bool,
+    /// yj: fuzz input directory
+    pub input_dir: String,
+    /// yj: fuzz output directory
+    pub output_dir: String,
 }
 
 impl Default for MiriConfig {
@@ -196,6 +200,8 @@ impl Default for MiriConfig {
             num_cpus: 1,
             page_size: None,
             collect_leak_backtraces: true,
+            input_dir: String::new(),
+            output_dir: String::new(),
         }
     }
 }
@@ -419,7 +425,8 @@ pub fn create_ecx<'mir, 'tcx: 'mir>(
     Ok(ecx)
 }
 
-
+use rustc_middle::ty::InstanceDef;
+// use std::collections::VecDeque;
 /// Evaluates the entry function specified by `entry_id`.
 /// Returns `Some(return_code)` if program executed completed.
 /// Returns `None` if an evaluation error occurred.
@@ -441,34 +448,26 @@ pub fn eval_entry<'tcx>(
             panic!("Miri initialization error: {kind:?}")
         }
     };
-    println!("In eval entry ");
+    println!("CHECK miri config {:?}", config.args);
+    println!("In eval entry [{:?}] [{:?}]", config.input_dir, config.output_dir);
+    // let mut q: VecDeque<fuzz::Inp> = VecDeque::new();
+    // fuzz::get_seeds(config.input_dir, &mut q);
+    // println!("q={:?}", q);
+
+
+    // let (mut return_code, mut leak_check) = (0, true);
+
+    // let mut res = Default::default();
+    // while let Some(test_case) = q.pop_front() {
+    //     println!("test case : {:?}", test_case);
+
     // let def_id = body.source.def_id();
     // use crate::eval::rustc_middle::query::descs::mir_const;
     // use rustc_mir_transform::lib::mir_const;
     let ids = dump_mir_def_ids(tcx, None);
 
-    let _ids2 :Vec<DefId>= tcx.mir_keys(()).iter().map(|def_id| def_id.to_def_id()).collect();
-    let _ids = tcx.mir_keys(());
     for def_id in ids {
-        // let mut mir = tcx.mir_built(def_id)();
-        // let mir = tcx.mir_const(*def_id);
-
-        // if tcx.is_const_fn_raw(def_id) {
-        //     println!("here1");
-        // } else {
-        use rustc_middle::ty::InstanceDef;
         let mir = tcx.instance_mir(InstanceDef::Item(def_id));
-        // if def_id.is_local() {
-        //     let id = def_id.local_def_id();
-        // }
-        // let d = tcx.def_id();
-        // let mut mir = tcx.mir_yunji(*def_id);
-        // let mut _mir = tcx.mir_built(def_id).get_mut();
-        // let mut mir = tcx.mir_built(def_id).value.get_mut().as_mut().expect("please get get");
-        // println!("def_id {:?}", def_id);
-
-        // mark_scc_info(tcx,&mut index_map, &mut scc_info_stk,  &mir);
-
         // TODO: remove this function
         if &tcx.def_path_str(def_id) == "fuzz_target" {
             // println!("yunji variable {:?}", mir.scc_info);
@@ -477,16 +476,9 @@ pub fn eval_entry<'tcx>(
             }
         }
     }
-    // if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
-    //     if let Err(error) = rustc_mir_transform::add_bb::run_pass(tcx) {
-    //         tcx.sess.emit_err(errors::CantEmitMIR { error });
-    //         tcx.sess.abort_if_errors();
-    //     }
-    // }
-
 
     // yunji: run step function =====================
-    let mut path : Vec<usize> = vec![];
+    let mut path: Vec<usize> = vec![];
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads(&mut path)));

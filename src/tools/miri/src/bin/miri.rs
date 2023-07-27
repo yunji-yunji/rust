@@ -568,6 +568,27 @@ fn main() {
             };
 
             miri_config.page_size = Some(page_size);
+        } else if let Some(param) = arg.strip_prefix("-Zmiri-fuzz-input-dir=") { // yunji
+            let input_dir = match param.parse::<std::string::String>() {
+                Ok(dir) =>{
+                    println!("arguments {:?}", dir);
+                    dir
+                },
+                Err(err) => show_error!("-Zmiri-fuzz-input-dir requires a `std::string::String`: {}", err),
+            };
+
+            // miri_config.args.push(input_dir);
+            miri_config.input_dir = input_dir;
+        } else if let Some(param) = arg.strip_prefix("-Zmiri-fuzz-output-dir=") { // yunji
+            let output_dir = match param.parse::<std::string::String>() {
+                Ok(dir) =>{
+                    println!("arguments {:?}", dir);
+                    dir
+                },
+                Err(err) => show_error!("-Zmiri-fuzz-output-dir requires a `std::string::String`: {}", err),
+            };
+
+            miri_config.output_dir = output_dir;
         } else {
             // Forward to rustc.
             rustc_args.push(arg);
@@ -584,10 +605,15 @@ fn main() {
 
     debug!("rustc arguments: {:?}", rustc_args);
     debug!("crate arguments: {:?}", miri_config.args);
+
+    println!("yj: rustc arguments: {:?}", rustc_args.clone());
+    println!("yj: crate arguments: {:?}", miri_config.args.clone());
     run_compiler(
         rustc_args,
         /* target_crate: */ true,
         &mut MiriCompilerCalls { miri_config },
         using_internal_features,
     )
+
+    // run_compiler(rustc_args, /* target_crate: */ true, &mut MiriCompilerCalls { miri_config })
 }

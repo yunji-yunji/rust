@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 // use petgraph::Graph;
 // use petgraph::dot::{Dot, Config};
 // use petgraph::algo::kosaraju_scc;
@@ -8,15 +9,58 @@
 // use rustc_middle::ty::TyCtxt;
 // use rustc_middle::mir::*;
 //
-// use std::fs::File;
-// use std::io::{BufReader, BufRead};
+use std::fs;
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+// use std::io::{self, Write, BufReader, BufRead, Error};
+
 // use std::collections::HashMap;
-//
-// // pub fn default_g () -> Graph<usize, String> {
-// //     let my_g = Graph::<usize, String>::new();
-// //     my_g
-// // }
-//
+
+#[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
+pub struct Inp {
+    x: i32,
+    y: i32,
+    n: i32,
+}
+
+fn _mutate_seed(seed: Inp, flag: bool) -> Inp {
+
+    if flag { // previous one is interesting
+        Inp {x: seed.x + 1, y: seed.y, n: seed.n + 1}
+    } else {
+        // Inp {x: seed.x - 1, y: seed.y + 1, n: seed.n + 1}
+        Inp {x: seed.x, y: seed.y + 1, n: seed.n + 1}
+    }
+}
+
+pub fn _get_seeds(input_dir : String,q:&mut VecDeque<Inp>/* s_l : &mut Vec<Inp>*/) {
+    // let corpus_dir : &str = ;
+    println!("input dir={:?}", input_dir);
+    let path = fs::read_dir(input_dir).unwrap();
+    for file in path {
+        let mut arr : Vec<i32> = vec!();
+        // println!("yunji Debug = {:?}", file);
+
+        let input = File::open(file.unwrap().path()).expect("yunji : Unable to open file");
+        let buffered = BufReader::new(input);
+        for line in buffered.lines() {
+            if let Ok(num) = line {
+                // println!("yunji Debug = {:?}", num);
+                let tmp: i32 = num.parse().unwrap();
+                arr.push(tmp);
+            }
+        }
+
+        let seed = Inp {
+            x: arr[0],
+            y: arr[1],
+            n: arr[2],
+        };
+        q.push_back(seed);
+        println!("seed={:?}", seed);
+        // s_l.push(seed);
+    }
+}
 
 //
 // pub fn my_app <'tcx>(_tcx: TyCtxt<'tcx>, _body: &Body<'_>)
