@@ -15,7 +15,6 @@ impl<'tcx> MirPass<'tcx> for RemoveStorageMarkers {
         if tcx.sess.emit_lifetime_markers() {
             return;
         }
-        println!("TEST pass yj");
         trace!("Running RemoveStorageMarkers on {:?}", body.source);
         for data in body.basic_blocks.as_mut_preserves_cfg() {
             data.statements.retain(|statement| match statement.kind {

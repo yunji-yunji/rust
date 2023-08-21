@@ -3,11 +3,13 @@
 use std::ffi::{OsStr, OsString};
 use std::iter;
 use std::panic::{self, AssertUnwindSafe};
-use std::path::PathBuf;
+// use std::path::PathBuf;
 use std::task::Poll;
 use std::thread;
 
 // yunji
+use std::fs;
+use std::path::{Path, PathBuf};
 // use rustc_data_structures::steal::Steal;
 use rustc_middle::mir::pretty::dump_mir_def_ids;
 // use crate::fuzz::*;
@@ -479,6 +481,11 @@ pub fn eval_entry<'tcx>(
 
     // yunji: run step function =====================
     let mut path: Vec<usize> = vec![];
+
+    if Path::new("/home/y23kim/rust/test_progs/corpus/sub_dir/new_path").exists() {
+        fs::remove_file("/home/y23kim/rust/test_progs/corpus/sub_dir/new_path").expect("File delete failed yunji");
+    }
+
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads(&mut path)));
@@ -492,7 +499,7 @@ pub fn eval_entry<'tcx>(
         Ok(never) => match never {},
     };
 
-    // yunji: result of run_trheads() =====================
+    // yunji: result of run_threads() =====================
     println!("Final path = {:?}", path);
 
 

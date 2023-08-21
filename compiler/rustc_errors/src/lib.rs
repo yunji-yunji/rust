@@ -1626,13 +1626,14 @@ impl HandlerInner {
 
     // FIXME(eddyb) note the comment inside `impl Drop for HandlerInner`, that's
     // where the explanation of what "good path" is (also, it should be renamed).
-    fn delay_good_path_bug(&mut self, msg: impl Into<DiagnosticMessage>) {
-        let mut diagnostic = Diagnostic::new(Level::DelayedBug, msg);
-        if self.flags.report_delayed_bugs {
-            self.emit_diagnostic(&mut diagnostic);
-        }
-        let backtrace = std::backtrace::Backtrace::capture();
-        self.delayed_good_path_bugs.push(DelayedDiagnostic::with_backtrace(diagnostic, backtrace));
+    fn delay_good_path_bug(&mut self, _msg: impl Into<DiagnosticMessage>) {
+        // let mut diagnostic = Diagnostic::new(Level::DelayedBug, msg);
+        // if self.flags.report_delayed_bugs {
+        //     self.emit_diagnostic(&mut diagnostic);
+        // }
+        // let backtrace = std::backtrace::Backtrace::capture();
+        // self.delayed_good_path_bugs.push(DelayedDiagnostic::with_backtrace(diagnostic, backtrace));
+        //
     }
 
     fn failure(&mut self, msg: impl Into<DiagnosticMessage>) {

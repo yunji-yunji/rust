@@ -83,6 +83,8 @@ mod tag_gc;
 
 // yunji
 mod fuzz;
+pub mod mutator;
+
 // Establish a "crate-wide prelude": we often import `crate::*`.
 
 // Make all those symbols available in the same place as our own.

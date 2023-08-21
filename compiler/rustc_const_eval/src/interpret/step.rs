@@ -11,7 +11,9 @@ use rustc_middle::ty::layout::LayoutOf;
 
 use super::{ImmTy, InterpCx, Machine, Projectable};
 use crate::util;
-
+// yunji
+use std::io::Write;
+use std::fs;
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Returns `true` as long as there are more things to do.
     ///
@@ -335,10 +337,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 if self.tcx.def_path_str(def_id) == "fuzz_target" {
 
                     let t : usize = loc.block.index();
-
-                    println!("[DEBUG] s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
+                    // println!("[DEBUG] s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
                     generate_path(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
-                    println!("[DEBUG] s= {:?} t= {:?} scc_info = {:?}", *s,  t, self.body().scc_info.clone()[t]);
+                    // println!("[DEBUG] s= {:?} t= {:?} scc_info = {:?}", *s,  t, self.body().scc_info.clone()[t]);
                     *s = t;
                 }
                 info!("// executing {:?}", loc.block);
@@ -392,16 +393,22 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                         // fin.push(pp);
                         path.push(pp as usize);
 
-                        println!("push to final path {:?}", pp);
+                        // println!("push to final path (loop) {:?}", pp);
+                        let bb_number = format!("{:?} ", pp);
+                        let mut file = fs::OpenOptions::new().append(true).create(true)
+                            .open("/home/y23kim/rust/test_progs/corpus/sub_dir/new_path").expect("Fail to write yunji");
+                        file.write_all(bb_number.as_bytes()).expect("yunji: Fail to write.");
+
                     }
                 }
                 // fin.push(sccid.try_into().unwrap()); // for debugging
             }
         }
-        println!("[1] Exit edge");
-        for e in stk.iter() {
-            println!("  * {:?}", e);
-        }
+        // yunji comment
+        // println!("[1] Exit edge");
+        // for e in stk.iter() {
+        //     println!("  * {:?}", e);
+        // }
         s_idx += 1;
         *is_loop = false;
     }
@@ -437,7 +444,7 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                     prefix_to_key.push(k.try_into().unwrap());
                     i += 1;
                 }
-                println!("content {:?}", content);
+                // println!("content {:?}", content);
                 let mut flag = true;
                 if let Some(val) = last.counts.get_mut(&prefix_to_key) {
                     *val += 1;
@@ -451,19 +458,20 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                 last.prefix = vec!();
             }
 
-            println!("[2] back edge" );
-            for e in stk.iter() {
-                println!("  * {:?}", e);
-            }
+            // println!("[2] back edge" );
+            // for e in stk.iter() {
+            //     println!("  * {:?}", e);
+            // }
+
             if s==t {
                 t_idx = scc_info_stk[t].len();
-                println!("[2-1] self loop back edge" );
+                // println!("[2-1] self loop back edge" );
                 break;
             }
 
         }
         else {
-            println!("[3] normal edge" );
+            // println!("[3] normal edge" );
             // for e in stk.iter() {
             //     println!("  * {:?}", e);
             // }
@@ -497,20 +505,25 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
         stk.push(el);
         t_idx += 1;
 
-        println!("[4] Entering edge (Push)" );
-        for e in stk.iter() {
-            println!("  * {:?}", e);
-        }
+        // println!("[4] Entering edge (Push)" );
+        // for e in stk.iter() {
+        //     println!("  * {:?}", e);
+        // }
     }
 
     if *is_loop == false {
-        println!("push to final path {:?}", t);
+        // println!("push to final path (no loop) {:?}", t);
         path.push(t);
+        let bb_number = format!("{:?} ", t);
+        let mut file = fs::OpenOptions::new().append(true).create(true)
+            .open("/home/y23kim/rust/test_progs/corpus/sub_dir/new_path").expect("Fail to write yunji");
+        file.write_all(bb_number.as_bytes()).expect("yunji: Fail to write.");
+
         // fin.push(t.try_into().unwrap());
-        println!("[5] Not loop" );
-        for e in stk.iter() {
-            println!("  * {:?}", e);
-        }
+        // println!("[5] Not loop" );
+        // for e in stk.iter() {
+        //     println!("  * {:?}", e);
+        // }
     }
     // println!("at last stk={:?}", stk);
 }

@@ -7,7 +7,7 @@ use rustc_middle::ty::TyCtxt;
 // use std::collections::HashMap;
 use rustc_data_structures::fx::FxHashMap;
 use petgraph::Graph;
-use petgraph::dot::{Dot, Config};
+// use petgraph::dot::{Dot, Config};
 use petgraph::algo::kosaraju_scc;
 use petgraph::algo::toposort;
 use petgraph::prelude::NodeIndex;
@@ -42,7 +42,7 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
             let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
 
             let g = mir_to_petgraph(tcx, body, &mut index_map, &mut scc_info_stk);
-            print_bbs(body.clone().basic_blocks, "Initial MIR");
+            // print_bbs(body.clone().basic_blocks, "Initial MIR");
 
             let mut scc_id: i32 = 1;
             let mut copy_graph = g.clone();
@@ -58,13 +58,13 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
                                             scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map);
                     }
                 }
-                println!("after break down graph = \n{:?}", Dot::with_config(&copy_graph, &[Config::EdgeIndexLabel]));
+                // println!("after break down graph = \n{:?}", Dot::with_config(&copy_graph, &[Config::EdgeIndexLabel]));
 
                 if stop {
-                    println!("\nBREAK!\n final SCC ={:?}\n\nSCC INFO STACK", scc_list.clone());
-                    for (n_idx, &ref stack) in scc_info_stk.iter() {
-                        println!("node: {:?} == {:?}", n_idx, stack);
-                    }
+                    // println!("\nBREAK!\n final SCC ={:?}\n\nSCC INFO STACK", scc_list.clone());
+                    // for (n_idx, &ref stack) in scc_info_stk.iter() {
+                    //     println!("node: {:?} == {:?}", n_idx, stack);
+                    // }
                     break;
                 }
             }
@@ -84,7 +84,7 @@ fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>, arr: &mut Ve
         scc_info_stk.insert(node, vec!());
         // node.index() should be index of IndexVector
         let index = body.scc_info.push(vec![]);
-        println!("mir to petgraph {:?} == {:?}, {:?}", node.index(), index, body.scc_info);
+        // println!("mir to petgraph {:?} == {:?}, {:?}", node.index(), index, body.scc_info);
         assert_eq!(node.index(), index);
 
         arr.push(node);
@@ -126,7 +126,7 @@ fn is_cycle(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
     // println!("Test if {:?} has cycle" , scc);
     match toposort(&new, None){
         Ok(_order) => {
-            println!("no cycle");
+            // println!("no cycle");
             return false;
         },
         Err(err) => {
@@ -178,9 +178,9 @@ pub fn printpg(g: Graph<usize, String>, title: &str) {
     for edge in g.clone().raw_edges() {
         println!("{:?}", edge);
     }
-    for node in g.clone().raw_nodes() {
-        println!("{:?}", node);
-    }
+    // for node in g.clone().raw_nodes() {
+    //     println!("{:?}", node);
+    // }
 }
 
 
@@ -338,7 +338,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
     for edge in g.clone().raw_edges() {
 
         let mut test_g = g.clone();
-        println!("header, source, target {:?} {:?} {:?}", header.index(), edge.source().index(), edge.target().index());
+        // println!("header, source, target {:?} {:?} {:?}", header.index(), edge.source().index(), edge.target().index());
         if scc.contains(&edge.source()) && scc.contains(&edge.target())
             && edge.target() == header {
             let Some(edge_idx) = test_g.find_edge(edge.source(), edge.target()) else {
@@ -347,7 +347,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
 
             // assume
             test_g.remove_edge(edge_idx);
-            println!("remove edge {:?} -> {:?}", edge.source(), edge.target());
+            // println!("remove edge {:?} -> {:?}", edge.source(), edge.target());
 
             let mut dfs_res = vec!();
             let mut dfs = Dfs::new(&test_g, edge.source());
@@ -355,7 +355,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
             while let Some(visited) = dfs.next(&test_g) {
                 dfs_res.push(visited.index());
             }
-            println!("dfs_res {:?}", dfs_res);
+            // println!("dfs_res {:?}", dfs_res);
 
             if dfs_res.contains(&edge.target().index()) {
                 // self loop is included here
