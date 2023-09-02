@@ -397,6 +397,7 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                         let bb_number = format!("{:?} ", pp);
                         let mut file = fs::OpenOptions::new().append(true).create(true)
                             .open("/home/y23kim/rust/test_progs/corpus/sub_dir/new_path").expect("Fail to write yunji");
+                        // .open("/home/y23kim/rust/test_progs/path_dir").expect("Fail to write yunji");
                         file.write_all(bb_number.as_bytes()).expect("yunji: Fail to write.");
 
                     }
@@ -517,6 +518,8 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
         let bb_number = format!("{:?} ", t);
         let mut file = fs::OpenOptions::new().append(true).create(true)
             .open("/home/y23kim/rust/test_progs/corpus/sub_dir/new_path").expect("Fail to write yunji");
+        // .open("/home/y23kim/rust/test_progs/path_dir").expect("Fail to write yunji");
+
         file.write_all(bb_number.as_bytes()).expect("yunji: Fail to write.");
 
         // fin.push(t.try_into().unwrap());
