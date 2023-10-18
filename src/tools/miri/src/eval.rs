@@ -470,8 +470,23 @@ pub fn eval_entry<'tcx>(
 
     for def_id in ids {
         let mir = tcx.instance_mir(InstanceDef::Item(def_id));
+
+        // println!("EVAL.RS [{:?}]", &tcx.def_path_str(def_id));
+        // let target_name = std::env::var("TARGET_NAME").unwrap();
+        let target_name:String;
+        if let Ok(val) = std::env::var("TARGET_NAME") {
+            target_name = val;
+        } else {
+            target_name = "fuzz_target".parse().unwrap();
+        }
+        println!("EVal def id {:?}, target name {:?}", tcx.def_path_str(def_id), target_name);
+        if tcx.def_path_str(def_id).contains(&target_name) {
+            println!("Eval.RS [{:?}]", &tcx.def_path_str(def_id));
+        }
         // TODO: remove this function
-        if &tcx.def_path_str(def_id) == "fuzz_target" {
+        // if &tcx.def_path_str(def_id) == "fuzz_target" {
+        if tcx.def_path_str(def_id).contains(&target_name) {
+        // if tcx.def_path_str(def_id) == target_name {
             // println!("yunji variable {:?}", mir.scc_info);
             for (index, value) in mir.scc_info.clone().into_iter_enumerated() {
                 println!("yunji res: {:?} : {:?}", index, value);

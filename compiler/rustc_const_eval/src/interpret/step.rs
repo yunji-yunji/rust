@@ -334,7 +334,21 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
                 let def_id = self.body().source.def_id();
-                if self.tcx.def_path_str(def_id) == "fuzz_target" {
+                // let target_name = std::env::var("TARGET_NAME").unwrap();
+                let target_name:String;
+                if let Ok(val) = std::env::var("TARGET_NAME") {
+                    target_name = val;
+                } else {
+                    target_name = "fuzz_target".parse().unwrap();
+                }
+                if self.tcx.def_path_str(def_id).contains(&target_name) {
+                    println!("step) Target name {:?} def name {:?}", target_name, self.tcx.def_path_str(def_id));
+                    println!("STEP.RS [{:?}]", self.tcx.def_path_str(def_id));
+                }
+
+                // if self.tcx.def_path_str(def_id) == "fuzz_target" {
+                if self.tcx.def_path_str(def_id).contains(&target_name) {
+                // if self.tcx.def_path_str(def_id) == target_name {
 
                     let t : usize = loc.block.index();
                     // println!("[DEBUG] s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);

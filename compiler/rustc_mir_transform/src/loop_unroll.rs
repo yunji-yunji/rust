@@ -20,6 +20,8 @@ use rustc_index::vec::IndexVec;
 use rustc_middle::mir::{BasicBlock, Body, TerminatorKind, BasicBlockData, };
 
 // use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
+// use std::{env};
+use std::string::String;
 
 pub struct LoopUnroll();
 impl<'tcx> MirPass<'tcx> for LoopUnroll {
@@ -31,9 +33,35 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
     }
     // #[instrument(skip(self, tcx, body))]
     fn run_pass(&self, tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
+
+        let target_name:String;
+        if let Ok(val) = std::env::var("TARGET_NAME") {
+            target_name = val;
+        } else {
+            target_name = "fuzz_target".parse().unwrap();
+        }
+        //
+        // let mut target_name = String()ToString("");
+        // if let Ok(extra_flags) = env::var("TARGET_NAME") {
+        //     target_name = extra_flags;
+        //     // for flag in extra_flags.split_whitespace() {
+        //     //     // program.args.push(flag.into());
+        //     //     target_name = flag.into();
+        //     // }
+        // }
+
         let def_id = body.source.def_id();
-        if &tcx.def_path_str(def_id) == "fuzz_target" {
-            println!("RUn roop_unroll.rs file, run fuzz_target function");
+        // println!("what is def_id [{:?}]", &tcx.def_path_str(def_id));
+        // if &tcx.def_path_str(def_id) == "fuzz_target" {
+        if tcx.def_path_str(def_id).contains(&target_name) {
+            println!("loop_unroll.RS [{:?}]", tcx.def_path_str(def_id));
+        }
+        let tmp = tcx.def_path_str(def_id);
+        println!("loop unroll) Target name {:?}/{:?} def name {:?}", &target_name, target_name, tmp);
+
+        if tcx.def_path_str(def_id).contains(&target_name) {
+        // if tcx.def_path_str(def_id) == target_name {
+            println!("run_pass function in MIRI roop_unroll.rs file, run {:?} function", target_name);
 
             // let bbs=body.basic_blocks_mut();
             // insert_dummy_block(body);
@@ -162,7 +190,7 @@ pub fn print_bbs<'tcx>(bbs: BasicBlocks<'tcx>, title: &str) {
     }
 }
 
-/// TODO: [fix] not necessarily mutable
+// TODO: not necessarily mutabless
 pub fn print_bbs_mut<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>, title: &str) {
     println!("\n\n=====  {} ({:?})  =====", title, bbs.len());
     for i in 0..bbs.len() {
@@ -385,8 +413,8 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
     // let new_latch_idx = bbs.len() - 1;
     let new_latch_idx = body.basic_blocks.len() - 1;
 
-    /// change_bb MUST BE SwtichInt kind
-    /// TODO: remove temporarily
+    // change_bb MUST BE SwtichInt kind
+    // TODO: remove temporarily
     // change_targets_switchint(bbs,BasicBlock::from_usize(7),
     //                          BasicBlock::from_usize(6),BasicBlock::from_usize(9), false);
 
