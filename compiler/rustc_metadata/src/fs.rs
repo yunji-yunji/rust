@@ -40,6 +40,7 @@ pub fn emit_wrapper_file(
 
 pub fn encode_and_write_metadata(tcx: TyCtxt<'_>) -> (EncodedMetadata, bool) {
     let out_filename = filename_for_metadata(tcx.sess, tcx.output_filenames(()));
+
     // To avoid races with another rustc process scanning the output directory,
     // we need to write the file somewhere else and atomically move it to its
     // final destination, with an `fs::rename` call. In order for the rename to

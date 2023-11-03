@@ -46,6 +46,10 @@ use std::io::{Read, Seek, Write};
 use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 
+// yj
+use rustc_middle::mir::SccInfo;
+use std::fs::File;
+
 pub(super) struct EncodeContext<'a, 'tcx> {
     opaque: opaque::FileEncoder,
     tcx: TyCtxt<'tcx>,
@@ -1605,6 +1609,7 @@ impl<'a, 'tcx> EncodeContext<'a, 'tcx> {
         }
     }
 
+    // yj
     fn encode_mir(&mut self) {
         if self.is_proc_macro {
             return;
@@ -1618,6 +1623,69 @@ impl<'a, 'tcx> EncodeContext<'a, 'tcx> {
             if encode_const || encode_opt { Some((def_id, encode_const, encode_opt)) } else { None }
         });
         for (def_id, encode_const, encode_opt) in keys_and_jobs {
+
+            let name = tcx.def_path_str(def_id.to_def_id());
+
+            println!("[encoder] {:?}, index={:?}", name, def_id.local_def_index);
+            // let (body, _) = tcx.mir_promoted(def_id);
+            // let mut body = body.steal();
+
+            // let abc = tcx.optimized_mir(def_id);
+            // let body = tcx.mir_drops_elaborated_and_const_checked(def_id).steal();
+            // let mut body = remap_mir_for_const_eval_select(tcx, body, hir::Constness::NotConst);
+            // debug!("body: {:#?}", body);
+            // let bbs = body.basic_blocks_mut();
+            // println!("bbs {:?}", bbs);
+
+            let tmp = tcx.def_path_str(def_id);
+            let name1 = format!("/home/y23kim/rust/scc_info/{:?}.json", tmp);
+            let name:String = name1.chars().take(30).collect();
+            // let name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
+            println!("[encoder] Create file = {:?}, defID {:?}", name.clone(), tmp);
+            let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+            /*
+            let mut index_map: Vec<NodeIndex> = vec!();
+            let g = mir_to_petgraph(tcx,
+                                    body,
+                                    &mut index_map,
+                                    &mut scc_info_stk);
+
+            let mut scc_id: i32 = 1;
+            let mut copy_graph = g.clone();
+            loop {
+                let mut stop = true;
+                let mut scc_list = kosaraju_scc(&copy_graph);
+                println!("SCC = {:?}", scc_list.clone());
+                for scc in &mut scc_list {
+                    let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
+                    if is_cycle == true {
+                        stop = false;
+                        break_down_and_mark(tcx,
+                                            scc,
+                                            &mut scc_id,
+                                            &mut copy_graph,
+                                            &mut scc_info_stk,
+                                            &mut index_map);
+                    }
+                }
+
+                if stop {
+                    println!("\nBREAK!\n final SCC ={:?}\n\nSCC INFO STACK", scc_list.clone());
+                    // for (n_idx, &ref stack) in scc_info_stk.iter() {
+                    //     println!("node: {:?} == {:?}", n_idx, stack);
+                    // }
+                    break;
+                }
+            } // loop end
+            */
+            let json = serde_json::to_string_pretty(&scc_info_stk).expect("write json yj");
+            let mut file = File::create(name.clone()).expect("yjyj cannot open file");
+            // // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}.json", tmp)).expect("yjyj cannot open file");
+            // // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index))
+            // //     .expect("yjyj cannot open file");
+            file.write_all(json.as_bytes()).expect("cannot write file");
+            println!("[encoder] after create file");
+
             debug_assert!(encode_const || encode_opt);
 
             debug!("EntryBuilder::encode_mir({:?})", def_id);
