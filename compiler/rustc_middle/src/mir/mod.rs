@@ -250,6 +250,7 @@ impl<'tcx> MirSource<'tcx> {
 
 pub const REPEAT_LIMIT: usize = 3;
 
+#[derive(Serialize, Deserialize)]
 #[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable, PartialEq, Eq)]
 pub enum NodeType {
     Header, Latch, Normal,
@@ -261,7 +262,8 @@ pub struct PathInfo {
     pub temp_path: Vec<Vec<i32>>,
     pub prefix: Vec<i32>,
 }
-
+use serde::{Serialize, Deserialize};
+#[derive(Serialize, Deserialize)]
 #[derive(Clone, TyEncodable, TyDecodable, Debug, HashStable, TypeFoldable, TypeVisitable)]
 pub struct SccInfo {
     pub id: usize,

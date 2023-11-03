@@ -38,6 +38,9 @@ smallvec = { version = "1.8.1", features = ["union", "may_dangle"] }
 thin-vec = "0.2.12"
 tracing = "0.1"
 # tidy-alphabetical-end
+# yunji
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 
 [features]
 # tidy-alphabetical-start
