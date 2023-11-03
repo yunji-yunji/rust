@@ -25,3 +25,9 @@ rustc_trait_selection = { path = "../rustc_trait_selection" }
 rustc_type_ir = { path = "../rustc_type_ir" }
 tracing = "0.1"
 # tidy-alphabetical-end
+
+# yunji
+petgraph = "0.5.1"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+#rustc_mir_transform = { path = "../rustc_mir_transform" }

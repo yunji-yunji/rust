@@ -24,6 +24,8 @@ use crate::interpret::{
 };
 
 use rustc_middle::mir::{REPEAT_LIMIT, PathInfo};
+use rustc_middle::mir::{SccInfo};
+use rustc_index::{/*Idx,*/ IndexVec};
 
 // Returns a pointer to where the result lives
 fn eval_body_using_ecx<'mir, 'tcx>(
@@ -68,11 +70,21 @@ fn eval_body_using_ecx<'mir, 'tcx>(
     // yunji
     let mut tmp_path : Vec<usize> = vec![];
     let mut s: usize = 0;
-    let mut stk :Vec<PathInfo> = vec!()                                                                                                                                 ;
+    let mut stk :Vec<PathInfo> = vec!();
+    let mut scc_info: IndexVec<usize, Vec<SccInfo>> = IndexVec::new();
+
     let mut is_loop = false;
+    let def_id = ecx.body().source.def_id(); // make body function public()
+    let _def_str = ecx.tcx.def_path_str(def_id);
+    // println!("in eval_queries {:?}", def_str);
+
+    // if def_str.contains("verifier") {
+    //     println!("in eval_queries file {:?}", def_str);
+    //
+    // }
 
     // The main interpreter loop.
-    while ecx.step(&mut tmp_path, &mut s, &mut stk, &mut is_loop, REPEAT_LIMIT)? {}
+    while ecx.step(&mut tmp_path, &mut s, &mut stk, &mut is_loop, REPEAT_LIMIT, &mut scc_info)? {}
 
     // Intern the result
     let intern_kind = if cid.promoted.is_some() {

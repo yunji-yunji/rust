@@ -11,9 +11,23 @@ use rustc_middle::ty::layout::LayoutOf;
 
 use super::{ImmTy, InterpCx, Machine, Projectable};
 use crate::util;
+
+use crate::interpret::mir_transform::*;
+
 // yunji
 use std::io::Write;
 use std::fs;
+use std::fs::File;
+use std::path::Path;
+// ============
+use rustc_data_structures::fx::FxHashMap;
+use petgraph::algo::kosaraju_scc;
+use petgraph::prelude::NodeIndex;
+// use rustc_index::vec::IndexVec;
+
+use std::string::String;
+
+
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Returns `true` as long as there are more things to do.
     ///
@@ -23,7 +37,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
     #[inline(always)]
     pub fn step(&mut self,
-                path : &mut Vec<usize>, s: &mut usize, stk: &mut Vec<PathInfo>, is_loop: &mut bool, limit: usize)
+                path : &mut Vec<usize>, s: &mut usize, stk: &mut Vec<PathInfo>,
+                is_loop: &mut bool, limit: usize,
+                scc_info: &mut IndexVec<usize, Vec<SccInfo>>)
         -> InterpResult<'tcx, bool> {
         if self.stack().is_empty() {
             return Ok(false);
@@ -39,11 +55,26 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         let basic_block = &self.body().basic_blocks[loc.block];
 
         // yunji part
-        // let def_id = self.body().source.def_id();
-        // if self.tcx.def_path_str(def_id) == "fuzz_target" {
+        let def_id = self.body().source.def_id();
+        // let tmp = "move_bytecode_verifier::verify_module_with_config";
+        let target_name:String;
+        if let Ok(val) = std::env::var("TARGET_NAME") {
+            target_name = val;
+        } else {
+            target_name = "fuzz_target".parse().unwrap();
+        }
+        // println!("## outside {:?} {:?}", self.tcx.def_path_str(def_id), target name);
+        // if self.tcx.def_path_str(def_id).contains(&target_name) {
+        if self.tcx.def_path_str(def_id).contains(&target_name) {
+        // main, fuzz_target 처럼 인식되는걸 넘기면 여기서 걸린다. 근데
+            // 컴파일 안되는 함수를 넘기면 인터프리터 코드인 이곳에서도 인식이 안된다.
+            // 그래서 여기에다가 코드를 넣는거느 할수가 없다.
+            // terminator code에다가 넣어야되는건데 외부 변수를 하나 만들어서 그게 모드에 따라서 그 코드를 실행할지 말지를 해야할것같다.
+        // if self.tcx.def_path_str(def_id) == target_name {
         //     let bb_number = format!("{:?} ", loc.block);
-        //     // println!("fuzz_target in step: {:?}", bb_number);
-        // }
+            println!("## STEPrs: def id in interpreter {:?}", self.tcx.def_path_str(def_id));
+            // println!("fuzz_target in step: {:?}", bb_number);
+        }
 
         if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
             let old_frames = self.frame_idx();
@@ -61,7 +92,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         let terminator = basic_block.terminator();
 
-        self.terminator(terminator, path, s, stk, is_loop, limit)?;
+        self.terminator(terminator, path, s, stk, is_loop,
+                        limit, scc_info)?;
         Ok(true)
     }
 
@@ -324,10 +356,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     }
     // use rustc_middle::mir::{BasicBlock};
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
-    fn terminator(&mut self, terminator: &mir::Terminator<'tcx>,
+    fn terminator(&mut self,
+                  terminator: &mir::Terminator<'tcx>,
                   path : &mut Vec<usize>,
                   s: &mut usize,
-                  stk:&mut Vec<PathInfo>, is_loop: &mut bool, limit:usize) -> InterpResult<'tcx> {
+                  stk:&mut Vec<PathInfo>,
+                  is_loop: &mut bool,
+                  limit:usize,
+                  _scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
 
         self.eval_terminator(terminator)?;
@@ -335,31 +371,144 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             if let Either::Left(loc) = self.frame().loc {
                 let def_id = self.body().source.def_id();
                 // let target_name = std::env::var("TARGET_NAME").unwrap();
-                let target_name:String;
-                if let Ok(val) = std::env::var("TARGET_NAME") {
-                    target_name = val;
-                } else {
-                    target_name = "fuzz_target".parse().unwrap();
-                }
-                if self.tcx.def_path_str(def_id).contains(&target_name) {
-                    println!("step) Target name {:?} def name {:?}", target_name, self.tcx.def_path_str(def_id));
-                    println!("STEP.RS [{:?}]", self.tcx.def_path_str(def_id));
-                }
+                // let target_name:String;
+                // if let Ok(val) = std::env::var("TARGET_NAME") {
+                //     target_name = val;
+                // } else {
+                //     target_name = "fuzz_target".parse().unwrap();
+                // }
+                //
+                // if self.tcx.def_path_str(def_id).contains(&target_name) {
+                //     println!("$#$#(step) Target name {:?} def name {:?}", target_name, self.tcx.def_path_str(def_id));
+                //     self.transform(scc_info);
+                // }
+                let def_name = self.tcx.def_path_str(def_id);
+                // let file_name = format!("/home/y23kim/rust/scc_info/{:?}.json", def_name);
+                let file_name1 = format!("~/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
+                let file_name:String = file_name1.chars().take(30).collect();
+                // let contents = fs::read_to_string(file_name).expect("read seed file in file_format.rs");
+                // let data_vector: Vec<usize> = contents
+                //     .split_whitespace()
+                //     .map(|s| s.parse::<usize>().unwrap())
+                //     .collect();
+
+
+
+
+                // match File::open(file_name) {
+                //     Ok(_) =>
+                //     Err(e) =>
+                // }
+                if Path::new(&file_name).exists() {
+                    let file = File::open(file_name).expect("Failed to open file");
+                    let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = serde_json::from_reader(file).expect("Failed to deserialize");
+                    // let scc_info_stk: IndexVec<usize, Vec<SccInfo>> = serde_json::from_reader(file).expect("Failed to deserialize");
+                    println!("[STEP] scc_info {:?}", scc_info_stk);
+                    let mut scc_info2: IndexVec<usize, Vec<SccInfo>>
+                        = IndexVec::with_capacity(scc_info_stk.len());
+
+                    for key in 0..scc_info_stk.len() {
+                        if let Some(value) = scc_info_stk.get(&key) {
+                            scc_info2.push(value.clone());
+                        } else {
+                            panic!("Missing key in FxHashMap: {}", key);
+                        }
+                    }
+
 
                 // if self.tcx.def_path_str(def_id) == "fuzz_target" {
-                if self.tcx.def_path_str(def_id).contains(&target_name) {
+                // if self.tcx.def_path_str(def_id).contains(&target_name) {
                 // if self.tcx.def_path_str(def_id) == target_name {
+                //     println!("$#$#Target {:?} def  {:?}", target_name, self.tcx.def_path_str(def_id));
 
                     let t : usize = loc.block.index();
                     // println!("[DEBUG] s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
-                    generate_path(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
+                    // ---------------------- PATH
+                    generate_path(scc_info2, *s, t, stk, is_loop, limit, path);
+                    // generate_path(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
                     // println!("[DEBUG] s= {:?} t= {:?} scc_info = {:?}", *s,  t, self.body().scc_info.clone()[t]);
                     *s = t;
+                // }
+                } else {
+                    println!("[step] file not exist {:?}, def = {:?}", file_name, def_name);
                 }
+
                 info!("// executing {:?}", loc.block);
             }
         }
         Ok(())
+    }
+
+
+    pub fn transform(&mut self, scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) {
+        let body = self.body();
+        // let mut body = self.frame_mut().deref_mut().body;
+
+        let target_name:String;
+        if let Ok(val) = std::env::var("TARGET_NAME") {
+            target_name = val;
+        } else {
+            target_name = "fuzz_target".parse().unwrap();
+        }
+        //
+        // let mut target_name = String()ToString("");
+        // if let Ok(extra_flags) = env::var("TARGET_NAME") {
+        //     target_name = extra_flags;
+        //     // for flag in extra_flags.split_whitespace() {
+        //     //     // program.args.push(flag.into());
+        //     //     target_name = flag.`into();
+        //     // }
+        // }
+
+        let def_id = body.source.def_id();
+        // println!("what is def_id [{:?}]", &tcx.def_path_str(def_id));
+        // if &tcx.def_path_str(def_id) == "fuzz_target" {
+        if self.tcx.def_path_str(def_id).contains(&target_name) {
+            println!("Transform func in step.rs def id = [{:?}]", self.tcx.def_path_str(def_id));
+        // }
+        // let tmp = self.tcx.def_path_str(def_id);
+        // println!("loop unroll##) Target name {:?}/{:?} def name {:?}", &target_name, target_name, tmp);
+
+        // if self.tcx.def_path_str(def_id).contains(&target_name) {
+            // if self.tcx.def_path_str(def_id) == target_name {
+            println!("in trasfomr func in STEP.rs, target name =  [{:?}]", target_name);
+
+            // let bbs=body.basic_blocks_mut();
+            // insert_dummy_block(body);
+
+            let mut index_map: Vec<NodeIndex> = vec!();
+            let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
+
+            let g = mir_to_petgraph(self.tcx, body, &mut index_map, &mut scc_info_stk, scc_info);
+            // print_bbs(body.clone().basic_blocks, "Initial MIR");
+
+            let mut scc_id: i32 = 1;
+            let mut copy_graph = g.clone();
+            loop {
+                let mut stop = true;
+                let mut scc_list = kosaraju_scc(&copy_graph);
+                println!("SCC = {:?}", scc_list.clone());
+                for scc in &mut scc_list {
+                    let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
+                    if is_cycle == true {
+                        stop = false;
+                        break_down_and_mark(self.tcx, body,
+                                            scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map, scc_info);
+                    }
+                }
+                // println!("after break down graph = \n{:?}", Dot::with_config(&copy_graph, &[Config::EdgeIndexLabel]));
+
+                if stop {
+                    // println!("\nBREAK!\n final SCC ={:?}\n\nSCC INFO STACK", scc_list.clone());
+                    // for (n_idx, &ref stack) in scc_info_stk.iter() {
+                    //     println!("node: {:?} == {:?}", n_idx, stack);
+                    // }
+                    break;
+                }
+            }
+            println!("End of LOOP in step.rs");
+        }
+
     }
 
 }
@@ -374,7 +523,7 @@ fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                 path: &mut Vec<usize>,
 ) {
     let mut recorded = false;
-
+    println!("Run generate_path");
     // ============= Exiting edge ============= //
     let mut s_idx = 0;
     let mut t_idx = 0;
