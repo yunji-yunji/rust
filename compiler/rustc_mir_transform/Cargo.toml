@@ -33,6 +33,9 @@ tracing = "0.1"
 #rustc_fluent_macro = { path = "../rustc_fluent_macro" }
 #rustc_macros = { path = "../rustc_macros" }
 petgraph = "0.5.1"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
 
 [dev-dependencies]
 # tidy-alphabetical-start

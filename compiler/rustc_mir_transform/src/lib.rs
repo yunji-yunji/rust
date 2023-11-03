@@ -43,6 +43,13 @@ use rustc_middle::ty::{self, TyCtxt, TypeVisitableExt};
 use rustc_span::sym;
 use rustc_trait_selection::traits;
 
+// yunji
+use petgraph::prelude::NodeIndex;
+use rustc_data_structures::fx::FxHashMap;
+use rustc_middle::mir::SccInfo;
+use crate::loop_unroll::mir_to_petgraph;
+
+
 #[macro_use]
 mod pass_manager;
 
@@ -98,7 +105,7 @@ mod ref_prop;
 mod remove_noop_landing_pads;
 mod remove_storage_markers;
 // yunji
-mod loop_unroll;
+pub mod loop_unroll;
 mod remove_uninit_drops;
 mod remove_unneeded_drops;
 mod remove_zsts;
@@ -154,7 +161,7 @@ pub fn provide(providers: &mut Providers) {
     };
 }
 
-fn remap_mir_for_const_eval_select<'tcx>(
+pub fn remap_mir_for_const_eval_select<'tcx>(
     tcx: TyCtxt<'tcx>,
     mut body: Body<'tcx>,
     context: hir::Constness,
@@ -238,7 +245,10 @@ fn mir_keys(tcx: TyCtxt<'_>, (): ()) -> FxIndexSet<LocalDefId> {
 
     // All body-owners have MIR associated with them.
     set.extend(tcx.hir().body_owners());
-
+    // for def_id in tcx.hir().body_owners() {
+    //     let name = tcx.def_path_str(def_id.to_def_id());
+    //     println!("[DEFID] mirkeys {:?}, index={:?}", name, def_id.local_def_index );
+    // }
     // Additionally, tuple struct/variant constructors have MIR, but
     // they don't have a BodyId, so we need to build them separately.
     struct GatherCtors<'a> {
@@ -290,12 +300,34 @@ fn mir_const_qualif(tcx: TyCtxt<'_>, def: LocalDefId) -> ConstQualifs {
     // when deciding to promote a reference to a `const` for now.
     validator.qualifs_in_return_place()
 }
-
+/*
+fn mir_yunji(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
+// fn mir_yunji(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
 // pub fn mir_yunji(tcx: TyCtxt<'_>, def: LocalDefId) -> &mut Body<'_> {
 //     let mut body = tcx.mir_built(def).get_mut();
 //     body
-// }
 
+    // let (body, _) = tcx.mir_promoted(def);
+    // let mut body = body.steal();
+    // let bbs = body.basic_blocks_mut();
+    // println!("[in pass1] bbs ={:?}", bbs);
+
+    let body = tcx.mir_drops_elaborated_and_const_checked(def).steal();
+    let mut body = remap_mir_for_const_eval_select(tcx, body, hir::Constness::NotConst);
+    debug!("body: {:#?}", body);
+    // run_optimization_passes(tcx, &mut body);
+
+    let mut index_map: Vec<NodeIndex> = vec!();
+    let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+    let g = mir_to_petgraph(tcx, &mut body, &mut index_map, &mut scc_info_stk);
+    println!("[in passes else] after mir to pet graph {:?}", g);
+    // tcx.alloc_steal_mir(body);
+
+    body
+
+
+}
+ */
 
 /// Make MIR ready for const evaluation. This is run on all MIR, not just on consts!
 /// FIXME(oli-obk): it's unclear whether we still need this phase (and its corresponding query).
@@ -336,6 +368,21 @@ fn mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
 
     tcx.alloc_steal_mir(body)
     // body
+}
+
+pub fn yunji_steal(tcx: TyCtxt<'_>,
+                   def: LocalDefId,
+) {
+    let (body, _) = tcx.mir_promoted(def);
+    let mut body = body.steal();
+    // let bbs = body.basic_blocks_mut();
+    // println!("[in pass1] bbs ={:?}", bbs);
+    let mut index_map: Vec<NodeIndex> = vec!();
+    // let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
+    let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+    let g = mir_to_petgraph(tcx, &mut body, &mut index_map, &mut scc_info_stk);
+    println!("[in passes else] after mir to pet graph {:?}", g);
+
 }
 
 /// Compute the main MIR body and the list of MIR bodies of the promoteds.
@@ -410,6 +457,14 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
         None => bug!("`mir_for_ctfe` called on non-const {def:?}"),
     };
 
+    // let context = tcx
+    //     .hir()
+    //     .body_const_context(def)
+    //     .expect("mir_for_ctfe should not be used for runtime functions");
+    //
+    // let body = tcx.mir_drops_elaborated_and_const_checked(def).borrow().clone();
+    println!("[yjyj] mir_drops def_id = {:?}", tcx.def_path_str(def));
+
     let mut body = remap_mir_for_const_eval_select(tcx, body, hir::Constness::Const);
     pm::run_passes(tcx, &mut body, &[&ctfe_limit::CtfeLimit], None);
 
@@ -420,9 +475,18 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
 /// mir borrowck *before* doing so in order to ensure that borrowck can be run and doesn't
 /// end up missing the source MIR due to stealing happening.
 fn mir_drops_elaborated_and_const_checked(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
+//     fn mir_drops_elaborated_and_const_checked<'tcx>(tcx: TyCtxt<'_>,
+//                                               def: LocalDefId,
+//                                               body: &mut Body<'tcx>,) -> &'tcx Steal<Body<'tcx>> {
+
     if let DefKind::Coroutine = tcx.def_kind(def) {
         tcx.ensure_with_value().mir_coroutine_witnesses(def);
     }
+    // if tcx.sess.opts.unstable_opts.drop_tracking_mir
+    //     && let DefKind::Generator = tcx.def_kind(def)
+    // {
+    //     tcx.ensure_with_value().mir_generator_witnesses(def);
+    // }
     let mir_borrowck = tcx.mir_borrowck(def);
 
     let is_fn_like = tcx.def_kind(def).is_fn_like();
@@ -436,8 +500,20 @@ fn mir_drops_elaborated_and_const_checked(tcx: TyCtxt<'_>, def: LocalDefId) -> &
     let (body, _) = tcx.mir_promoted(def);
     let mut body = body.steal();
     if let Some(error_reported) = mir_borrowck.tainted_by_errors {
+        println!("error borrow check");
         body.tainted_by_errors = Some(error_reported);
     }
+    // yunji
+    let mut index_map: Vec<NodeIndex> = vec!();
+    let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+    let g = mir_to_petgraph(tcx, &mut body, &mut index_map, &mut scc_info_stk);
+    println!("[in lib.rs] after mir to pet graph {:?}", g);
+
+    // yunji
+    // let bbs = body.basic_blocks_mut();
+    // println!("[in lib.rs] bbs ={:?}", bbs);
+
+
 
     // Check if it's even possible to satisfy the 'where' clauses
     // for this item.

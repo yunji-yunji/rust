@@ -8,7 +8,7 @@ use rustc_middle::ty::TyCtxt;
 use rustc_data_structures::fx::FxHashMap;
 use petgraph::Graph;
 // use petgraph::dot::{Dot, Config};
-use petgraph::algo::kosaraju_scc;
+// use petgraph::algo::kosaraju_scc;
 use petgraph::algo::toposort;
 use petgraph::prelude::NodeIndex;
 use petgraph::visit::Dfs;
@@ -17,103 +17,177 @@ use petgraph::visit::Dfs;
 // use rustc_middle::mir::*; // visit
 use rustc_index::vec::IndexVec;
 // use rustc_middle::mir::MirPass;
-use rustc_middle::mir::{BasicBlock, Body, TerminatorKind, BasicBlockData, };
+use rustc_middle::mir::{BasicBlock, Body, TerminatorKind,
+                        BasicBlockData, };
 
 // use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
 // use std::{env};
 use std::string::String;
+// use std::io::{self, Read};
+// use std::path::PathBuf;
+
+
+// use std::fs::File;
+// use std::io::Write;
 
 pub struct LoopUnroll();
 impl<'tcx> MirPass<'tcx> for LoopUnroll {
-    fn is_enabled(&self, sess: &rustc_session::Session) -> bool {
+    fn is_enabled(&self, _sess: &rustc_session::Session) -> bool {
         // sess.instrument_coverage()
         // sess.mir_opt_level() > 0
-        sess.mir_opt_level() == 0
-        // true
+        // sess.mir_opt_level() == 2
+        true
     }
     // #[instrument(skip(self, tcx, body))]
-    fn run_pass(&self, tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
+    fn run_pass(&self, _tcx: TyCtxt<'tcx>, _body: &mut Body<'tcx>) {
 
-        let target_name:String;
-        if let Ok(val) = std::env::var("TARGET_NAME") {
-            target_name = val;
-        } else {
-            target_name = "fuzz_target".parse().unwrap();
-        }
+        // let target_name:String = "fuzz_target".parse().unwrap();
+        // if let Ok(val) = std::env::var("TARGET_NAME") {
+        //     target_name = val;
+        // } else {
+        //     target_name = "fuzz_target".parse().unwrap();
+        // }
         //
         // let mut target_name = String()ToString("");
         // if let Ok(extra_flags) = env::var("TARGET_NAME") {
         //     target_name = extra_flags;
         //     // for flag in extra_flags.split_whitespace() {
         //     //     // program.args.push(flag.into());
-        //     //     target_name = flag.into();
+        //     //     target_name = flag.`into();
         //     // }
         // }
 
+        // let mut start: String = "off".parse().unwrap();
+        // if let Ok(val) = std::env::var("START") {
+        //     start = val;
+        // }
+
+
+
+
+
+
+
+
+
+        /*
         let def_id = body.source.def_id();
         // println!("what is def_id [{:?}]", &tcx.def_path_str(def_id));
         // if &tcx.def_path_str(def_id) == "fuzz_target" {
-        if tcx.def_path_str(def_id).contains(&target_name) {
-            println!("loop_unroll.RS [{:?}]", tcx.def_path_str(def_id));
-        }
+        // if tcx.def_path_str(def_id).contains(&target_name) {
+        // }
         let tmp = tcx.def_path_str(def_id);
-        println!("loop unroll) Target name {:?}/{:?} def name {:?}", &target_name, target_name, tmp);
+        let name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
+        println!("[mirpass] Create file = {:?}, defID {:?}", name.clone(), tmp);
 
-        if tcx.def_path_str(def_id).contains(&target_name) {
+        let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+        let json = serde_json::to_string_pretty(&scc_info_stk).expect("write json yj");
+        let mut file = File::create(name.clone()).expect("yjyj cannot open file");
+        // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}.json", tmp)).expect("yjyj cannot open file");
+        // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index))
+        //     .expect("yjyj cannot open file");
+        file.write_all(json.as_bytes()).expect("cannot write file");
+
+        println!("mirpass after LOOP");
+
+         */
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // if tmp.contains("move") {
+        //     println!("[mirpass] def id {:?}, {:?}, def name {:?}", def_id.index, def_id.krate, tmp);
+        // }
+        // let mut file = File::open(name);
+        // if tcx.def_path_str(def_id).contains(&target_name) {
         // if tcx.def_path_str(def_id) == target_name {
-            println!("run_pass function in MIRI roop_unroll.rs file, run {:?} function", target_name);
+        // println!(" run {:?} function", target_name);
 
-            // let bbs=body.basic_blocks_mut();
-            // insert_dummy_block(body);
+        // let bbs=body.basic_blocks_mut();
+        // insert_dummy_block(body);
+        // if start.equals('on'.borrow()) {
+        // if start == String::from("on") && tmp.contains("move") {
+            // let name = format!("~/rust/scc_info/{}.json", tmp);
+            // let mut index_map: Vec<NodeIndex> = vec!();
+            // let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
+        // let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+        /*
 
-            let mut index_map: Vec<NodeIndex> = vec!();
-            let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
+                    let g = mir_to_petgraph(tcx,
+                                            body,
+                                            &mut index_map, &mut scc_info_stk);
+                    // print_bbs(body.clone().basic_blocks, "Initial MIR");
 
-            let g = mir_to_petgraph(tcx, body, &mut index_map, &mut scc_info_stk);
-            // print_bbs(body.clone().basic_blocks, "Initial MIR");
+                    let mut scc_id: i32 = 1;
+                    let mut copy_graph = g.clone();
+                    loop {
+                        let mut stop = true;
+                        let mut scc_list = kosaraju_scc(&copy_graph);
+                        println!("SCC = {:?}", scc_list.clone());
+                        for scc in &mut scc_list {
+                            let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
+                            if is_cycle == true {
+                                stop = false;
+                                break_down_and_mark(tcx, body,
+                                                    scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map);
+                            }
+                        }
+                        /*
+                        // let serialized_data = serde_json::to_string(&scc_info_stk).;
+                        // let mut file = File::create(PathBuf::from(name.clone())).expect("create file");
+                        // file.write_all(serialized_data.as_bytes())?;
+                        // println!("after break down graph = \n{:?}", Dot::with_config(&copy_graph, &[Config::EdgeIndexLabel]));
 
-            let mut scc_id: i32 = 1;
-            let mut copy_graph = g.clone();
-            loop {
-                let mut stop = true;
-                let mut scc_list = kosaraju_scc(&copy_graph);
-                println!("SCC = {:?}", scc_list.clone());
-                for scc in &mut scc_list {
-                    let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
-                    if is_cycle == true {
-                        stop = false;
-                        break_down_and_mark(tcx, body,
-                                            scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map);
-                    }
-                }
-                // println!("after break down graph = \n{:?}", Dot::with_config(&copy_graph, &[Config::EdgeIndexLabel]));
 
-                if stop {
-                    // println!("\nBREAK!\n final SCC ={:?}\n\nSCC INFO STACK", scc_list.clone());
-                    // for (n_idx, &ref stack) in scc_info_stk.iter() {
-                    //     println!("node: {:?} == {:?}", n_idx, stack);
-                    // }
-                    break;
-                }
-            }
-            println!("End of LOOP");
-        }
+                         */
+                        if stop {
+                            // println!("\nBREAK!\n final SCC ={:?}\n\nSCC INFO STACK", scc_list.clone());
+                            // for (n_idx, &ref stack) in scc_info_stk.iter() {
+                            //     println!("node: {:?} == {:?}", n_idx, stack);
+                            // }
+                            break;
+                        }
+                    } // loop end
+
+
+
+         */
+
+        // }
+        // }
     }
 }
 
 
-fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>, arr: &mut Vec<NodeIndex>, scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>)
+pub fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>,
+                             // body: &Body<'tcx>,
+                             body: &Body<'_>,
+                             // body: &mut Body<'tcx>,
+                         arr: &mut Vec<NodeIndex>,
+                             scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>)
+// scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>)
                          -> Graph::<usize, String>{
     let mut g = Graph::<usize, String>::new();
 
     let mut cnt: usize = 0;
     for _ in body.basic_blocks.iter() {
         let node = g.add_node(cnt);
-        scc_info_stk.insert(node, vec!());
+        scc_info_stk.insert(node.index(), vec!());
         // node.index() should be index of IndexVector
-        let index = body.scc_info.push(vec![]);
+
+        //
+        // let index = body.scc_info.push(vec![]);
         // println!("mir to petgraph {:?} == {:?}, {:?}", node.index(), index, body.scc_info);
-        assert_eq!(node.index(), index);
+        // assert_eq!(node.index(), index);
 
         arr.push(node);
         cnt = cnt + 1;
@@ -128,12 +202,10 @@ fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>, arr: &mut Ve
             g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
         }
     }
-    printpg(g.clone(), "Initial");
-
+    // printpg(g.clone(), "Initial");
     g
 }
-
-fn is_cycle(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
+pub fn is_cycle(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
     let mut new = Graph::<usize, String>::new();
 
     let mut i = 0;
@@ -164,15 +236,13 @@ fn is_cycle(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
     }
 }
 
-
-
 pub fn find_all_headers(scc:Vec<NodeIndex>, g:&Graph<usize, String>) -> Vec<NodeIndex> {
     let mut headers :Vec<NodeIndex> = vec!();
     for edge in g.clone().raw_edges() {
         if !scc.contains(&edge.source()) && scc.contains(&edge.target()) {
             if !headers.contains(&edge.target()) {
                 headers.push(edge.target());
-                println!("Header = {:? } scc= {:?}", edge.target(), scc);
+                // println!("Header = {:? } scc= {:?}", edge.target(), scc);
             }
         }
     }
@@ -201,7 +271,7 @@ pub fn print_bbs_mut<'tcx>(bbs: &mut IndexVec<BasicBlock, BasicBlockData<'tcx>>,
     }
 }
 
-pub fn printpg(g: Graph<usize, String>, title: &str) {
+pub fn _printpg(g: Graph<usize, String>, title: &str) {
     println!("\n\n===== PetGraph ({})   =====", title);
     for edge in g.clone().raw_edges() {
         println!("{:?}", edge);
@@ -298,7 +368,7 @@ pub fn insert_latch<'tcx>(body: &mut Body<'tcx>, header: BasicBlock) {
 pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
                                         headers: Vec<NodeIndex>,
                                         g: &mut Graph<usize, String>,
-                                        scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
+                                        scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>,
                                         arr: &mut Vec<NodeIndex>,
                                         _tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>)
                                         -> NodeIndex {
@@ -306,7 +376,7 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
     let new_node = g.add_node(777);
     scc.push(new_node);
     arr.push(new_node);
-    scc_info_stk.insert(new_node, vec!());
+    scc_info_stk.insert(new_node.index(), vec!());
     let index = body.scc_info.push(vec![]);
     println!("add new single header node {:?} == {:?}, {:?}", new_node.index(), index, body.scc_info);
     assert_eq!(new_node.index(), index);
@@ -353,11 +423,11 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
 pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
                                        header: NodeIndex,
                                        g: &mut Graph<usize, String>,
-                                       scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
+                                       scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>,
                                        arr: &mut Vec<NodeIndex>,
                                        body: &mut Body<'tcx>)
                                        -> NodeIndex {
-    println!("SCC in get back edges {:?}", scc);
+    // println!("SCC in get back edges {:?}", scc);
 
     let mut back_edges :Vec<(NodeIndex, NodeIndex)> = vec!();
     let mut inner_edges :Vec<(NodeIndex, NodeIndex)> = vec!();
@@ -387,12 +457,12 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
 
             if dfs_res.contains(&edge.target().index()) {
                 // self loop is included here
-                println!("still can reach {:?}", edge.target().index());
+                // println!("still can reach {:?}", edge.target().index());
                 inner_edges.push((edge.source(), edge.target()));
             } else {
                 // if i cannot reach
                 back_edges.push((edge.source(), edge.target()));
-                println!("back_edges  = {:?}", back_edges);
+                // println!("back_edges  = {:?}", back_edges);
                 remove = true;
             }
         }
@@ -423,14 +493,14 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
     let single_latch;
     let new_node;
     if back_edges.len() > 1 {
-        println!("####### back edges {:?}", back_edges);
+        // println!("####### back edges {:?}", back_edges);
         new_node = g.add_node(999);
         single_latch = new_node;
         arr.push(new_node);
-        scc_info_stk.insert(new_node, vec!());
+        scc_info_stk.insert(new_node.index(), vec!());
 
         let index = body.scc_info.push(vec![]);
-        println!("add new single latch node {:?} == {:?}, {:?}", new_node.index(), index, body.scc_info);
+        // println!("add new single latch node {:?} == {:?}, {:?}", new_node.index(), index, body.scc_info);
         assert_eq!(new_node.index(), index);
 
         /// ====================== create new basic block (add new sinlge latchnode)
@@ -461,7 +531,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
             /// change edge latch->header to latch->new_single_latch
             // change_target_goto(body, BasicBlock::from_usize(latch.index().into()), BasicBlock::from_usize(new_latch_idx)),
 
-            println!("tmp tmp {:?}", new_latch_idx);
+            // println!("tmp tmp {:?}", new_latch_idx);
             let terminator = body.basic_blocks_mut()
                 .get_mut(latch.index().into()).expect("basic block data")
                 .terminator.as_mut().expect("terminator");
@@ -483,7 +553,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
         }
 
 
-        print_bbs(body.clone().basic_blocks, "In get single latch");
+        //print_bbs(body.clone().basic_blocks, "In get single latch");
 
     } else {
         single_latch = back_edges[0].0;
@@ -500,7 +570,7 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
 
         if edge.target() == header && edge.source() != header {
             preds.push(edge.source());
-            println!("{:?}", edge);
+            // println!("edge (get pred) {:?}", edge);
         }
     }
     return preds;
@@ -510,11 +580,14 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
 use rustc_middle::mir::SccInfo;
 
 pub fn break_down_and_mark<'tcx>(
-    tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>,
+    _tcx: TyCtxt<'tcx>,
+    // _body: & Body<'tcx>,
+    // body: &mut Body<'tcx>,
     scc: &mut Vec<NodeIndex>, scc_id: &mut i32,
     g: &mut Graph<usize, String>,
-    scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-    arr: &mut Vec<NodeIndex>) {
+    scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>,
+    // scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
+    _arr: &mut Vec<NodeIndex>) {
 
 
     let loop_header;
@@ -528,17 +601,27 @@ pub fn break_down_and_mark<'tcx>(
         loop_header = headers[0];
     } else {
         println!("[2] if there are multiple headers {:?}", headers);
-        loop_header = transform_to_single_header(scc, headers, g, scc_info_stk, arr, tcx, body);
+        // loop_header =
+        //     transform_to_single_header(scc,
+        //                                headers, g,
+        //                                scc_info_stk,
+        //                                arr, tcx, body);
+        loop_header = headers[0];
         // transform_mir_header(tcx, body)
     }
     // H: 1, L: 2, X: 3
     let scc_info = SccInfo::new(*scc_id as usize, NodeType::Header);
-    let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Header);
-    scc_info_stk.get_mut(&loop_header).map(|stk| stk.push(scc_info));
-    body.scc_info[loop_header.index()].push(scc_info2);
+    let _scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Header);
+    scc_info_stk.get_mut(&loop_header.index()).map(
+        |stk| stk.push(scc_info));
+    // body.scc_info[loop_header.index()].push(scc_info2);
 
     // 2. mark latch
-    single_latch = transform_to_single_latch(scc, loop_header, g, scc_info_stk, arr, body);
+    // single_latch = transform_to_single_latch(scc, loop_header,
+    //                                          g, scc_info_stk,
+    //                                          arr, body);
+    let new_node = g.add_node(999);
+    single_latch = new_node;
     if scc.len() != 1 {
         // only if it is not a self loop, mark as Latch
         // let scc_info = SccInfo {
@@ -546,27 +629,28 @@ pub fn break_down_and_mark<'tcx>(
         //     _n_type: 2,
         // };
         let scc_info = SccInfo::new(*scc_id as usize, NodeType::Latch);
-        let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Latch);
-        scc_info_stk.get_mut(&single_latch).map(|stk| stk.push(scc_info));
-        body.scc_info[single_latch.index()].push(scc_info2);
+        let _scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Latch);
+        scc_info_stk.get_mut(&single_latch.index()).map(|stk| stk.push(scc_info));
+        // scc_info_stk.get_mut(&single_latch).map(|stk| stk.push(scc_info));
+        // body.scc_info[single_latch.index()].push(scc_info2);
     }
 
     // 3. mark 'X'
     for node in scc.clone() {
-        if node != loop_header && node != single_latch {
+        if node != loop_header && node != single_latch.into() {
             let scc_info = SccInfo::new(*scc_id as usize, NodeType::Normal);
-            let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Normal);
-            scc_info_stk.get_mut(&node).map(|stk| stk.push(scc_info));
-            body.scc_info[node.index()].push(scc_info2);
+            let _scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Normal);
+            scc_info_stk.get_mut(&node.index()).map(|stk| stk.push(scc_info));
+            // body.scc_info[node.index()].push(scc_info2);
         }
     }
 
-    println!("\n====================== Break Down ======================");
-    let Some(edge_idx) = g.find_edge(single_latch, loop_header) else {
+    // println!("\n====================== Break Down ======================");
+    let Some(edge_idx) = g.find_edge(single_latch.into(), loop_header) else {
         println!("cannot find edge in mark and break down");
         return;
     };
-    println!("remove single latch = {:?} -> header = {:?}", single_latch, loop_header);
+    // println!("remove single latch = {:?} -> header = {:?}", single_latch, loop_header);
     g.remove_edge(edge_idx);
 
     *scc_id += 1;
