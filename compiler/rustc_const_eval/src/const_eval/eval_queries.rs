@@ -67,13 +67,13 @@ fn eval_body_using_ecx<'mir, 'tcx>(
     )?;
     ecx.storage_live_for_always_live_locals()?;
 
-    // yunji
+    // Prepare variables for step function.
     let mut tmp_path : Vec<usize> = vec![];
     let mut s: usize = 0;
     let mut stk :Vec<PathInfo> = vec!();
+    let mut is_loop = false;
     let mut scc_info: IndexVec<usize, Vec<SccInfo>> = IndexVec::new();
 
-    let mut is_loop = false;
     let def_id = ecx.body().source.def_id(); // make body function public()
     let _def_str = ecx.tcx.def_path_str(def_id);
     // println!("in eval_queries {:?}", def_str);

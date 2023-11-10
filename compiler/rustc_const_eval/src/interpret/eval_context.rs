@@ -511,9 +511,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
     #[inline(always)]
     pub fn body(&self) -> &'mir mir::Body<'tcx> {
-    // pub fn body(&mut self) -> &'mir mir::Body<'tcx> {
         self.frame().body
-        // self.frame_mut().body
     }
 
     #[inline(always)]

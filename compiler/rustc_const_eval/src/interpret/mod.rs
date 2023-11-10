@@ -40,5 +40,3 @@ use self::{
 
 pub(crate) use self::intrinsics::eval_nullary_intrinsic;
 use eval_context::{from_known_layout, mir_assign_valid_types};
-
-mod mir_transform;

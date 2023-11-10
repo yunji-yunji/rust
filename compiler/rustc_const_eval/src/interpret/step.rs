@@ -12,17 +12,20 @@ use rustc_middle::ty::layout::LayoutOf;
 use super::{ImmTy, InterpCx, Machine, Projectable};
 use crate::util;
 
-use crate::interpret::mir_transform::*;
-
+// use crate::interpret::mir_transform::*;
+use rustc_middle::*;
+// use rustc_mir_transform::loop_unroll::{is_cycle, mir_to_petgraph};
+// use rustc_middle::mir::{is_cycle, mir_to_petgraph};
 // yunji
+use std::default::Default;
 use std::io::Write;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
 // ============
 use rustc_data_structures::fx::FxHashMap;
-use petgraph::algo::kosaraju_scc;
-use petgraph::prelude::NodeIndex;
+// use petgraph::algo::kosaraju_scc;
+// use petgraph::prelude::NodeIndex;
 use std::string::String;
 use rustc_middle::mir::{SccInfo, PathInfo, NodeType};
 use std::default::Default as HashDefault;
@@ -386,9 +389,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     let file_name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
                     let _file_name22:String = file_name.chars().take(50).collect();
                     if Path::new(&file_name).exists() {
-                        let file = File::open(file_name).expect("[step] Failed to open file");
-                        let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = serde_json::from_reader(file)
-                            .expect("Failed to deserialize");
+                        let _file = File::open(file_name).expect("[step] Failed to open file");
+                        // let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = serde_json::from_reader(file).expect("Failed to deserialize");
+                        let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
                         // let scc_info_stk: IndexVec<usize, Vec<SccInfo>> = serde_json::from_reader(file).expect("Failed to deserialize");
                         println!("[STEP] Read scc_info file ={:?}", scc_info_stk);
                         // TODO FIX!!!!!!!! (remove)
@@ -440,19 +443,20 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
         Ok(())
     }
-
-    pub fn transform(&mut self, scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) {
+/*
+    pub fn _transform(&mut self, scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) {
         // Can refer "body", BUT cannot modify it.
         let body = self.body();
         let _def_id = body.source.def_id();
 
         let mut index_map: Vec<NodeIndex> = vec!();
         let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
+        // let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
 
         let g = mir_to_petgraph(self.tcx, body, &mut index_map, &mut scc_info_stk, scc_info);
 
-        let mut scc_id: i32 = 1;
-        let mut copy_graph = g.clone();
+        let _scc_id: i32 = 1;
+        let copy_graph = g.clone();
         loop {
             let mut stop = true;
             let mut scc_list = kosaraju_scc(&copy_graph);
@@ -461,8 +465,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
                 if is_cycle == true {
                     stop = false;
-                    break_down_and_mark(self.tcx, body,
-                                        scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map, scc_info);
+                    // break_down_and_mark(self.tcx, body,
+                    //                     scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map, scc_info);
                 }
             }
 
@@ -476,8 +480,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
         // println!("[step][transform] After LOOP");
     }
-}
 
+ */
+}
 
 fn _generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                  s:usize, t:usize,

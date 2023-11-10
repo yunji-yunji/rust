@@ -47,7 +47,8 @@ use rustc_trait_selection::traits;
 use petgraph::prelude::NodeIndex;
 use rustc_data_structures::fx::FxHashMap;
 use rustc_middle::mir::SccInfo;
-use crate::loop_unroll::{is_cycle, mir_to_petgraph};
+// use crate::loop_unroll::{is_cycle, mir_to_petgraph};
+use rustc_middle::mir::{is_cycle, mir_to_petgraph, break_down_and_mark};
 
 
 #[macro_use]
@@ -482,7 +483,7 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
 use std::fs::File;
 use petgraph::algo::kosaraju_scc;
 // use rustc_middle::mir::{PathInfo, NodeType};
-use crate::loop_unroll::*;
+// use crate::loop_unroll::*;
 use std::io::Write;
 
 /// Obtain just the main MIR (no promoteds) and run some cleanups on it. This also runs
