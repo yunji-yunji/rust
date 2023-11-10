@@ -708,6 +708,13 @@ impl<T> ClearCrossCrate<T> {
             ClearCrossCrate::Set(v) => v,
         }
     }
+
+    pub fn yunji_assert_crate_local(self) -> bool {
+        match self {
+            ClearCrossCrate::Clear => true,
+            ClearCrossCrate::Set(_v) => false,
+        }
+    }
 }
 
 const TAG_CLEAR_CROSS_CRATE_CLEAR: u8 = 0;

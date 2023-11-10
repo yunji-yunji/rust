@@ -47,7 +47,7 @@ use rustc_trait_selection::traits;
 use petgraph::prelude::NodeIndex;
 use rustc_data_structures::fx::FxHashMap;
 use rustc_middle::mir::SccInfo;
-use crate::loop_unroll::mir_to_petgraph;
+use crate::loop_unroll::{is_cycle, mir_to_petgraph};
 
 
 #[macro_use]
@@ -128,13 +128,13 @@ use rustc_const_eval::transform::promote_consts;
 use rustc_const_eval::transform::validate;
 // yunji
 use rustc_mir_dataflow::rustc_peek;
-// use std::cell::Ref;
 
 use rustc_errors::{DiagnosticMessage, SubdiagnosticMessage};
 use rustc_fluent_macro::fluent_messages;
 
 fluent_messages! { "../messages.ftl" }
 
+// yj
 pub fn provide(providers: &mut Providers) {
     check_unsafety::provide(providers);
     coverage::query::provide(providers);
@@ -238,6 +238,7 @@ fn is_mir_available(tcx: TyCtxt<'_>, def_id: LocalDefId) -> bool {
     tcx.mir_keys(()).contains(&def_id)
 }
 
+// yj
 /// Finds the full set of `DefId`s within the current crate that have
 /// MIR associated with them.
 fn mir_keys(tcx: TyCtxt<'_>, (): ()) -> FxIndexSet<LocalDefId> {
@@ -329,6 +330,7 @@ fn mir_yunji(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
 }
  */
 
+// yj
 /// Make MIR ready for const evaluation. This is run on all MIR, not just on consts!
 /// FIXME(oli-obk): it's unclear whether we still need this phase (and its corresponding query).
 /// We used to have this for pre-miri MIR based const eval.
@@ -370,6 +372,7 @@ fn mir_const(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
     // body
 }
 
+// yj
 pub fn yunji_steal(tcx: TyCtxt<'_>,
                    def: LocalDefId,
 ) {
@@ -385,6 +388,7 @@ pub fn yunji_steal(tcx: TyCtxt<'_>,
 
 }
 
+// yj
 /// Compute the main MIR body and the list of MIR bodies of the promoteds.
 fn mir_promoted(
     tcx: TyCtxt<'_>,
@@ -438,6 +442,7 @@ fn mir_for_ctfe(tcx: TyCtxt<'_>, def_id: LocalDefId) -> &Body<'_> {
     tcx.arena.alloc(inner_mir_for_ctfe(tcx, def_id))
 }
 
+// yj
 fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
     // FIXME: don't duplicate this between the optimized_mir/mir_for_ctfe queries
     if tcx.is_constructor(def.to_def_id()) {
@@ -457,6 +462,7 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
         None => bug!("`mir_for_ctfe` called on non-const {def:?}"),
     };
 
+<<<<<<< HEAD
     // let context = tcx
     //     .hir()
     //     .body_const_context(def)
@@ -465,19 +471,36 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
     // let body = tcx.mir_drops_elaborated_and_const_checked(def).borrow().clone();
     println!("[yjyj] mir_drops def_id = {:?}", tcx.def_path_str(def));
 
+=======
+    let body = tcx.mir_drops_elaborated_and_const_checked(def).borrow().clone();
+    println!("[Mir_transform][lib][mir_for_ctfe] def_id = {:?}", tcx.def_path_str(def));
+>>>>>>> 2b4bbe6cd42 (Commit before rebase)
     let mut body = remap_mir_for_const_eval_select(tcx, body, hir::Constness::Const);
     pm::run_passes(tcx, &mut body, &[&ctfe_limit::CtfeLimit], None);
 
     body
 }
 
+// use rustc_middle::mir::{/*BasicBlock,*/ /*TerminatorKind,*/ BasicBlockData, };
+// use rustc_middle::mir::Terminator;
+// use rustc_middle::mir::SccInfo;
+use std::fs::File;
+use petgraph::algo::kosaraju_scc;
+// use rustc_middle::mir::{PathInfo, NodeType};
+use crate::loop_unroll::*;
+use std::io::Write;
+
 /// Obtain just the main MIR (no promoteds) and run some cleanups on it. This also runs
 /// mir borrowck *before* doing so in order to ensure that borrowck can be run and doesn't
 /// end up missing the source MIR due to stealing happening.
 fn mir_drops_elaborated_and_const_checked(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
+<<<<<<< HEAD
 //     fn mir_drops_elaborated_and_const_checked<'tcx>(tcx: TyCtxt<'_>,
 //                                               def: LocalDefId,
 //                                               body: &mut Body<'tcx>,) -> &'tcx Steal<Body<'tcx>> {
+=======
+//     fn mir_drops_elaborated_and_const_checked<'tcx>(tcx: TyCtxt<'_>, def: LocalDefId, body: &mut Body<'tcx>,) -> &'tcx Steal<Body<'tcx>> {
+>>>>>>> 2b4bbe6cd42 (Commit before rebase)
 
     if let DefKind::Coroutine = tcx.def_kind(def) {
         tcx.ensure_with_value().mir_coroutine_witnesses(def);
@@ -504,16 +527,108 @@ fn mir_drops_elaborated_and_const_checked(tcx: TyCtxt<'_>, def: LocalDefId) -> &
         body.tainted_by_errors = Some(error_reported);
     }
     // yunji
+    // only if first time meet this definition id
+    let type_id = body.clone().local_decls;
+    let name = tcx.def_path_str(def.to_def_id());
+    println!("[Mir_transform][lib][mir_drops] def id {:?} def name {:?}, index={:?}", def, name, def.local_def_index );
+    println!("[mir_transform] [{:?}] type id={:?} ", type_id.len(), type_id.raw[0].clone());
     let mut index_map: Vec<NodeIndex> = vec!();
     let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
     let g = mir_to_petgraph(tcx, &mut body, &mut index_map, &mut scc_info_stk);
-    println!("[in lib.rs] after mir to pet graph {:?}", g);
+    println!("[Mir_transform][mir_drops] after mir_to_petgraph {:?}", g);
 
-    // yunji
+    let file_name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def.to_def_id().krate, def.to_def_id().index);
+    // let file_name:String = file_name1.chars().take(50).collect();
+    // println!("[encoder] Create file = {:?}, defID {:?}", name.clone(), d);
+    if body.arg_count ==0 { // mean this mir is for constant
+    // if type_id.raw[0].local_info.clone().yunji_assert_crate_local() {
+
+        // if type_id.raw[0].local_info == ClearCrossCrate::Clear {
+    // if type_id[0].local_info == "Clear" {
+    // if name.contains("constant") {
+        println!("[trasnfrom] maybe it's constant {:?} / {:?} / [{:?}] / {:?}",
+                 name, type_id.raw[0].local_info.clone(), body.arg_count, def.to_def_id().krate);
+    } else {
+        println!("[trasnfrom] not a constant {:?} / {:?} / [{:?}]/ {:?}",
+                 name, type_id.raw[0].local_info.clone(), body.arg_count, def.to_def_id().krate);
+        let mut scc_id: i32 = 1;
+        let mut copy_graph = g.clone();
+        loop {
+            let mut stop = true;
+            let mut scc_list = kosaraju_scc(&copy_graph);
+            // println!("SCC = {:?}", scc_list.clone());
+            for scc in &mut scc_list {
+                let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
+                if is_cycle == true {
+                    stop = false;
+                    break_down_and_mark(tcx, &mut body,
+                                        scc, &mut scc_id, &mut copy_graph,
+                                        &mut scc_info_stk, &mut index_map);
+
+                    // break_down_and_mark(tcx,
+                    //                     scc,
+                    //                     &mut scc_id,
+                    //                     &mut copy_graph,
+                    //                     &mut scc_info_stk,
+                    //                     &mut index_map);
+                }
+            }
+
+            if stop {
+                println!("\nBREAK!\n final SCC ={:?}\nSCC INFO STACK", scc_list.clone());
+                break;
+            }
+        } // loop end
+
+
+        // let json = serde_json::to_string_pretty(&scc_info_stk).expect("write json yj");
+
+        //  IndexVec to FxHashMap
+        let mut scc_info_stk_fin: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+
+        if !body.scc_info.is_empty() {
+            // let mut scc_info2: IndexVec<usize, Vec<SccInfo>>
+            //     = IndexVec::with_capacity(scc_info_stk.len());
+            for (index, value) in body.scc_info.clone().into_iter().enumerate() {
+                scc_info_stk_fin.insert(index, value);
+            }
+            for (index, value) in body.scc_info.clone().into_iter().enumerate() {
+                scc_info_stk_fin.insert(index, value.clone()); // Clone if necessary
+            }
+            // for key in 0..scc_info_stk.len() {
+            //     if let Some(value) = scc_info_stk.get(&key) {
+            //         scc_info2.push(value.clone());
+            //     } else {
+            //         panic!("Missing key in FxHashMap: {}", key);
+            //     }
+            // }
+        }
+            println!("indexvec to FxHashmp \n{:?} \n{:?}", scc_info_stk_fin, body.scc_info.clone());
+            assert!(scc_info_stk_fin.len() == body.scc_info.clone().len());
+            // let json = serde_json::to_string_pretty(&body.scc_info).expect("write json yj");
+            let json = serde_json::to_string_pretty(&scc_info_stk_fin).expect("write json yj");
+            let mut file = File::create(file_name.clone()).expect("yjyj cannot open file");
+            // let mut file = File::create(name.clone()).expect("yjyj cannot open file");
+            // // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}.json", tmp)).expect("yjyj cannot open file");
+            // // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index))
+            // //     .expect("yjyj cannot open file");
+            file.write_all(json.as_bytes()).expect("cannot write file");
+            println!("## Create file [MIR_transform]  {:?}", file_name);
+    }
+
+
+    /*
     // let bbs = body.basic_blocks_mut();
-    // println!("[in lib.rs] bbs ={:?}", bbs);
-
-
+    // let bbd = BasicBlockData::new(Some(Terminator {
+    //     source_info: bbs[header].terminator().source_info,
+    //     kind: TerminatorKind::Goto {
+    //         target: header,
+    //     },
+    // }));
+    // bbs.push(bbd);
+    // bbs.raw.remove(0);
+    // println!("[Mir_transform][mir_drops] bbs = {:?}", bbs);
+*/
 
     // Check if it's even possible to satisfy the 'where' clauses
     // for this item.

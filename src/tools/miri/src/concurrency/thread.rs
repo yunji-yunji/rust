@@ -783,6 +783,8 @@ trait EvalContextPrivExt<'mir, 'tcx: 'mir>: MiriInterpCxExt<'mir, 'tcx> {
     }
 }
 
+use rustc_middle::mir::{SccInfo};
+
 // Public interface to thread management.
 impl<'mir, 'tcx: 'mir> EvalContextExt<'mir, 'tcx> for crate::MiriInterpCx<'mir, 'tcx> {}
 pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
@@ -1053,8 +1055,8 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             //     match iterator.next() {
             //         Some(k) =>{
             //             b.pop();
-            //             let kkk = k.body.
-            //             println!("after pop {:?} ", kkk);
+            //             // let kkk = k.body.
+            //             println!("after pop {:?} ", kkk)
             //             //
             //             // let Either::Left(loc) = k.loc else {
             //             //     // We are unwinding and this fn has no cleanup code.
@@ -1078,6 +1080,8 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
         let mut s: usize = 0;
         let mut stk :Vec<PathInfo> = vec!()                                                                                                                                 ;
         let mut is_loop = false;
+        let mut scc_info: IndexVec<usize, Vec<SccInfo>> = IndexVec::new();
+
 
         loop {
             if SIGNALED.load(Relaxed) {
@@ -1090,7 +1094,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
                     // this.my_f();
                     // println!("execute");
 
-                    if !this.step(path, &mut s, &mut stk, &mut is_loop, REPEAT_LIMIT)? {
+                    if !this.step(path, &mut s, &mut stk, &mut is_loop, REPEAT_LIMIT, &mut scc_info)? {
                         // See if this thread can do something else.
                         match this.run_on_stack_empty()? {
                             Poll::Pending => {} // keep going

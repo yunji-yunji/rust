@@ -377,6 +377,8 @@ pub fn create_ecx<'mir, 'tcx: 'mir>(
 
     match entry_type {
         EntryFnType::Main { .. } => {
+            println!("entry type main");
+
             let start_id = tcx.lang_items().start_fn().unwrap_or_else(|| {
                 tcx.sess.fatal(
                     "could not find start function. Make sure the entry point is marked with `#[start]`."
@@ -414,6 +416,7 @@ pub fn create_ecx<'mir, 'tcx: 'mir>(
             )?;
         }
         EntryFnType::Start => {
+            println!("entry type satrt");
             ecx.call_function(
                 entry_instance,
                 Abi::Rust,
@@ -427,7 +430,7 @@ pub fn create_ecx<'mir, 'tcx: 'mir>(
     Ok(ecx)
 }
 
-use rustc_middle::ty::InstanceDef;
+// use rustc_middle::ty::InstanceDef;
 // use std::collections::VecDeque;
 /// Evaluates the entry function specified by `entry_id`.
 /// Returns `Some(return_code)` if program executed completed.
@@ -467,31 +470,33 @@ pub fn eval_entry<'tcx>(
     // use crate::eval::rustc_middle::query::descs::mir_const;
     // use rustc_mir_transform::lib::mir_const;
     let ids = dump_mir_def_ids(tcx, None);
-
+    println!("def id len {:?}", ids.len());
     for def_id in ids {
-        let mir = tcx.instance_mir(InstanceDef::Item(def_id));
+        // let mir = tcx.instance_mir(InstanceDef::Item(def_id));
 
         // println!("EVAL.RS [{:?}]", &tcx.def_path_str(def_id));
         // let target_name = std::env::var("TARGET_NAME").unwrap();
-        let target_name:String;
-        if let Ok(val) = std::env::var("TARGET_NAME") {
-            target_name = val;
-        } else {
-            target_name = "fuzz_target".parse().unwrap();
-        }
-        println!("EVal def id {:?}, target name {:?}", tcx.def_path_str(def_id), target_name);
-        if tcx.def_path_str(def_id).contains(&target_name) {
-            println!("Eval.RS [{:?}]", &tcx.def_path_str(def_id));
-        }
+        // let target_name:String;
+        // if let Ok(val) = std::env::var("TARGET_NAME") {
+        //     target_name = val;
+        // } else {
+        //     target_name = "fuzz_target".parse().unwrap();
+        // }
+        // ecx
+        // println!("ecx {:?}", ecx.tcx)
+        println!("EVal def id {:?} / {:?} / {:?}", def_id.krate, def_id.index, tcx.def_path_str(def_id));
+        // if tcx.def_path_str(def_id).contains(&target_name) {
+        //     println!("Eval.RS [{:?}]", &tcx.def_path_str(def_id));
+        // }
         // TODO: remove this function
         // if &tcx.def_path_str(def_id) == "fuzz_target" {
-        if tcx.def_path_str(def_id).contains(&target_name) {
-        // if tcx.def_path_str(def_id) == target_name {
-            // println!("yunji variable {:?}", mir.scc_info);
-            for (index, value) in mir.scc_info.clone().into_iter_enumerated() {
-                println!("yunji res: {:?} : {:?}", index, value);
-            }
-        }
+        // if tcx.def_path_str(def_id).contains(&target_name) {
+        // // if tcx.def_path_str(def_id) == target_name {
+        //     // println!("yunji variable {:?}", mir.scc_info);
+        //     for (index, value) in mir.scc_info.clone().into_iter_enumerated() {
+        //         println!("yunji res: {:?} : {:?}", index, value);
+        //     }
+        // }
     }
 
     // yunji: run step function =====================

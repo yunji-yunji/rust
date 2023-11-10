@@ -331,6 +331,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
 
         // Push frame.
         let mir = this.load_mir(f.def, None)?;
+        println!("[call_function] def id = {:?} / mir {:?}", f.def, mir.basic_blocks);
         let dest = match dest {
             Some(dest) => dest.clone(),
             None => MPlaceTy::fake_alloc_zst(this.layout_of(mir.return_ty())?).into(),

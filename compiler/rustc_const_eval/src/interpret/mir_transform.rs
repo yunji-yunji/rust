@@ -556,14 +556,14 @@ pub fn break_down_and_mark<'tcx>(
     let loop_header;
     let single_latch;
 
-    println!("====================== Transform & Mark ======================");
+    // println!("====================== Transform & Mark ======================");
     // 1. mark header
     let headers = find_all_headers(scc.clone(), g);
     if headers.len() ==1 {
-        println!("[1] if there is a single header {:?}", headers);
+        // println!("[1] if there is a single header {:?}", headers);
         loop_header = headers[0];
     } else {
-        println!("[2] if there are multiple headers {:?}", headers);
+        // println!("[2] if there are multiple headers {:?}", headers);
         loop_header = transform_to_single_header(scc, headers, g, scc_info_stk, arr, tcx, body, scc_info);
         // transform_mir_header(tcx, body)
     }
@@ -601,7 +601,7 @@ pub fn break_down_and_mark<'tcx>(
         }
     }
 
-    println!("\n====================== Break Down ======================");
+    // println!("\n====================== Break Down ======================");
     let Some(edge_idx) = g.find_edge(single_latch, loop_header) else {
         println!("cannot find edge in mark and break down");
         return;

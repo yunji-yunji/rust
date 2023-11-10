@@ -41,6 +41,18 @@ use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock};
 use std::{env, fs, iter};
+/*
+//yj
+use rustc_mir_transform::loop_unroll::mir_to_petgraph;
+use petgraph::prelude::NodeIndex;
+use rustc_data_structures::fx::FxHashMap;
+use rustc_middle::mir::SccInfo;
+// use rustc_mir_transform::yunji_steal;
+ */
+
+// use rustc_index::Idx;
+// use rustc_mir_transform::remap_mir_for_const_eval_select;
+// use rustc_hir as hir;
 
 pub fn parse<'a>(sess: &'a Session) -> PResult<'a, ast::Crate> {
     let krate = sess.time("parse_crate", || match &sess.io.input {
@@ -421,6 +433,14 @@ fn write_out_deps(tcx: TyCtxt<'_>, outputs: &OutputFilenames, out_filenames: &[P
     let deps_output = outputs.path(OutputType::DepInfo);
     let deps_filename = deps_output.as_path();
 
+    // yj: print log to check if this function is related.
+
+    // for def_id in tcx.hir().body_owners() {
+    //     tcx.hir().krate(), tcx.dep_graph
+    //     let name = tcx.def_path_str(def_id.to_def_id());
+    //     println!("def id {:?}, index={:?}", name, def_id.index() );
+    // }
+
     let result: io::Result<()> = try {
         // Build a list of files used to compile the output and
         // write Makefile-compatible dependency rules
@@ -458,6 +478,11 @@ fn write_out_deps(tcx: TyCtxt<'_>, outputs: &OutputFilenames, out_filenames: &[P
         for debugger_visualizer in tcx.debugger_visualizers(LOCAL_CRATE) {
             files.push(normalize_path(debugger_visualizer.path.clone().unwrap()));
         }
+        // let def_id = tcx.hir().krate();
+
+        // print name of definition id
+        // println!("[passes] write to output deps hir krate {:?}", tcx.hir().krate());
+        println!("[passes] write to output deps hir krate");
 
         if sess.binary_dep_depinfo() {
             if let Some(ref backend) = sess.opts.unstable_opts.codegen_backend {
@@ -470,6 +495,8 @@ fn write_out_deps(tcx: TyCtxt<'_>, outputs: &OutputFilenames, out_filenames: &[P
 
             for &cnum in tcx.crates(()) {
                 let source = tcx.used_crate_source(cnum);
+                // println!("[passes!] write deps to file {:?}", source);
+
                 if let Some((path, _)) = &source.dylib {
                     files.push(escape_dep_filename(&path.display().to_string()));
                 }
@@ -613,6 +640,7 @@ fn output_filenames(tcx: TyCtxt<'_>, (): ()) -> Arc<OutputFilenames> {
 
 pub static DEFAULT_QUERY_PROVIDERS: LazyLock<Providers> = LazyLock::new(|| {
     let providers = &mut Providers::default();
+    // yj
     providers.analysis = analysis;
     providers.hir_crate = rustc_ast_lowering::lower_to_hir;
     providers.output_filenames = output_filenames;
@@ -641,6 +669,17 @@ pub static DEFAULT_QUERY_PROVIDERS: LazyLock<Providers> = LazyLock::new(|| {
     *providers
 });
 
+<<<<<<< HEAD
+=======
+pub static DEFAULT_EXTERN_QUERY_PROVIDERS: LazyLock<ExternProviders> = LazyLock::new(|| {
+    let mut extern_providers = ExternProviders::default();
+    rustc_metadata::provide_extern(&mut extern_providers);
+    rustc_codegen_ssa::provide_extern(&mut extern_providers);
+    extern_providers
+});
+
+// yj
+>>>>>>> 2b4bbe6cd42 (Commit before rebase)
 pub fn create_global_ctxt<'tcx>(
     compiler: &'tcx Compiler,
     crate_types: Vec<CrateType>,
@@ -661,8 +700,17 @@ pub fn create_global_ctxt<'tcx>(
     let query_result_on_disk_cache = rustc_incremental::load_query_result_cache(sess);
 
     let codegen_backend = compiler.codegen_backend();
+<<<<<<< HEAD
     let mut providers = *DEFAULT_QUERY_PROVIDERS;
     codegen_backend.provide(&mut providers);
+=======
+    // yj
+    let mut local_providers = *DEFAULT_QUERY_PROVIDERS;
+    codegen_backend.provide(&mut local_providers);
+
+    let mut extern_providers = *DEFAULT_EXTERN_QUERY_PROVIDERS;
+    codegen_backend.provide_extern(&mut extern_providers);
+>>>>>>> 2b4bbe6cd42 (Commit before rebase)
 
     if let Some(callback) = compiler.override_queries {
         callback(sess, &mut providers);
@@ -749,8 +797,36 @@ fn analysis(tcx: TyCtxt<'_>, (): ()) -> Result<()> {
         });
     });
 
+    // yj: !!
     sess.time("MIR_effect_checking", || {
         for def_id in tcx.hir().body_owners() {
+            let name = tcx.def_path_str(def_id.to_def_id());
+            println!("[Passes] def id {:?}, index={:?}", name, def_id.local_def_index );
+            /*
+            let (body, _) = tcx.mir_promoted(def_id);
+            let mut body = body.steal();
+
+            // yunji
+            let mut index_map: Vec<NodeIndex> = vec!();
+            let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+            let g = mir_to_petgraph(tcx, &mut body, &mut index_map, &mut scc_info_stk);
+            println!("[in pass.rs] after mir to pet graph {:?}", g);
+
+
+            // yunji_steal(tcx, def_id);
+
+            let bbs = body.basic_blocks_mut();
+            println!("[in pass1] bbs ={:?}", bbs);
+
+            let mut index_map: Vec<NodeIndex> = vec!();
+            // let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
+            let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+            let g = mir_to_petgraph(tcx, &mut body, &mut index_map, &mut scc_info_stk);
+            println!("[in pass] after mir to pet graph {:?}", g);
+            */
+
+            // tcx.ensure().thir_check_unsafety(def_id); // is this removed?
+
             if !tcx.sess.opts.unstable_opts.thir_unsafeck {
                 rustc_mir_transform::check_unsafety::check_unsafety(tcx, def_id);
             }
@@ -759,12 +835,26 @@ fn analysis(tcx: TyCtxt<'_>, (): ()) -> Result<()> {
             // If we need to codegen, ensure that we emit all errors from
             // `mir_drops_elaborated_and_const_checked` now, to avoid discovering
             // them later during codegen.
+            // tcx.ensure().mir_drops_elaborated_and_const_checked(def_id);
             if tcx.sess.opts.output_types.should_codegen()
                 || tcx.hir().body_const_context(def_id).is_some()
             {
+                println!("[Passes][if] def id {:?}, index={:?}", name, def_id.local_def_index );
+                // yj: steal body, mir_to_petgraph
+                // let tmp = tcx.ensure().mir_drops_elaborated_and_const_checked(def_id);
+                // let tmp = tcx.mir_drops_elaborated_and_const_checked(def_id).borrow().clone();
                 tcx.ensure().mir_drops_elaborated_and_const_checked(def_id);
+                // println!("[Passes][if] after run1");
                 tcx.ensure().unused_generic_params(ty::InstanceDef::Item(def_id.to_def_id()));
+                println!("[Passes][if] after run2");
             }
+
+/*
+            // tcx.ensure().mir_yunji(def_id);
+            // let mut body = remap_mir_for_const_eval_select(tcx, bsody1, hir::Constness::NotConst);
+            // let body = tcx.mir_drops_elaborated_and_const_checked(did).steal();
+            // let mut body2 = remap_mir_for_const_eval_select(tcx, body, hir::Constness::NotConst);
+*/
         }
     });
 
@@ -920,6 +1010,7 @@ fn analysis(tcx: TyCtxt<'_>, (): ()) -> Result<()> {
     Ok(())
 }
 
+// yj: check
 /// Runs the codegen backend, after which the AST and analysis can
 /// be discarded.
 pub fn start_codegen<'tcx>(
@@ -928,6 +1019,7 @@ pub fn start_codegen<'tcx>(
 ) -> Box<dyn Any> {
     info!("Pre-codegen\n{:?}", tcx.debug_stats());
 
+    // yj: encode+and_write --> metatdata
     let (metadata, need_metadata_module) = rustc_metadata::fs::encode_and_write_metadata(tcx);
 
     let codegen = tcx.sess.time("codegen_crate", move || {
@@ -943,6 +1035,7 @@ pub fn start_codegen<'tcx>(
     info!("Post-codegen\n{:?}", tcx.debug_stats());
 
     if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
+        println!("contin key {:?}", tcx.sess.opts.crate_name);
         if let Err(error) = rustc_mir_transform::dump_mir::emit_mir(tcx) {
             tcx.sess.emit_err(errors::CantEmitMIR { error });
             tcx.sess.abort_if_errors();

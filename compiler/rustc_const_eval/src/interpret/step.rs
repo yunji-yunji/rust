@@ -53,9 +53,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         };
         let basic_block = &self.body().basic_blocks[loc.block];
 
-        // yunji part
-        let def_id = self.body().source.def_id();
-        println!("[step] def string = {:?}", self.tcx.def_path_str(def_id));
+        // yunji
+        // let def_id = self.body().source.def_id();
+        // println!("[step] def string = {:?}", self.tcx.def_path_str(def_id));
 
         if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
             let old_frames = self.frame_idx();
@@ -339,53 +339,103 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
     fn terminator(&mut self,
                   terminator: &mir::Terminator<'tcx>,
-                  path : &mut Vec<usize>,
+                  _path : &mut Vec<usize>,
                   s: &mut usize,
-                  stk:&mut Vec<PathInfo>,
-                  is_loop: &mut bool,
-                  limit:usize,
+                  _stk:&mut Vec<PathInfo>,
+                  _is_loop: &mut bool,
+                  _limit:usize,
                   _scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
-
+        println!("starting index {:?}", s);
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
                 // open scc_info file and use it.
+                // let bd = self.body();
                 let def_id = self.body().source.def_id();
+                // let def_id = bd.source.def_id();
+
                 let def_name = self.tcx.def_path_str(def_id);
-                // let file_name = format!("/home/y23kim/rust/scc_info/{:?}.json", def_name);
-                let file_name1 = format!("~/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
-                let file_name:String = file_name1.chars().take(30).collect();
-                if Path::new(&file_name).exists() {
-                    let file = File::open(file_name).expect("[step] Failed to open file");
-                    let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = serde_json::from_reader(file).expect("Failed to deserialize");
-                    // let scc_info_stk: IndexVec<usize, Vec<SccInfo>> = serde_json::from_reader(file).expect("Failed to deserialize");
-                    println!("[STEP] Read scc_info file ={:?}", scc_info_stk);
+                if def_name.contains("std") {
 
-                    // FxHashMap to IndexVec
-                    let mut scc_info2: IndexVec<usize, Vec<SccInfo>>
-                        = IndexVec::with_capacity(scc_info_stk.len());
+                } else {
+                    println!("[step][terminator] def string={:?} / def_krate ={:?}, def_index {:?} terminator kind = {:?} ",
+                             def_name, def_id.krate, def_id.index, terminator.kind.name(),);
+                }
+                // let type_id = self.body().source.type_id();
+                // let type_id = self.type_id();
+                // let type_id = bd.source.type_id();
 
-                    for key in 0..scc_info_stk.len() {
-                        if let Some(value) = scc_info_stk.get(&key) {
-                            scc_info2.push(value.clone());
+                let type_id = self.body().clone().local_decls;
+                let _span = self.body().clone().span;
+                println!("[step] [{:?}] type id={:?} loc.block{:?}", type_id.len(), type_id.raw[0].clone().local_info,  loc.block.clone());
+                // println!("[step] type id=s{:?} span={:?} user type={:?}", type_id, span, self.body().clone().user_type_annotations);
+                // if def_name.contains("constant") {
+                if self.body().arg_count ==0 { // mean this mir is for constant
+                // if terminator.kind.name() != "Call" {
+                // if type_id.raw[0].local_info.clone().yunji_assert_crate_local() {
+                    // if type_id.raw[0].local_info.fmt() == ClearCrossCrate::Clear {
+                    println!("[step] no generate path, def is constant {:?} /  {:?} / {:?} / {:?}",
+                             self.body().arg_count,def_name, type_id.raw[0].local_info.clone(), terminator.kind.name());
+                } else {
+                    println!("[step] yes generate path, def is constant  {:?} / {:?} / {:?} / {:?}",
+                             self.body().arg_count, def_name, type_id.raw[0].local_info.clone(), terminator.kind.name());
+
+                    // println!("print type!{:?}", Any::type_name(self.body().source.type_id()));
+                    // let file_name = format!("/home/y23kim/rust/scc_info/{:?}.json", def_name);
+                    let file_name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
+                    let _file_name22:String = file_name.chars().take(50).collect();
+                    if Path::new(&file_name).exists() {
+                        let file = File::open(file_name).expect("[step] Failed to open file");
+                        let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = serde_json::from_reader(file)
+                            .expect("Failed to deserialize");
+                        // let scc_info_stk: IndexVec<usize, Vec<SccInfo>> = serde_json::from_reader(file).expect("Failed to deserialize");
+                        println!("[STEP] Read scc_info file ={:?}", scc_info_stk);
+                        // TODO FIX!!!!!!!! (remove)
+                        // *s = 0;
+
+                        if !scc_info_stk.is_empty() {
+                            println!("size scc_info_stk {:?}", scc_info_stk.len());
+                            // FxHashMap to IndexVec
+                            let mut scc_info2: IndexVec<usize, Vec<SccInfo>>
+                                = IndexVec::with_capacity(scc_info_stk.len());
+
+                            for key in 0..scc_info_stk.len() {
+                                if let Some(value) = scc_info_stk.get(&key) {
+                                    scc_info2.push(value.clone());
+                                } else {
+                                    panic!("Missing key in FxHashMap: {}", key);
+                                }
+                            }
+
+                            let t : usize = loc.block.index();
+                            // println!("[DEBUG] s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
+                            // ---------------------- PATH
+
+                            // FIX: HOW TO CHECK IF THE DEFINITEION'S TYPE
+                            // def_id.is_top_level_module()
+                            // self.tcx.data_layout;
+                            // let ty = TyBuilder::def_ty(ctx.sema.db, def_id.into(), None);
+                                                // yunji
+                            // CONDITION: only when the file exist
+                            // CONDITION: and only when the definition has MIR, not a construco
+                            // only when it has cfg(content)
+                            // only when it is not a definition of Struct or single value..
+                            // generate_path(scc_info2, *s, t, stk, is_loop, limit, path);
+                            // generate_path(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
+                            // println!("[DEBUG] s= {:?} t= {:?} scc_info = {:?}", *s,  t, self.body().scc_info.clone()[t]);
+                            *s = t;
                         } else {
-                            panic!("Missing key in FxHashMap: {}", key);
+                            println!("[step][terminator] MAP is EMPTY, check type{:?}", type_id);
                         }
+                    } else {
+                        println!("[step] file not exist {:?}, def = {:?}", file_name, def_name);
                     }
 
-                    let t : usize = loc.block.index();
-                    // println!("[DEBUG] s= {:?} t={:?} stk={:?} is_loop={:?}", *s, t, stk, is_loop);
-                    // ---------------------- PATH
-                    generate_path(scc_info2, *s, t, stk, is_loop, limit, path);
-                    // generate_path(self.body().scc_info.clone(), *s, t, stk, is_loop, limit, path);
-                    // println!("[DEBUG] s= {:?} t= {:?} scc_info = {:?}", *s,  t, self.body().scc_info.clone()[t]);
-                    *s = t;
-                } else {
-                    println!("[step] file not exist {:?}, def = {:?}", file_name, def_name);
                 }
 
                 info!("[step] executing {:?}", loc.block);
+                // println!("[step] executing {:?}", loc.block);
             }
         }
         Ok(())
@@ -394,7 +444,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn transform(&mut self, scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) {
         // Can refer "body", BUT cannot modify it.
         let body = self.body();
-        let def_id = body.source.def_id();
+        let _def_id = body.source.def_id();
 
         let mut index_map: Vec<NodeIndex> = vec!();
         let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
@@ -429,7 +479,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 }
 
 
-fn generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
+fn _generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                  s:usize, t:usize,
                  stk:&mut Vec<PathInfo>, is_loop: &mut bool, limit: usize,
                 path: &mut Vec<usize>,

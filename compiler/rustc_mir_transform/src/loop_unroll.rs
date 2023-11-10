@@ -39,7 +39,7 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
         true
     }
     // #[instrument(skip(self, tcx, body))]
-    fn run_pass(&self, _tcx: TyCtxt<'tcx>, _body: &mut Body<'tcx>) {
+    fn run_pass(&self, tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
 
         // let target_name:String = "fuzz_target".parse().unwrap();
         // if let Ok(val) = std::env::var("TARGET_NAME") {
@@ -62,20 +62,13 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
         //     start = val;
         // }
 
-
-
-
-
-
-
-
-
-        /*
         let def_id = body.source.def_id();
-        // println!("what is def_id [{:?}]", &tcx.def_path_str(def_id));
+        println!("[MIRPASS] def_id [{:?}] def str {:?}", def_id, &tcx.def_path_str(def_id));
         // if &tcx.def_path_str(def_id) == "fuzz_target" {
         // if tcx.def_path_str(def_id).contains(&target_name) {
         // }
+        /*
+
         let tmp = tcx.def_path_str(def_id);
         let name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
         println!("[mirpass] Create file = {:?}, defID {:?}", name.clone(), tmp);
@@ -91,10 +84,6 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
         println!("mirpass after LOOP");
 
          */
-
-
-
-
 
 
 
@@ -170,8 +159,8 @@ impl<'tcx> MirPass<'tcx> for LoopUnroll {
 
 pub fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>,
                              // body: &Body<'tcx>,
-                             body: &Body<'_>,
-                             // body: &mut Body<'tcx>,
+                             // body: &Body<'_>,
+                             body: &mut Body<'tcx>,
                          arr: &mut Vec<NodeIndex>,
                              scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>)
 // scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>)
@@ -185,9 +174,9 @@ pub fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>,
         // node.index() should be index of IndexVector
 
         //
-        // let index = body.scc_info.push(vec![]);
+        let index = body.scc_info.push(vec![]);
         // println!("mir to petgraph {:?} == {:?}, {:?}", node.index(), index, body.scc_info);
-        // assert_eq!(node.index(), index);
+        assert_eq!(node.index(), index);
 
         arr.push(node);
         cnt = cnt + 1;
@@ -370,7 +359,8 @@ pub fn transform_to_single_header<'tcx>(scc: &mut Vec<NodeIndex>,
                                         g: &mut Graph<usize, String>,
                                         scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>,
                                         arr: &mut Vec<NodeIndex>,
-                                        _tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>)
+                                        _tcx: TyCtxt<'tcx>,
+                                        body: &mut Body<'tcx>)
                                         -> NodeIndex {
     /// add to petgraph
     let new_node = g.add_node(777);
@@ -493,7 +483,7 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
     let single_latch;
     let new_node;
     if back_edges.len() > 1 {
-        // println!("####### back edges {:?}", back_edges);
+        println!("####### back edges {:?}", back_edges);
         new_node = g.add_node(999);
         single_latch = new_node;
         arr.push(new_node);
@@ -580,14 +570,14 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
 use rustc_middle::mir::SccInfo;
 
 pub fn break_down_and_mark<'tcx>(
-    _tcx: TyCtxt<'tcx>,
+    tcx: TyCtxt<'tcx>,
     // _body: & Body<'tcx>,
-    // body: &mut Body<'tcx>,
+    body: &mut Body<'tcx>,
     scc: &mut Vec<NodeIndex>, scc_id: &mut i32,
     g: &mut Graph<usize, String>,
     scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>,
     // scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-    _arr: &mut Vec<NodeIndex>) {
+    arr: &mut Vec<NodeIndex>) {
 
 
     let loop_header;
@@ -600,28 +590,32 @@ pub fn break_down_and_mark<'tcx>(
         println!("[1] if there is a single header {:?}", headers);
         loop_header = headers[0];
     } else {
-        println!("[2] if there are multiple headers {:?}", headers);
-        // loop_header =
-        //     transform_to_single_header(scc,
-        //                                headers, g,
-        //                                scc_info_stk,
-        //                                arr, tcx, body);
-        loop_header = headers[0];
-        // transform_mir_header(tcx, body)
+        println!("[2] if there are multiple headers {:?}", headers.clone());
+        loop_header =
+            transform_to_single_header(scc,
+                                       headers, g,
+                                       scc_info_stk,
+                                       arr, tcx, body);
+        // loop_header = headers[0];
+        // transform_mir_header(tcx, body);
+        println!("[2] loop_header {:?}",loop_header.clone());
     }
     // H: 1, L: 2, X: 3
+    println!("[2] loop_header {:?} ", loop_header.clone());
     let scc_info = SccInfo::new(*scc_id as usize, NodeType::Header);
-    let _scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Header);
+    let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Header);
     scc_info_stk.get_mut(&loop_header.index()).map(
         |stk| stk.push(scc_info));
-    // body.scc_info[loop_header.index()].push(scc_info2);
+    body.scc_info[loop_header.index()].push(scc_info2);
+    println!("[2] before transfrom single latch ");
 
     // 2. mark latch
-    // single_latch = transform_to_single_latch(scc, loop_header,
-    //                                          g, scc_info_stk,
-    //                                          arr, body);
-    let new_node = g.add_node(999);
-    single_latch = new_node;
+    single_latch = transform_to_single_latch(scc, loop_header,
+                                             g, scc_info_stk,
+                                             arr, body);
+    println!("[2] after transfrom single latch ");
+    // let new_node = g.add_node(999);
+    // single_latch = new_node;
     if scc.len() != 1 {
         // only if it is not a self loop, mark as Latch
         // let scc_info = SccInfo {
@@ -629,19 +623,20 @@ pub fn break_down_and_mark<'tcx>(
         //     _n_type: 2,
         // };
         let scc_info = SccInfo::new(*scc_id as usize, NodeType::Latch);
-        let _scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Latch);
+        let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Latch);
         scc_info_stk.get_mut(&single_latch.index()).map(|stk| stk.push(scc_info));
         // scc_info_stk.get_mut(&single_latch).map(|stk| stk.push(scc_info));
-        // body.scc_info[single_latch.index()].push(scc_info2);
+        body.scc_info[single_latch.index()].push(scc_info2);
     }
+    println!("[2] before amrk X ");
 
     // 3. mark 'X'
     for node in scc.clone() {
         if node != loop_header && node != single_latch.into() {
             let scc_info = SccInfo::new(*scc_id as usize, NodeType::Normal);
-            let _scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Normal);
+            let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Normal);
             scc_info_stk.get_mut(&node.index()).map(|stk| stk.push(scc_info));
-            // body.scc_info[node.index()].push(scc_info2);
+            body.scc_info[node.index()].push(scc_info2);
         }
     }
 

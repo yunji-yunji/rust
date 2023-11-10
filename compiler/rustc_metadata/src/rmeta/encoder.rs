@@ -47,8 +47,8 @@ use std::num::NonZeroUsize;
 use std::path::{Path, PathBuf};
 
 // yj
-use rustc_middle::mir::SccInfo;
-use std::fs::File;
+// use rustc_middle::mir::SccInfo;
+// use std::fs::File;
 
 pub(super) struct EncodeContext<'a, 'tcx> {
     opaque: opaque::FileEncoder,
@@ -1626,6 +1626,7 @@ impl<'a, 'tcx> EncodeContext<'a, 'tcx> {
 
             let name = tcx.def_path_str(def_id.to_def_id());
 
+            // yj: This part is not exectued during TEST.
             println!("[encoder] {:?}, index={:?}", name, def_id.local_def_index);
             // let (body, _) = tcx.mir_promoted(def_id);
             // let mut body = body.steal();
@@ -1636,13 +1637,15 @@ impl<'a, 'tcx> EncodeContext<'a, 'tcx> {
             // debug!("body: {:#?}", body);
             // let bbs = body.basic_blocks_mut();
             // println!("bbs {:?}", bbs);
-
+/*
             let tmp = tcx.def_path_str(def_id);
             let name1 = format!("/home/y23kim/rust/scc_info/{:?}.json", tmp);
             let name:String = name1.chars().take(30).collect();
             // let name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index);
             println!("[encoder] Create file = {:?}, defID {:?}", name.clone(), tmp);
             let scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+
+ */
             /*
             let mut index_map: Vec<NodeIndex> = vec!();
             let g = mir_to_petgraph(tcx,
@@ -1678,6 +1681,7 @@ impl<'a, 'tcx> EncodeContext<'a, 'tcx> {
                 }
             } // loop end
             */
+            /*
             let json = serde_json::to_string_pretty(&scc_info_stk).expect("write json yj");
             let mut file = File::create(name.clone()).expect("yjyj cannot open file");
             // // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}.json", tmp)).expect("yjyj cannot open file");
@@ -1686,6 +1690,8 @@ impl<'a, 'tcx> EncodeContext<'a, 'tcx> {
             file.write_all(json.as_bytes()).expect("cannot write file");
             println!("[encoder] after create file");
 
+
+             */
             debug_assert!(encode_const || encode_opt);
 
             debug!("EntryBuilder::encode_mir({:?})", def_id);
