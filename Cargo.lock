@@ -4091,8 +4091,6 @@ name = "rustc_interface"
 version = "0.0.0"
 dependencies = [
  "libloading 0.7.4",
-# "atty",
-# "libloading",
  "petgraph",
  "rustc-rayon",
  "rustc-rayon-core",
@@ -4347,8 +4345,8 @@ dependencies = [
  "coverage_test_macros",
  "either",
  "itertools",
- "rustc_arena",
  "petgraph",
+ "rustc_arena",
  "rustc_ast",
  "rustc_attr",
  "rustc_const_eval",

@@ -462,7 +462,6 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
         None => bug!("`mir_for_ctfe` called on non-const {def:?}"),
     };
 
-<<<<<<< HEAD
     // let context = tcx
     //     .hir()
     //     .body_const_context(def)
@@ -470,11 +469,7 @@ fn inner_mir_for_ctfe(tcx: TyCtxt<'_>, def: LocalDefId) -> Body<'_> {
     //
     // let body = tcx.mir_drops_elaborated_and_const_checked(def).borrow().clone();
     println!("[yjyj] mir_drops def_id = {:?}", tcx.def_path_str(def));
-
-=======
-    let body = tcx.mir_drops_elaborated_and_const_checked(def).borrow().clone();
     println!("[Mir_transform][lib][mir_for_ctfe] def_id = {:?}", tcx.def_path_str(def));
->>>>>>> 2b4bbe6cd42 (Commit before rebase)
     let mut body = remap_mir_for_const_eval_select(tcx, body, hir::Constness::Const);
     pm::run_passes(tcx, &mut body, &[&ctfe_limit::CtfeLimit], None);
 
@@ -494,13 +489,6 @@ use std::io::Write;
 /// mir borrowck *before* doing so in order to ensure that borrowck can be run and doesn't
 /// end up missing the source MIR due to stealing happening.
 fn mir_drops_elaborated_and_const_checked(tcx: TyCtxt<'_>, def: LocalDefId) -> &Steal<Body<'_>> {
-<<<<<<< HEAD
-//     fn mir_drops_elaborated_and_const_checked<'tcx>(tcx: TyCtxt<'_>,
-//                                               def: LocalDefId,
-//                                               body: &mut Body<'tcx>,) -> &'tcx Steal<Body<'tcx>> {
-=======
-//     fn mir_drops_elaborated_and_const_checked<'tcx>(tcx: TyCtxt<'_>, def: LocalDefId, body: &mut Body<'tcx>,) -> &'tcx Steal<Body<'tcx>> {
->>>>>>> 2b4bbe6cd42 (Commit before rebase)
 
     if let DefKind::Coroutine = tcx.def_kind(def) {
         tcx.ensure_with_value().mir_coroutine_witnesses(def);
