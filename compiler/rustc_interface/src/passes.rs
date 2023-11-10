@@ -669,17 +669,7 @@ pub static DEFAULT_QUERY_PROVIDERS: LazyLock<Providers> = LazyLock::new(|| {
     *providers
 });
 
-<<<<<<< HEAD
-=======
-pub static DEFAULT_EXTERN_QUERY_PROVIDERS: LazyLock<ExternProviders> = LazyLock::new(|| {
-    let mut extern_providers = ExternProviders::default();
-    rustc_metadata::provide_extern(&mut extern_providers);
-    rustc_codegen_ssa::provide_extern(&mut extern_providers);
-    extern_providers
-});
-
 // yj
->>>>>>> 2b4bbe6cd42 (Commit before rebase)
 pub fn create_global_ctxt<'tcx>(
     compiler: &'tcx Compiler,
     crate_types: Vec<CrateType>,
@@ -700,17 +690,9 @@ pub fn create_global_ctxt<'tcx>(
     let query_result_on_disk_cache = rustc_incremental::load_query_result_cache(sess);
 
     let codegen_backend = compiler.codegen_backend();
-<<<<<<< HEAD
+
     let mut providers = *DEFAULT_QUERY_PROVIDERS;
     codegen_backend.provide(&mut providers);
-=======
-    // yj
-    let mut local_providers = *DEFAULT_QUERY_PROVIDERS;
-    codegen_backend.provide(&mut local_providers);
-
-    let mut extern_providers = *DEFAULT_EXTERN_QUERY_PROVIDERS;
-    codegen_backend.provide_extern(&mut extern_providers);
->>>>>>> 2b4bbe6cd42 (Commit before rebase)
 
     if let Some(callback) = compiler.override_queries {
         callback(sess, &mut providers);
