@@ -1737,50 +1737,6 @@ pub fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>,
     g
 }
 
-/*
-pub fn mir_to_petgraph<'tcx>(_tcx: TyCtxtAt<'tcx>, body: &Body<'tcx>, arr: &mut Vec<NodeIndex>,
-                             scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-                             scc_info: &mut IndexVec<usize, Vec<SccInfo>>)
-                             -> Graph::<usize, String>{
-    let mut g = Graph::<usize, String>::new();
-
-    let mut cnt: usize = 0;
-    for _ in body.basic_blocks.iter() {
-        let node = g.add_node(cnt);
-        scc_info_stk.insert(node, vec!());
-        // node.index() should be index of IndexVector
-
-
-
-
-        // let index = body.scc_info.push(vec![]);
-        // assert_eq!(node.index(), index);
-        let _index = scc_info.push(vec![]);
-        // assert_eq!(node.index(), index);
-
-        // println!("mir to petgraph {:?} == {:?}, {:?}", node.index(), index, body.scc_info);
-
-        arr.push(node);
-        cnt = cnt + 1;
-    }
-
-    for (source, _) in body.basic_blocks.iter_enumerated() {
-        // let def_id = body.source.def_id();
-        // let def_name = format!("{}_{}", def_id.krate.index(), def_id.index.index(),);
-        let terminator = body[source].terminator();
-        let labels = terminator.kind.fmt_successor_labels();
-        for (target, _label) in terminator.successors().zip(labels) {
-            g.update_edge(arr[source.index()], arr[target.index()], String::from(""));
-        }
-    }
-    // printpg(g.clone(), "Initial");
-
-    g
-}
-
-
- */
-
 pub fn is_cycle(orig: Graph<usize, String>, scc:Vec<NodeIndex>) -> bool {
     let mut new = Graph::<usize, String>::new();
 
@@ -2163,83 +2119,7 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
 
 }
 
-/*
 
-pub fn break_down_and_mark<'tcx>(
-    tcx: TyCtxtAt<'tcx>,
-    // body: &Body<'tcx>,
-    body: &mut Body<'tcx>,
-    scc: &mut Vec<NodeIndex>, scc_id: &mut i32,
-    g: &mut Graph<usize, String>,
-    scc_info_stk: &mut FxHashMap<NodeIndex, Vec<SccInfo>>,
-    // scc_info_stk: &mut FxHashMap<usize, Vec<SccInfo>>,
-    arr: &mut Vec<NodeIndex>,
-    scc_info: &mut IndexVec<usize, Vec<SccInfo>>,
-) {
-
-
-    let loop_header;
-    let single_latch;
-
-    // println!("====================== Transform & Mark ======================");
-    // 1. mark header
-    let headers = find_all_headers(scc.clone(), g);
-    if headers.len() ==1 {
-        // println!("[1] if there is a single header {:?}", headers);
-        loop_header = headers[0];
-    } else {
-        // println!("[2] if there are multiple headers {:?}", headers);
-        loop_header = transform_to_single_header(scc, headers, g, scc_info_stk, arr, tcx, body/*, scc_info*/);
-        // transform_mir_header(tcx, body)
-    }
-    // H: 1, L: 2, X: 3
-    let scc_info1 = SccInfo::new(*scc_id as usize, NodeType::Header);
-    let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Header);
-    scc_info_stk.get_mut(&loop_header).map(|stk| stk.push(scc_info1));
-    //body.scc_info[loop_header.index()].push(scc_info2);
-    scc_info[loop_header.index()].push(scc_info2);
-
-    // 2. mark latch
-    single_latch = transform_to_single_latch(scc, loop_header, g, scc_info_stk, arr, body, scc_info);
-    if scc.len() != 1 {
-        // only if it is not a self loop, mark as Latch
-        // let scc_info = SccInfo {
-        //     _id: *scc_id,
-        //     _n_type: 2,
-        // };
-        let scc_info1 = SccInfo::new(*scc_id as usize, NodeType::Latch);
-        let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Latch);
-        scc_info_stk.get_mut(&single_latch).map(|stk| stk.push(scc_info1));
-        // body.scc_info[single_latch.index()].push(scc_info2);
-        scc_info[single_latch.index()].push(scc_info2);
-
-    }
-
-    // 3. mark 'X'
-    for node in scc.clone() {
-        if node != loop_header && node != single_latch {
-            let scc_info1 = SccInfo::new(*scc_id as usize, NodeType::Normal);
-            let scc_info2 = SccInfo::new(*scc_id as usize, NodeType::Normal);
-            scc_info_stk.get_mut(&node).map(|stk| stk.push(scc_info1));
-            // body.scc_info[node.index()].push(scc_info2);
-            scc_info[node.index()].push(scc_info2);
-        }
-    }
-
-    // println!("\n====================== Break Down ======================");
-    let Some(edge_idx) = g.find_edge(single_latch, loop_header) else {
-        println!("cannot find edge in mark and break down");
-        return;
-    };
-    println!("remove single latch = {:?} -> header = {:?}", single_latch, loop_header);
-    g.remove_edge(edge_idx);
-
-    *scc_id += 1;
-}
-
-
-
- */
 
 pub fn break_down_and_mark<'tcx>(
     tcx: TyCtxt<'tcx>,

@@ -12,20 +12,14 @@ use rustc_middle::ty::layout::LayoutOf;
 use super::{ImmTy, InterpCx, Machine, Projectable};
 use crate::util;
 
-// use crate::interpret::mir_transform::*;
-use rustc_middle::*;
-// use rustc_mir_transform::loop_unroll::{is_cycle, mir_to_petgraph};
-// use rustc_middle::mir::{is_cycle, mir_to_petgraph};
 // yunji
+use rustc_middle::*;
 use std::default::Default;
 use std::io::Write;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
-// ============
 use rustc_data_structures::fx::FxHashMap;
-// use petgraph::algo::kosaraju_scc;
-// use petgraph::prelude::NodeIndex;
 use std::string::String;
 use rustc_middle::mir::{SccInfo, PathInfo, NodeType};
 use std::default::Default as HashDefault;
@@ -349,7 +343,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                   _limit:usize,
                   _scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
-        println!("starting index {:?}", s);
+
+        // yj: only if terminator.kind == Call
+        // init starting index, ...
+        println!("generate path starting index {:?}", s);
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
@@ -373,11 +370,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let _span = self.body().clone().span;
                 println!("[step] [{:?}] type id={:?} loc.block{:?}", type_id.len(), type_id.raw[0].clone().local_info,  loc.block.clone());
                 // println!("[step] type id=s{:?} span={:?} user type={:?}", type_id, span, self.body().clone().user_type_annotations);
-                // if def_name.contains("constant") {
-                if self.body().arg_count ==0 { // mean this mir is for constant
-                // if terminator.kind.name() != "Call" {
-                // if type_id.raw[0].local_info.clone().yunji_assert_crate_local() {
-                    // if type_id.raw[0].local_info.fmt() == ClearCrossCrate::Clear {
+                if terminator.kind.name() != "Call" {
                     println!("[step] no generate path, def is constant {:?} /  {:?} / {:?} / {:?}",
                              self.body().arg_count,def_name, type_id.raw[0].local_info.clone(), terminator.kind.name());
                 } else {
@@ -443,45 +436,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
         Ok(())
     }
-/*
-    pub fn _transform(&mut self, scc_info: &mut IndexVec<usize, Vec<SccInfo>>,) {
-        // Can refer "body", BUT cannot modify it.
-        let body = self.body();
-        let _def_id = body.source.def_id();
 
-        let mut index_map: Vec<NodeIndex> = vec!();
-        let mut scc_info_stk: FxHashMap<NodeIndex, Vec<SccInfo>> = Default::default();
-        // let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
-
-        let g = mir_to_petgraph(self.tcx, body, &mut index_map, &mut scc_info_stk, scc_info);
-
-        let _scc_id: i32 = 1;
-        let copy_graph = g.clone();
-        loop {
-            let mut stop = true;
-            let mut scc_list = kosaraju_scc(&copy_graph);
-            // println!("SCC = {:?}", scc_list.clone());
-            for scc in &mut scc_list {
-                let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
-                if is_cycle == true {
-                    stop = false;
-                    // break_down_and_mark(self.tcx, body,
-                    //                     scc, &mut scc_id, &mut copy_graph, &mut scc_info_stk, &mut index_map, scc_info);
-                }
-            }
-
-            if stop {
-                // println!("\nBREAK!\n final SCC ={:?}\n\nSCC INFO STACK", scc_list.clone());
-                // for (n_idx, &ref stack) in scc_info_stk.iter() {
-                //     println!("node: {:?} == {:?}", n_idx, stack);
-                // }
-                break;
-            }
-        }
-        // println!("[step][transform] After LOOP");
-    }
-
- */
 }
 
 fn _generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,

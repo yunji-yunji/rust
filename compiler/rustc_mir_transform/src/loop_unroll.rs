@@ -4,16 +4,8 @@ use crate::MirPass;
 // use rustc_middle::mir::*;
 use rustc_middle::ty::TyCtxt;
 
-// // use std::collections::HashMap;
 // use rustc_data_structures::fx::FxHashMap;
-// use petgraph::Graph;
-// // use petgraph::dot::{Dot, Config};
-// // use petgraph::algo::kosaraju_scc;
-// use petgraph::algo::toposort;
-// use petgraph::prelude::NodeIndex;
-// use petgraph::visit::Dfs;
 // // use rustc_middle::mir::Body;
-//
 // // use rustc_middle::mir::*; // visit
 // use rustc_index::vec::IndexVec;
 // // use rustc_middle::mir::MirPass;
@@ -21,12 +13,7 @@ use rustc_middle::mir::Body;
 // use rustc_middle::mir::{BasicBlock, Body, TerminatorKind, BasicBlockData, };
 
 // // use rustc_ast::ast::{InlineAsmOptions, InlineAsmTemplatePiece};
-// // use std::{env};
 // use std::string::String;
-// // use std::io::{self, Read};
-// // use std::path::PathBuf;
-//
-//
 // // use std::fs::File;
 // // use std::io::Write;
 

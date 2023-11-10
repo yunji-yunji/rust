@@ -475,7 +475,6 @@ fn run_compiler(
                 return early_exit();
             }
 
-            // yj
             let ongoing_codegen = queries.ongoing_codegen()?;
 
             if sess.opts.unstable_opts.print_type_sizes {
