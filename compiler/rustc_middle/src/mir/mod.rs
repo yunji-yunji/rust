@@ -1656,8 +1656,17 @@ mod size_asserts {
 }
 
 
-// ==================== yunji codes
+// ==================== yunji code ==================== //
 use serde::{Serialize, Deserialize};
+use petgraph::Graph;
+use petgraph::algo::toposort;
+use petgraph::algo::kosaraju_scc;
+use petgraph::prelude::NodeIndex;
+use petgraph::visit::Dfs;
+use std::string::String;
+// use crate::query::TyCtxtAt;
+use std::fs::File;
+use std::io::Write;
 
 pub const REPEAT_LIMIT: usize = 3;
 
@@ -1689,14 +1698,6 @@ impl SccInfo {
         }
     }
 }
-
-
-use petgraph::Graph;
-use petgraph::algo::toposort;
-use petgraph::prelude::NodeIndex;
-use petgraph::visit::Dfs;
-use std::string::String;
-// use crate::query::TyCtxtAt;
 
 
 pub fn mir_to_petgraph<'tcx>(_tcx: TyCtxt<'tcx>,
@@ -2203,3 +2204,80 @@ pub fn break_down_and_mark<'tcx>(
     *scc_id += 1;
 }
 
+pub fn breakdown_outer_loop<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>,) {
+    let mut index_map: Vec<NodeIndex> = vec!();
+    let mut scc_info_stk: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+    let g = mir_to_petgraph(tcx, body, &mut index_map, &mut scc_info_stk);
+    println!("## after mir_to_petgraph {:?}", g);
+
+    let mut scc_id: i32 = 1;
+    let mut copy_graph = g.clone();
+    loop {
+        let mut stop = true;
+        let mut scc_list = kosaraju_scc(&copy_graph);
+        // println!("SCC = {:?}", scc_list.clone());
+        for scc in &mut scc_list {
+            let is_cycle = is_cycle(copy_graph.clone(), scc.clone());
+            if is_cycle == true {
+                stop = false;
+                break_down_and_mark(tcx, body,
+                                    scc, &mut scc_id, &mut copy_graph,
+                                    &mut scc_info_stk, &mut index_map);
+
+                // break_down_and_mark(tcx,
+                //                     scc,
+                //                     &mut scc_id,
+                //                     &mut copy_graph,
+                //                     &mut scc_info_stk,
+                //                     &mut index_map);
+            }
+        }
+
+        if stop {
+            println!("\nBREAK!\n final SCC ={:?}\nSCC INFO STACK", scc_list.clone());
+            break;
+        }
+    } // loop end
+
+}
+
+pub fn write_scc_info_to_file<'tcx>(body: &mut Body<'tcx>, file_name: String) {
+    // ========== CONVERT TYPE ========== //
+    // IndexVec(body.scc_info) to FxHashMap(serialize) //
+    let mut scc_info_stk_fin: FxHashMap<usize, Vec<SccInfo>> = Default::default();
+
+    if !body.scc_info.is_empty() {
+        // let mut scc_info2: IndexVec<usize, Vec<SccInfo>>
+        //     = IndexVec::with_capacity(scc_info_stk.len());
+        for (index, value) in body.scc_info.clone().into_iter().enumerate() {
+            scc_info_stk_fin.insert(index, value);
+        }
+        for (index, value) in body.scc_info.clone().into_iter().enumerate() {
+            scc_info_stk_fin.insert(index, value.clone()); // Clone if necessary
+        }
+
+        // for key in 0..scc_info_stk.len() {
+        //     if let Some(value) = scc_info_stk.get(&key) {
+        //         scc_info2.push(value.clone());
+        //     } else {
+        //         panic!("Missing key in FxHashMap: {}", key);
+        //     }
+        // }
+    }
+    println!("indexvec to FxHashmp \n{:?} \n{:?}", scc_info_stk_fin, body.scc_info.clone());
+    assert!(scc_info_stk_fin.len() == body.scc_info.clone().len());
+
+    // ========== WRITE FILE ========== //
+    // let json = serde_json::to_string_pretty(&scc_info_stk).expect("write json yj");
+    // let json = serde_json::to_string_pretty(&body.scc_info).expect("write json yj");
+
+    let json = serde_json::to_string_pretty(&scc_info_stk_fin).expect("write json yj");
+    let mut file = File::create(file_name.clone()).expect("yjyj cannot open file");
+    // let mut file = File::create(name.clone()).expect("yjyj cannot open file");
+    // // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}.json", tmp)).expect("yjyj cannot open file");
+    // // let mut file = File::create(format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def_id.krate, def_id.index))
+    // //     .expect("yjyj cannot open file");
+    file.write_all(json.as_bytes()).expect("cannot write file");
+    println!("## Create file  {:?}", file_name);
+
+}
