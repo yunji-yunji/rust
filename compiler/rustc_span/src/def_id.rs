@@ -268,7 +268,7 @@ pub struct DefId {
 // ```
 //
 // The order here has direct impact on `FxHash` quality because we have far more `DefIndex` per
-//``````````````````````````````````` crate than we have `Crate`s within one compilatio```````````````````````````````````n. Or in other words, this arrangement puts
+// crate than we have `Crate`s within one compilation. Or in other words, this arrangement puts
 // more entropy in the low bits than the high bits. The reason this matters is that `FxHash`, which
 // is used throughout rustc, has problems distributing the entropy from the high bits, so reversing
 // the order would lead to a large number of collisions and thus far worse performance.

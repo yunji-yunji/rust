@@ -1831,7 +1831,7 @@ impl<'t> TyCtxt<'t> {
         let def_id = def_id.into_query_param();
         let ns = guess_def_namespace(self, def_id);
         debug!("def_path_str: def_id={:?}, ns={:?}", def_id, ns);
-        // println!("def_path_str: def_id={:?}, ns={:?}, substs={:?}", def_id, ns, substs);
+
         FmtPrinter::print_string(self, ns, |cx| cx.print_def_path(def_id, args)).unwrap()
     }
 
