@@ -50,11 +50,6 @@ rustc_ty_utils = { path = "../rustc_ty_utils" }
 tracing = "0.1"
 # tidy-alphabetical-end
 
-# yj
-petgraph = "0.5.1"
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-
 [features]
 # tidy-alphabetical-start
 llvm = ['rustc_codegen_llvm']

@@ -388,6 +388,7 @@ pub struct Config {
 #[allow(rustc::bad_opt_access)]
 pub fn run_compiler<R: Send>(config: Config, f: impl FnOnce(&Compiler) -> R + Send) -> R {
     trace!("run_compiler");
+
     // Set parallel mode before thread pool creation, which will create `Lock`s.
     rustc_data_structures::sync::set_dyn_thread_safe_mode(config.opts.unstable_opts.threads > 1);
 
@@ -465,7 +466,6 @@ pub fn run_compiler<R: Send>(config: Config, f: impl FnOnce(&Compiler) -> R + Se
             if let Some(parse_sess_created) = config.parse_sess_created {
                 parse_sess_created(&mut sess.parse_sess);
             }
-            // println!("*.* before codegen_backend ==================================");
 
             if let Some(hash_untracked_state) = config.hash_untracked_state {
                 let mut hasher = StableHasher::new();
@@ -479,7 +479,6 @@ pub fn run_compiler<R: Send>(config: Config, f: impl FnOnce(&Compiler) -> R + Se
                 register_lints: config.register_lints,
                 override_queries: config.override_queries,
             };
-            // println!("*.* after codegen_backend (metadata is created before this?)");
 
             rustc_span::set_source_map(compiler.sess.parse_sess.clone_source_map(), move || {
                 let r = {

@@ -4091,7 +4091,6 @@ name = "rustc_interface"
 version = "0.0.0"
 dependencies = [
  "libloading 0.7.4",
- "petgraph",
  "rustc-rayon",
  "rustc-rayon-core",
  "rustc_ast",
@@ -4133,8 +4132,6 @@ dependencies = [
  "rustc_trait_selection",
  "rustc_traits",
  "rustc_ty_utils",
- "serde",
- "serde_json",
  "tracing",
 ]
 

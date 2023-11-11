@@ -160,7 +160,6 @@ impl<'tcx> Queries<'tcx> {
             debug_assert_eq!(_id, CRATE_DEF_ID);
             let untracked = Untracked { cstore, source_span, definitions };
 
-            // yj
             let qcx = passes::create_global_ctxt(
                 self.compiler,
                 crate_types,
@@ -189,7 +188,6 @@ impl<'tcx> Queries<'tcx> {
         })
     }
 
-    // yj
     pub fn ongoing_codegen(&'tcx self) -> Result<Box<dyn Any>> {
         self.global_ctxt()?.enter(|tcx| {
             // Don't do code generation if there were any errors
