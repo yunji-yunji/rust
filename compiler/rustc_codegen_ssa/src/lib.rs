@@ -265,3 +265,6 @@ impl CodegenResults {
         Ok((codegen_results, outputs))
     }
 }
+
+/// Encapsulation for code logic related to path-aware AFL-style fuzzing
+mod pafl;
