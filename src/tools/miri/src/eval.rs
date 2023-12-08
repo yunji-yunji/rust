@@ -422,6 +422,17 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
+    // Dump
+    match std::env::var_os("OUTDIR") {
+        None => (),
+        Some(val) => {
+            println!("Start Dump!");
+            let outdir: PathBuf = std::path::PathBuf::from(val);
+            dump::dump_in_eval_entry(tcx, entry_id, entry_type, &outdir);
+            println!("Complete Dump!");
+        }
+    }
+
     // Copy setting before we move `config`.
     let ignore_leaks = config.ignore_leaks;
 
