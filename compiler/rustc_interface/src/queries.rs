@@ -25,6 +25,8 @@ use std::any::Any;
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
+// use rustc_middle::bug;
+
 /// Represent the result of a query.
 ///
 /// This result can be stolen once with the [`steal`] method and generated with the [`compute`] method.
@@ -166,7 +168,7 @@ impl<'tcx> Queries<'tcx> {
                 let feed = tcx.create_crate_num(stable_crate_id).unwrap();
                 assert_eq!(feed.key(), LOCAL_CRATE);
                 feed.crate_name(crate_name);
-
+            
                 let feed = tcx.feed_unit_query();
                 feed.features_query(tcx.arena.alloc(rustc_expand::config::features(
                     sess,
@@ -222,7 +224,7 @@ impl<'tcx> Queries<'tcx> {
 
     pub fn codegen_and_build_linker(&'tcx self) -> Result<Linker> {
         self.global_ctxt()?.enter(|tcx| {
-            // Don't do code generation if there were any errors. Likewise if
+            // Don't do code generation if there were any errors
             // there were any delayed bugs, because codegen will likely cause
             // more ICEs, obscuring the original problem.
             if let Some(guar) = self.compiler.sess.dcx().has_errors_or_delayed_bugs() {
@@ -232,8 +234,29 @@ impl<'tcx> Queries<'tcx> {
             // Hook for UI tests.
             Self::check_for_rustc_errors_attr(tcx);
 
-            let ongoing_codegen = passes::start_codegen(&*self.compiler.codegen_backend, tcx);
-
+            // original dump location. codegen_crate is called in start_codegen.
+            let ongoing_codegen: Box<dyn Any> = passes::start_codegen(&*self.compiler.codegen_backend, tcx);
+            // println!("after start codegen");
+            // match std::env::var_os("BUILD_LINKER2") {
+            //     None => {},
+            //     Some(val) => {
+            //         let outdir = std::path::PathBuf::from(val.clone());
+            //         let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+            //             None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+            //             Some(v) => std::path::PathBuf::from(v),
+            //         };
+            //         match tcx.sess.local_crate_source_file() {
+            //             None => bug!("unable to locate local crate source file"),
+            //             Some(src) => {
+            //                 if src.starts_with(&prefix) {
+            //                     println!("Before collect dump2");
+            //                     tcx.dump_cp(&outdir);
+            //                 }
+            //             }
+            //         }
+            //     }
+            // };
+            
             Ok(Linker {
                 dep_graph: tcx.dep_graph.clone(),
                 output_filenames: tcx.output_filenames(()).clone(),

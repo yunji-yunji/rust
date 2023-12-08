@@ -18,6 +18,7 @@ use tracing::{debug, instrument};
 
 use std::assert_matches::assert_matches;
 use std::fmt;
+// use rustc_middle::ty::print::with_no_trimmed_paths;
 
 /// A monomorphized `InstanceDef`.
 ///
@@ -496,7 +497,28 @@ impl<'tcx> Instance<'tcx> {
         // below is more likely to ignore the bounds in scope (e.g. if the only
         // generic parameters mentioned by `args` were lifetime ones).
         let args = tcx.erase_regions(args);
-        tcx.resolve_instance(tcx.erase_regions(param_env.and((def_id, args))))
+        let res = tcx.resolve_instance(tcx.erase_regions(param_env.and((def_id, args))));
+        /*
+        with_no_trimmed_paths!({
+            match res.clone() {
+                Ok(Some(instance)) => {
+                    println!("get instance:{} [{}] <{}>", args.print_as_list(), tcx.def_path_debug_str(def_id), instance);
+                },
+                Ok(None) => {
+                    // therefore don't allow finding the final `Instance`
+                    // .into_type_list(tcx)
+                    println!("GenericArgsRef are still too generic:{} [{}]", args.print_as_list(), tcx.def_path_debug_str(def_id));
+                },
+                Err(err) => {
+                    println!("cannot resolve:{} [{}] <{:?}>", args.print_as_list(), tcx.def_path_debug_str(def_id), err);
+                },
+            }
+        }
+        );
+         */
+
+
+        return res;
     }
 
     pub fn expect_resolve(

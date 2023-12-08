@@ -126,6 +126,7 @@ pub fn eliminate<'tcx>(tcx: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
     }
 }
 
+#[allow(dead_code)]
 pub enum DeadStoreElimination {
     Initial,
     Final,

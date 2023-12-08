@@ -17,8 +17,12 @@ use rustc_middle::ty::layout::{
     self, FnAbiError, FnAbiOfHelpers, FnAbiRequest, LayoutError, LayoutOf, LayoutOfHelpers,
     TyAndLayout,
 };
+<<<<<<< HEAD
 use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance};
 use rustc_middle::{bug, span_bug};
+=======
+use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance, context::{FnInstKey, Trace}};
+>>>>>>> 6ed7d451b23 (move bb dumping to interpcx)
 use rustc_mir_dataflow::storage::always_storage_live_locals;
 use rustc_session::Limit;
 use rustc_span::Span;
@@ -33,6 +37,7 @@ use super::{
 use crate::errors;
 use crate::util;
 use crate::{fluent_generated as fluent, ReportErrorExt};
+use rustc_middle::ty::print::with_no_trimmed_paths;
 
 pub struct InterpCx<'tcx, M: Machine<'tcx>> {
     /// Stores the `Machine` instance.
@@ -53,6 +58,10 @@ pub struct InterpCx<'tcx, M: Machine<'tcx>> {
 
     /// The recursion limit (cached from `tcx.recursion_limit(())`)
     pub recursion_limit: Limit,
+
+    // my variables
+    pub _trace_stack: Vec<Trace>,
+    pub _skip_counter: usize,
 }
 
 // The Phantomdata exists to prevent this type from being `Send`. If it were sent across a thread
@@ -491,12 +500,21 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         param_env: ty::ParamEnv<'tcx>,
         machine: M,
     ) -> Self {
+        let dummy_fn_inst_key = FnInstKey {
+            krate: None,
+            index: 0,
+            path: String::from(""),
+            generics: vec![],
+        };
+
         InterpCx {
             machine,
             tcx: tcx.at(root_span),
             param_env,
             memory: Memory::new(),
             recursion_limit: tcx.recursion_limit(),
+            _trace_stack: vec![Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }],
+            _skip_counter: 0,
         }
     }
 
@@ -569,11 +587,14 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         instance: ty::InstanceDef<'tcx>,
         promoted: Option<mir::Promoted>,
     ) -> InterpResult<'tcx, &'tcx mir::Body<'tcx>> {
-        trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
+        // trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
+        // println!("load mir(instance={:?}, promoted={:?})", instance, promoted);
         let body = if let Some(promoted) = promoted {
             let def = instance.def_id();
+            // println!("load mir(promoted_mir)");
             &self.tcx.promoted_mir(def)[promoted]
         } else {
+            // println!("load mir(optimized_mir)");
             M::load_mir(self, instance)?
         };
         // do not continue if typeck errors occurred (can only occur in local crate)
@@ -620,9 +641,10 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         args: GenericArgsRef<'tcx>,
     ) -> InterpResult<'tcx, ty::Instance<'tcx>> {
         trace!("resolve: {:?}, {:#?}", def, args);
+        // println!("1) resolve: def={:?}, args={:#?}", def, args);
         trace!("param_env: {:#?}", self.param_env);
         trace!("args: {:#?}", args);
-        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) {
+        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) { // cannot find never here
             Ok(Some(instance)) => Ok(instance),
             Ok(None) => throw_inval!(TooGeneric),
 
@@ -797,6 +819,30 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         self.size_and_align_of(&mplace.meta(), &mplace.layout)
     }
 
+    pub fn fn_info(
+        &mut self,
+        // body: &Body<'_>,
+        // instance: ty::Instance<'tcx>,
+        body: &'mir mir::Body<'tcx>,
+    ) -> String {
+        let instance_def = body.source.instance;
+        let def_id = instance_def.def_id();
+        let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+        let def_path = self.tcx.def_path(def_id);
+        let def_paths = def_path.data;
+        let mut tmp : Vec<String> = vec!();
+        for item in &def_paths {
+            let name = with_no_trimmed_paths!(item.data.to_string());
+            tmp.push(name);
+            let num = with_no_trimmed_paths!(item.disambiguator.to_string());
+            tmp.push(num);
+        }
+        let s1 :String= tmp.join(":");
+        let s2 : String = String::from(":");
+        let fin = krate_name.to_string() + &s2 + &s1;
+        fin
+    }
+
     #[instrument(skip(self, body, return_place, return_to_block), level = "debug")]
     pub fn push_stack_frame(
         &mut self,
@@ -819,8 +865,24 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             tracing_span: SpanGuard::new(),
             extra: (),
         };
+<<<<<<< HEAD
         let frame = M::init_frame(self, pre_frame)?;
+=======
+        let frame = M::init_frame_extra(self, pre_frame)?;
+<<<<<<< HEAD
+        // self.yj_push(String::from("[ncall:"));
+        let s = self.fn_info(body);
+        self.yj_push(s);
+>>>>>>> 2a9d421cde1 (Call push_stack_frame print info)
+=======
+
+<<<<<<< HEAD
+>>>>>>> d8c30ebdc1a (Call-Return paired)
+=======
+        // let print = !instance.args.is_empty();
+>>>>>>> 539f42dac72 (Fix Never type bug)
         self.stack_mut().push(frame);
+        // if print {println!("4.1) push_stack_frame args={:?}", instance.args);}
 
         // Make sure all the constants required by this frame evaluate successfully (post-monomorphization check).
         for &const_ in &body.required_consts {
@@ -831,9 +893,28 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 err
             })?;
         }
-
+        
+        // if print {println!("4.2) push_stack_frame args={:?}", instance.args);}
         // done
         M::after_stack_push(self)?;
+
+        // let fn_inst_key = self.create_fn_inst_key3(instance);
+        let fn_inst_key = self.get_fn_inst_key(instance);
+        // if !fn_inst_key.generics.is_empty() {
+        // }
+
+        match std::env::var_os("INST_DUMP") {
+            None => {},
+            Some(_val) => {
+                with_no_trimmed_paths!({
+                    println!("4.3) caller_def=[{}] args=[{:?}] ", fn_inst_key.path, fn_inst_key.generics);
+                    println!("4.4) {:?}", instance.args);
+                });
+            }
+        };
+
+        self.push_trace_stack1(fn_inst_key);
+
         self.frame_mut().loc = Left(mir::Location::START);
 
         let span = info_span!("frame", "{}", instance);
@@ -980,6 +1061,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             // Skip machine hook.
             return Ok(());
         }
+
+        self.merge_trace_stack1();
+
         if M::after_stack_pop(self, frame, unwinding)? == StackPopJump::NoJump {
             // The hook already did everything.
             return Ok(());
@@ -987,6 +1071,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         // Normal return, figure out where to jump.
         if unwinding {
+
+            // self.push_bb("unwind]".to_string());
+            // println!("unwiding: {:?}", name);
             // Follow the unwind edge.
             let unwind = match return_to_block {
                 StackPopCleanup::Goto { unwind, .. } => unwind,
@@ -997,6 +1084,8 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             // This must be the very last thing that happens, since it can in fact push a new stack frame.
             self.unwind_to_block(unwind)
         } else {
+            // self.push_bb(name);
+            // self.push_bb("wind]".to_string());
             // Follow the normal return edge.
             match return_to_block {
                 StackPopCleanup::Goto { ret, .. } => self.return_to_block(ret),
