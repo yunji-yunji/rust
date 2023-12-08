@@ -96,6 +96,11 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         match terminator.kind {
             Return => {
                 self.return_from_current_stack_frame(/* unwinding */ false)?
+                // let crate_info = self.crate_info();
+                // let caller = self.stack().last().unwrap().instance;
+                // println!("caller of ret{:?}", caller.def);
+
+                // self.pop_stack_frame(/* unwinding */ false)?
             }
 
             Goto { target } => self.go_to_block(target),
@@ -133,6 +138,12 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 call_source: _,
                 fn_span: _,
             } => {
+
+                // let instance_def = self.body().source.instance;
+                // let def_id = instance_def.def_id();
+                // let fn_inst_key = self.create_fn_inst_key(def_id, func);
+                // self.push_trace_stack1(fn_inst_key);
+
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
 
@@ -641,6 +652,11 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                     return Ok(());
                 };
 
+                // with_no_trimmed_paths!({
+                //     println!("3) eval_fn_call: args=[{:?}]", instance.args);
+                // });
+                
+
                 // Compute callee information using the `instance` returned by
                 // `find_mir_or_eval_fn`.
                 // FIXME: for variadic support, do we have to somehow determine callee's extra_args?
@@ -659,23 +675,31 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                         )
                     }
                 }
-
+                // with_no_trimmed_paths!({
+                //     println!("3.1) {:?}", instance.args);
+                // });
                 // Check that all target features required by the callee (i.e., from
                 // the attribute `#[target_feature(enable = ...)]`) are enabled at
                 // compile time.
                 self.check_fn_target_features(instance)?;
-
+                // with_no_trimmed_paths!({
+                //     println!("3.2) {:?}", instance.args);
+                // });
                 if !callee_fn_abi.can_unwind {
                     // The callee cannot unwind, so force the `Unreachable` unwind handling.
                     unwind = mir::UnwindAction::Unreachable;
                 }
-
+                // with_no_trimmed_paths!({
+                //     println!("3.3) {:?}", instance.args);
+                // });
+                // CAN find never
                 self.push_stack_frame(
                     instance,
                     body,
                     destination,
                     StackPopCleanup::Goto { ret: target, unwind },
                 )?;
+
 
                 // If an error is raised here, pop the frame again to get an accurate backtrace.
                 // To this end, we wrap it all in a `try` block.
@@ -820,6 +844,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 match res {
                     Err(err) => {
                         self.stack_mut().pop();
+                        self.merge_trace_stack1();
                         Err(err)
                     }
                     Ok(()) => Ok(()),

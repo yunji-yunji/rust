@@ -71,6 +71,7 @@ use std::mem;
 use std::num::NonZero;
 use std::ptr::NonNull;
 use std::{fmt, str};
+use rustc_middle::ty::print::with_no_trimmed_paths;
 
 pub use crate::ty::diagnostics::*;
 pub use rustc_type_ir::ConstKind::{
@@ -146,7 +147,7 @@ mod adt;
 mod assoc;
 mod closure;
 mod consts;
-mod context;
+pub mod context;
 mod diagnostics;
 mod elaborate_impl;
 mod erase_regions;
@@ -1720,8 +1721,10 @@ impl<'tcx> TyCtxt<'tcx> {
         match instance {
             ty::InstanceKind::Item(def) => {
                 debug!("calling def_kind on def: {:?}", def);
+                // println!("calling def_kind on def: {:?}", def);
                 let def_kind = self.def_kind(def);
                 debug!("returned from def_kind: {:?}", def_kind);
+                // println!("returned from def_kind: {:?}", def_kind);
                 match def_kind {
                     DefKind::Const
                     | DefKind::Static { .. }
@@ -1748,6 +1751,7 @@ impl<'tcx> TyCtxt<'tcx> {
             | ty::InstanceKind::FnPtrAddrShim(..)
             | ty::InstanceKind::AsyncDropGlueCtorShim(..) => self.mir_shims(instance),
         }
+        body
     }
 
     // FIXME(@lcnr): Remove this function.

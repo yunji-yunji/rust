@@ -15,9 +15,9 @@ use rustc_span::def_id::DefId;
 use rustc_span::def_id::LOCAL_CRATE;
 use rustc_span::ErrorGuaranteed;
 
-mod collector;
-mod errors;
-mod partitioning;
+pub mod collector;
+pub mod errors;
+pub mod partitioning;
 mod polymorphize;
 mod util;
 

@@ -502,6 +502,10 @@ pub trait EvalContextExt<'tcx>: crate::MiriInterpCxExt<'tcx> {
             Some(dest) => dest.clone(),
             None => MPlaceTy::fake_alloc_zst(this.layout_of(mir.return_ty())?),
         };
+
+        // let fn_inst_key = this.create_fn_inst_key3(f);
+        // this.push_trace_stack1(fn_inst_key.clone());
+
         this.push_stack_frame(f, mir, &dest, stack_pop)?;
 
         // Initialize arguments.

@@ -15,6 +15,7 @@ use super::{
     ImmTy, Immediate, InterpCx, InterpResult, Machine, MemPlaceMeta, PlaceTy, Projectable, Scalar,
 };
 use crate::util;
+// use::rustc_codegen_ssa::pafl;
 
 impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     /// Returns `true` as long as there are more things to do.
@@ -24,9 +25,12 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     /// This is marked `#inline(always)` to work around adversarial codegen when `opt-level = 3`
     #[inline(always)]
     pub fn step(&mut self) -> InterpResult<'tcx, bool> {
+
         if self.stack().is_empty() {
             return Ok(false);
         }
+
+        let inst1 = self.frame().instance.def;
 
         let Either::Left(loc) = self.frame().loc else {
             // We are unwinding and this fn has no cleanup code.
@@ -36,6 +40,28 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             return Ok(true);
         };
         let basic_block = &self.body().basic_blocks[loc.block];
+        
+        let fn_inst_key = self.get_fn_inst_key(self.frame().instance);
+        // assert!(fn_inst_key == self._trace_stack.last().unwrap()._entry);
+        /*
+        if fn_inst_key != self._trace_stack.last().unwrap()._entry {
+            // println!("FAIL key match")
+            println!("official stack contents:");
+            for frame in self.stack() {
+                let fn_inst_key = self.get_fn_inst_key(frame.instance);
+                println!("{}", fn_inst_key.path);
+            }
+            println!("our stack contents:");
+            for item in &self._trace_stack {
+                println!("{}", item._entry.path);
+            }
+            println!("NEQ {:?} != {:?}", fn_inst_key.path, self._trace_stack.last().unwrap()._entry.path);
+        }
+        if self.frame().instance.def != self.body().source.instance {
+            // println!("FAIL key match")
+            println!("NEQABCD {:?} != {:?}", self.frame().instance.def, self.body().source.instance);
+        }*/
+        self.push_bb_stack1(loc.block);
 
         if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
             let old_frames = self.frame_idx();
@@ -49,6 +75,10 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         M::before_terminator(self)?;
 
+        let inst2 = self.body().source.instance;
+        if inst1 != inst2 {
+            println!("STEP {:?} {:?}", inst1, inst2);
+        }
         let terminator = basic_block.terminator();
         self.terminator(terminator)?;
         Ok(true)
@@ -379,12 +409,104 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     }
 
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
-    fn terminator(&mut self, terminator: &mir::Terminator<'tcx>) -> InterpResult<'tcx> {
+    // fn terminator(&mut self, terminator: &mir::Terminator<'tcx>, steps: &mut Vec<Step> ) -> InterpResult<'tcx> {
+    fn terminator(&mut self, terminator: &mir::Terminator<'tcx> ) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
 
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
+                // information to print
+                let tcx = self.tcx.tcx;
+                let body = self.body();
+                let instance_def = body.source.instance;
+                let def_id = instance_def.def_id();
+                let krate = tcx.crate_name(def_id.krate).to_string();
+                let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+
+                // 1. krate info + bb id
+                match std::env::var_os("BB_SHORT") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        if krate.contains(&name) | path.contains(&name) {
+                            println!("krate={:?}{:?} [{:?}]", krate, path, loc.block.as_usize());
+                        }
+                    }
+                }
+            
+                // 2. krate info + bb id + statements + terminator
+                match std::env::var_os("BB_LONG") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        if krate.contains(&name) | path.contains(&name) {
+                            let bb_data = &self.body().basic_blocks[loc.block];
+                            println!("krate={:?}{:?} [{:?}][{:?}][{:?}][{:?}]",
+                            krate, path, loc.block.as_usize(), bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind, bb_data.statements);
+                        }
+                    }
+                }
+
+                // 3. full CFG
+                match std::env::var_os("CFG_MIRI") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        if krate.contains(&name) | path.contains(&name) {
+                            println!("-{:?}{:?}<{:?}>[{:?}] -------------------------",
+                                krate, path, loc.block, self.body().basic_blocks.clone().len());
+                            for (source, _) in self.body().basic_blocks.iter_enumerated() {
+                                let bb_data = &self.body().basic_blocks[source];
+                                println!("* [{:?}][{:?}][{:?}][{:?}]",
+                                    source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind, bb_data.statements);
+                            }
+                            println!("--------------------------");
+                        }
+                    }
+                }
+
+                // 4. body info
+                match std::env::var_os("MIRI_BODY") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        if krate.contains(&name) | path.contains(&name) {
+                            println!("* {:?}{:?}<{:?}>[{:?}] ",
+                                krate, path, loc.block, self.body().basic_blocks.clone().len(),
+                            );
+                        }
+                    }
+                }
+                // 5. bb num
+                match std::env::var_os("BB_NUM") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        let num = name.parse::<usize>().unwrap();
+                        if loc.block.as_usize() == num {
+                            println!("* {:?}{:?}<{:?}>[{:?}] ",
+                                krate, path, loc.block, self.body().basic_blocks.clone().len(),
+                            );
+                        }
+                    }
+                }
+
                 info!("// executing {:?}", loc.block);
             }
         }

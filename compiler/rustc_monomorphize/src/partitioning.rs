@@ -124,12 +124,12 @@ use crate::collector::UsageMap;
 use crate::collector::{self, MonoItemCollectionStrategy};
 use crate::errors::{CouldntDumpMonoStats, SymbolAlreadyDefined, UnknownCguCollectionMode};
 
-struct PartitioningCx<'a, 'tcx> {
+pub struct PartitioningCx<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
     usage_map: &'a UsageMap<'tcx>,
 }
 
-struct PlacedMonoItems<'tcx> {
+pub struct PlacedMonoItems<'tcx> {
     /// The codegen units, sorted by name to make things deterministic.
     codegen_units: Vec<CodegenUnit<'tcx>>,
 
@@ -137,7 +137,7 @@ struct PlacedMonoItems<'tcx> {
 }
 
 // The output CGUs are sorted by name.
-fn partition<'tcx, I>(
+pub fn partition<'tcx, I>(
     tcx: TyCtxt<'tcx>,
     mono_items: I,
     usage_map: &UsageMap<'tcx>,
@@ -195,7 +195,7 @@ where
     codegen_units
 }
 
-fn place_mono_items<'tcx, I>(cx: &PartitioningCx<'_, 'tcx>, mono_items: I) -> PlacedMonoItems<'tcx>
+pub fn place_mono_items<'tcx, I>(cx: &PartitioningCx<'_, 'tcx>, mono_items: I) -> PlacedMonoItems<'tcx>
 where
     I: Iterator<Item = MonoItem<'tcx>>,
 {
@@ -1067,7 +1067,7 @@ fn debug_dump<'a, 'tcx: 'a>(tcx: TyCtxt<'tcx>, label: &str, cgus: &[CodegenUnit<
 }
 
 #[inline(never)] // give this a place in the profiler
-fn assert_symbols_are_distinct<'a, 'tcx, I>(tcx: TyCtxt<'tcx>, mono_items: I)
+pub fn assert_symbols_are_distinct<'a, 'tcx, I>(tcx: TyCtxt<'tcx>, mono_items: I)
 where
     I: Iterator<Item = &'a MonoItem<'tcx>>,
     'tcx: 'a,
@@ -1100,6 +1100,7 @@ where
 fn collect_and_partition_mono_items(tcx: TyCtxt<'_>, (): ()) -> (&DefIdSet, &[CodegenUnit<'_>]) {
     let collection_strategy = match tcx.sess.opts.unstable_opts.print_mono_items {
         Some(ref s) => {
+            // println!("cmode={:?}", s);
             let mode = s.to_lowercase();
             let mode = mode.trim();
             if mode == "eager" {
@@ -1113,6 +1114,7 @@ fn collect_and_partition_mono_items(tcx: TyCtxt<'_>, (): ()) -> (&DefIdSet, &[Co
             }
         }
         None => {
+            // println!("cmode=None");
             if tcx.sess.link_dead_code() {
                 MonoItemCollectionStrategy::Eager
             } else {
@@ -1120,6 +1122,7 @@ fn collect_and_partition_mono_items(tcx: TyCtxt<'_>, (): ()) -> (&DefIdSet, &[Co
             }
         }
     };
+    // println!("Collect mode [{:?}]", collection_mode);
 
     let (items, usage_map) = collector::collect_crate_mono_items(tcx, collection_strategy);
 

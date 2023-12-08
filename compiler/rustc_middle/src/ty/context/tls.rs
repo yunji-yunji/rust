@@ -9,6 +9,7 @@ use std::cell::Cell;
 use std::mem;
 use std::ptr;
 use thin_vec::ThinVec;
+// use super::{Trace, FnInstKey, PaflGeneric};
 
 /// This is the implicit state of rustc. It contains the current
 /// `TyCtxt` and query. It is updated when creating a local interner or
@@ -38,7 +39,15 @@ pub struct ImplicitCtxt<'a, 'tcx> {
 
 impl<'a, 'tcx> ImplicitCtxt<'a, 'tcx> {
     pub fn new(gcx: &'tcx GlobalCtxt<'tcx>) -> Self {
+        // let mut dummy_generics: Vec<PaflGeneric> = vec![];
+        // let dummy_fn_inst_key = FnInstKey {
+        //     krate: None,
+        //     index: 0.as_usize(),
+        //     path: String::from(""),
+        //     generics: dummy_generics,
+        // };
         let tcx = TyCtxt { gcx };
+        // let tcx = TyCtxt { gcx, _trace: Trace { _entry: dummy_fn_inst_key, _steps: vec![] } };
         ImplicitCtxt {
             tcx,
             query: None,

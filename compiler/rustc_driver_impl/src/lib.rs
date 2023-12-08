@@ -441,7 +441,10 @@ fn run_compiler(
                 return early_exit();
             }
 
-            queries.global_ctxt()?.enter(|tcx| tcx.analysis(()))?;
+            queries.global_ctxt()?.enter(|tcx| {
+                tcx.analysis(())
+            }
+            )?;
 
             if callbacks.after_analysis(compiler, queries) == Compilation::Stop {
                 return early_exit();

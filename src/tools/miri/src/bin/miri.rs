@@ -56,6 +56,7 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
             providers.extern_queries.used_crate_source = |tcx, cnum| {
                 let mut providers = Providers::default();
                 rustc_metadata::provide(&mut providers);
+
                 let mut crate_source = (providers.extern_queries.used_crate_source)(tcx, cnum);
                 // HACK: rustc will emit "crate ... required to be available in rlib format, but
                 // was not found in this form" errors once we use `tcx.dependency_formats()` if
@@ -138,6 +139,7 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 // In addition we need to add #[used] symbols to exported_symbols for `lookup_link_section`.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
+
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {
                         tcx.reachable_set(()).to_sorted(&hcx, true)
                     });

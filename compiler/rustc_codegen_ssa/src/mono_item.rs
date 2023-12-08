@@ -103,6 +103,9 @@ impl<'a, 'tcx: 'a> MonoItemExt<'a, 'tcx> for MonoItem<'tcx> {
                 }
             }
             MonoItem::Fn(instance) => {
+                // println!("in mono_item codegen_instance({:?})", instance);
+                // # of executed this part == # of executed codegen_instance
+                // # of codegen_mir executed
                 base::codegen_instance::<Bx>(cx, instance);
             }
         }

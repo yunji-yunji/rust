@@ -19,6 +19,9 @@ use crate::context::CodegenCx;
 use crate::llvm;
 use crate::value::Value;
 
+use rustc_middle::bug;
+use rustc_codegen_ssa::pafl::dump;
+
 use rustc_codegen_ssa::base::maybe_create_entry_wrapper;
 use rustc_codegen_ssa::mono_item::MonoItemExt;
 use rustc_codegen_ssa::traits::*;
@@ -91,6 +94,40 @@ pub fn compile_codegen_unit(tcx: TyCtxt<'_>, cgu_name: Symbol) -> (ModuleCodegen
             // ... and now that we have everything pre-defined, fill out those definitions.
             for &(mono_item, _) in &mono_items {
                 mono_item.define::<Builder<'_, '_, '_>>(&cx);
+            }
+                        
+            // do not use collect_mono_items -> use codegen units..?
+            // this is executed without miri but not with miri.
+            // original PAFL location (rustc_codgen_ssa) is not called when run with miri
+            // codegen is executed only when it's without miri?
+            // command: MIRIFLAGS="-Zmiri-disable-isolation" ON5="miriconfig" 
+            // MIR_DUMP2= PAFL_TARGET_PREFIX="third_party/move" cargo +fuzz miri test regression_tests::fuzz::miri_path_fuzz -- --exact -- MIR_DUMP2="/home" > $LOG/10.miri_build
+
+            // when i use "mono_items" instead of "collect_all_mono_items"
+            // many parts are missing..
+            // small size json is genrated..
+            // for &(mono_item, _) in &mono_items {
+            // for &(mono_item, _) in &mono_items {
+            match std::env::var_os("DUMP_LLVM") { 
+                None => {},
+                Some(val) => {
+        
+                    let outdir = std::path::PathBuf::from(val.clone());
+                    let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                        None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                        Some(v) => std::path::PathBuf::from(v),
+                    };
+                    println!("we got env var3");
+                    match tcx.sess.local_crate_source_file() {
+                        None => bug!("unable to locate local crate source file"),
+                        Some(src) => {
+                            if src.starts_with(&prefix) {
+                                println!("in miri 112codege11n@#");
+                                dump(tcx, &outdir);
+                            }
+                        }
+                    }
+                }
             }
 
             // If this codegen unit contains the main function, also create the

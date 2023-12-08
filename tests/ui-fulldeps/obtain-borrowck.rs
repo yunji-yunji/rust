@@ -98,6 +98,7 @@ impl rustc_driver::Callbacks for CompilerCalls {
                 }
             }
 
+            // YJ: this is never called.
             // Trigger borrow checking of all bodies.
             for def_id in bodies {
                 let _ = tcx.optimized_mir(def_id);

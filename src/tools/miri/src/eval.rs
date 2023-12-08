@@ -20,7 +20,8 @@ use rustc_middle::ty::{
 use rustc_target::spec::abi::Abi;
 
 use rustc_session::config::EntryFnType;
-
+// use rustc_codegen_ssa::pafl::dump;
+// use rustc_middle::ty::context::dump_cp;
 use crate::shims::tls;
 use crate::*;
 
@@ -274,6 +275,8 @@ pub fn create_ecx<'tcx>(
     let mut ecx =
         InterpCx::new(tcx, rustc_span::DUMMY_SP, param_env, MiriMachine::new(config, layout_cx));
 
+    println!("create ecx (MiriMachine) {:?}{:?}[{:?}]",
+    tcx.crate_name(entry_id.krate).to_string(), tcx.def_path_debug_str(entry_id), entry_type);
     // Some parts of initialization require a full `InterpCx`.
     MiriMachine::late_init(&mut ecx, config, {
         let mut state = MainThreadState::default();
@@ -427,6 +430,26 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
+    match std::env::var_os("DUMP_CFG_JSON") {
+        None => {},
+        Some(val) => {
+            let outdir = std::path::PathBuf::from(val.clone());
+            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                Some(v) => std::path::PathBuf::from(v),
+            };
+            println!("DUMP IN MIRI {:?}", val.clone());
+            match tcx.sess.local_crate_source_file() {
+                None => bug!("unable to locate local crate source file"),
+                Some(src) => {
+                    if src.starts_with(&prefix) {
+                        tcx.dump_cp(&outdir);
+                    }
+                }
+            }
+        }
+    };
+
     // Copy setting before we move `config`.
     let ignore_leaks = config.ignore_leaks;
 
@@ -438,10 +461,22 @@ pub fn eval_entry<'tcx>(
             panic!("Miri initialization error: {kind:?}")
         }
     };
-
+    println!("early trace {:?}", ecx._trace_stack);
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
+    // println!("miri after run_thread test {:?}", ecx._trace_stack);
+
+    match std::env::var_os("DUMP_TRACE") {
+        None => {},
+        Some(val) => {
+            println!("DUMP runtime trace {:?}", val.clone());
+            if let Some(file_name) = val.to_str() {
+                ecx.dump_trace(file_name);
+            };
+        }
+    };
+
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
         panic::resume_unwind(panic_payload)
@@ -461,6 +496,15 @@ pub fn eval_entry<'tcx>(
         ecx.allow_data_races_all_threads_done();
         EnvVars::cleanup(&mut ecx).expect("error during env var cleanup");
     }
+
+    println!("size of trace stack {}", ecx._trace_stack.len());
+    // let trace = ecx._trace_stack.last().unwrap();
+    // if trace._steps.len() > 0 {
+    //     println!("after miri2 {:?}", trace._steps.last().unwrap());
+    // } else {
+    //     println!("empty trace");
+    // };
+
 
     // Process the result.
     let (return_code, leak_check) = report_error(&ecx, res)?;

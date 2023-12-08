@@ -88,6 +88,7 @@ mod operator;
 mod provenance_gc;
 mod range_map;
 mod shims;
+pub mod dump;
 
 // Establish a "crate-wide prelude": we often import `crate::*`.
 use rustc_middle::{bug, span_bug};

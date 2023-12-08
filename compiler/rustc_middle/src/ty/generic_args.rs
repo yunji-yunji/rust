@@ -366,7 +366,14 @@ impl<'tcx> GenericArgs<'tcx> {
     pub fn into_type_list(&self, tcx: TyCtxt<'tcx>) -> &'tcx List<Ty<'tcx>> {
         tcx.mk_type_list_from_iter(self.iter().map(|arg| match arg.unpack() {
             GenericArgKind::Type(ty) => ty,
-            _ => bug!("`into_type_list` called on generic arg with non-types"),
+            _ => {
+                bug!("`into_type_list` called on generic arg with non-types");
+                // println!("`into_type_list` called on generic arg with non-types");
+            }, 
+            // GenericArgKind::Lifetime(_) => { 
+            //     println!("lifetime");
+            
+            // }
         }))
     }
 

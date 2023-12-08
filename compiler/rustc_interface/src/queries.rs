@@ -19,6 +19,8 @@ use std::any::Any;
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
+// use rustc_middle::bug;
+
 /// Represent the result of a query.
 ///
 /// This result can be stolen once with the [`steal`] method and generated with the [`compute`] method.

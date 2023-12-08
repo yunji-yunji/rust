@@ -3751,6 +3751,7 @@ dependencies = [
  "rustc_macros",
  "rustc_metadata",
  "rustc_middle",
+ "rustc_monomorphize",
  "rustc_query_system",
  "rustc_sanitizers",
  "rustc_session",
@@ -3814,10 +3815,12 @@ dependencies = [
 name = "rustc_const_eval"
 version = "0.0.0"
 dependencies = [
+ "colored",
  "either",
  "rustc_apfloat",
  "rustc_ast",
  "rustc_attr",
+ "rustc_codegen_ssa",
  "rustc_data_structures",
  "rustc_errors",
  "rustc_fluent_macro",
@@ -3832,6 +3835,8 @@ dependencies = [
  "rustc_target",
  "rustc_trait_selection",
  "rustc_type_ir",
+ "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -4369,6 +4374,8 @@ dependencies = [
  "rustc_span",
  "rustc_target",
  "rustc_type_ir",
+ "serde",
+ "serde_json",
  "smallvec",
  "thin-vec",
  "tracing",
@@ -4429,6 +4436,7 @@ dependencies = [
  "rustc_arena",
  "rustc_ast",
  "rustc_attr",
+ "rustc_codegen_ssa",
  "rustc_const_eval",
  "rustc_data_structures",
  "rustc_errors",
@@ -4440,10 +4448,13 @@ dependencies = [
  "rustc_middle",
  "rustc_mir_build",
  "rustc_mir_dataflow",
+ "rustc_monomorphize",
  "rustc_session",
  "rustc_span",
  "rustc_target",
  "rustc_trait_selection",
+ "serde",
+ "serde_json",
  "smallvec",
  "tracing",
 ]

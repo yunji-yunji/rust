@@ -44,6 +44,9 @@ use std::sync::{Arc, LazyLock};
 use std::{env, fs, iter};
 use tracing::{info, instrument};
 
+use rustc_middle::bug;
+use rustc_codegen_ssa::pafl::dump;
+
 pub(crate) fn parse<'a>(sess: &'a Session) -> Result<ast::Crate> {
     let krate = sess
         .time("parse_crate", || {
@@ -1020,9 +1023,10 @@ pub(crate) fn start_codegen<'tcx>(
     check_for_rustc_errors_attr(tcx);
 
     info!("Pre-codegen\n{:?}", tcx.debug_stats());
-
     let (metadata, need_metadata_module) = rustc_metadata::fs::encode_and_write_metadata(tcx);
 
+    // incorrect location
+    // original dump location is in codegen_crate function.
     let codegen = tcx.sess.time("codegen_crate", move || {
         codegen_backend.codegen_crate(tcx, metadata, need_metadata_module)
     });
@@ -1036,6 +1040,7 @@ pub(crate) fn start_codegen<'tcx>(
     info!("Post-codegen\n{:?}", tcx.debug_stats());
 
     if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
+        // test: OutputType::None, ...
         if let Err(error) = rustc_mir_transform::dump_mir::emit_mir(tcx) {
             tcx.dcx().emit_fatal(errors::CantEmitMIR { error });
         }

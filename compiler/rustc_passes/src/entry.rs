@@ -30,6 +30,7 @@ struct EntryContext<'tcx> {
 }
 
 fn entry_fn(tcx: TyCtxt<'_>, (): ()) -> Option<(DefId, EntryFnType)> {
+    // println!("in entry_fn function {:?} ", tcx.hir().opt_name(CRATE_HIR_ID));
     let any_exe = tcx.crate_types().iter().any(|ty| *ty == CrateType::Executable);
     if !any_exe {
         // No need to find a main function.

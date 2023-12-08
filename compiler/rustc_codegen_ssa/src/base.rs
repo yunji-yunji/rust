@@ -384,6 +384,7 @@ pub fn codegen_instance<'a, 'tcx: 'a, Bx: BuilderMethods<'a, 'tcx>>(
     // and to allow finding the last function before LLVM aborts from
     // release builds.
     info!("codegen_instance({})", instance);
+    // println!("codegen_instance({:?})", instance);
 
     mir::codegen_mir::<Bx>(cx, instance);
 }
@@ -578,6 +579,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     metadata: EncodedMetadata,
     need_metadata_module: bool,
 ) -> OngoingCodegen<B> {
+
     // Skip crate items and just output metadata in -Z no-codegen mode.
     if tcx.sess.opts.unstable_opts.no_codegen || !tcx.sess.opts.output_types.should_codegen() {
         let ongoing_codegen = start_async_codegen(backend, tcx, target_cpu, metadata, None);
@@ -608,19 +610,22 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
 
     // Hijack the process for collecting information for path-based fuzzing
     match std::env::var_os("PAFL") {
-        None => (),
+        None => {},
         Some(val) => {
-            let outdir = std::path::PathBuf::from(val);
+            let outdir = std::path::PathBuf::from(val.clone());
             let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
                 None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
                 Some(v) => std::path::PathBuf::from(v),
             };
+
+            // println!("dump original location");
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
                     if src.starts_with(&prefix) {
                         // we are compiling a target crate
-                        crate::pafl::dump(tcx, &outdir);
+                        tcx.dump_cp(&outdir);
+                        // crate::pafl::dump(tcx, &outdir);
                     }
                 }
             }
@@ -704,6 +709,8 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
         first_half.iter().interleave(second_half.iter().rev()).copied().collect()
     };
 
+    // this function is executed with miri, without miri
+
     // Calculate the CGU reuse
     let cgu_reuse = tcx.sess.time("find_cgu_reuse", || {
         codegen_units.iter().map(|cgu| determine_cgu_reuse(tcx, cgu)).collect::<Vec<_>>()
@@ -742,6 +749,8 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
             // Compile the found CGUs in parallel.
             let start_time = Instant::now();
 
+            // this is not executed with miri
+
             let pre_compiled_cgus = par_map(cgus, |(i, _)| {
                 let module = backend.compile_codegen_unit(tcx, codegen_units[i].name());
                 (i, module)
@@ -754,6 +763,8 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     } else {
         FxHashMap::default()
     };
+
+    // pafl dump here -> same output
 
     for (i, cgu) in codegen_units.iter().enumerate() {
         ongoing_codegen.wait_for_signal_to_codegen_item();
@@ -808,6 +819,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     }
 
     ongoing_codegen.codegen_finished(tcx);
+    // pafl dump here -> same output
 
     // Since the main thread is sometimes blocked during codegen, we keep track
     // -Ztime-passes output manually.

@@ -2297,15 +2297,14 @@ impl Symbol {
     pub fn intern(string: &str) -> Self {
         with_session_globals(|session_globals| session_globals.symbol_interner.intern(string))
     }
-
+    /// it works out ok.
     /// Access the underlying string. This is a slowish operation because it
     /// requires locking the symbol interner.
     ///
     /// Note that the lifetime of the return value is a lie. It's not the same
     /// as `&self`, but actually tied to the lifetime of the underlying
     /// interner. Interners are long-lived, and there are very few of them, and
-    /// this function is typically used for short-lived things, so in practice
-    /// it works out ok.
+    /// this function is typically used for short-lived thin
     pub fn as_str(&self) -> &str {
         with_session_globals(|session_globals| unsafe {
             std::mem::transmute::<&str, &str>(session_globals.symbol_interner.get(*self))
