@@ -9,7 +9,7 @@ use rustc_session::config::EntryFnType;
 
 use rustc_span::Symbol;
 use rustc_span::sym::crate_name;
-use rustc_span::def_id::{LocalDefId, DefIndex, CrateNum};
+// use rustc_span::def_id::{LocalDefId, DefIndex, CrateNum};
 
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 use rustc_hir::def_id::{LOCAL_CRATE, DefId};
@@ -25,8 +25,8 @@ struct ItemShort<'a> {
 
 pub fn dump_in_eval_entry(
     tcx: TyCtxt<'_>,
-    entry_id: DefId,
-    entry_type: EntryFnType,
+    _entry_id: DefId,
+    _entry_type: EntryFnType,
     outdir: &Path,
 ) {
     // === File setup === //
@@ -41,6 +41,7 @@ pub fn dump_in_eval_entry(
         .create_new(true)
         .open(output)
         .expect("Fail to create a file.");
+    // println!("Open file name = {:?}", file_name);
 
     // === Dump All Crate Items === //
     let mut content = String::new();
@@ -49,15 +50,14 @@ pub fn dump_in_eval_entry(
     let module_items = tcx.hir_crate_items(());
     for item in module_items.items() {
         let def_id: DefId = item.owner_id.def_id.to_def_id();
-        let def_idx = def_id.index;
-        let crate_num = def_id.krate;
+        let _def_idx = def_id.index;
+        let _crate_num = def_id.krate;
 
         let crate_name2 = tcx.crate_name(LOCAL_CRATE);
-        let stable_crate_id = tcx.stable_crate_id(LOCAL_CRATE);
         content.push_str(&format!("[{:?}]", crate_name2));
 
         let def_kind: DefKind = tcx.def_kind(def_id);
-        content.push_str(&format!("[{:?}]", kin));
+        content.push_str(&format!("[{:?}]", def_kind));
 
         let generics = tcx.generics_of(def_id);
         // content.push_str(&format!("[{:?}]", generics));
@@ -80,4 +80,11 @@ pub fn dump_in_eval_entry(
     }
 
     file.write_all(content.as_bytes()).expect("Fail to write file.");
+}
+
+pub fn dump_in_step(
+    tcx: TyCtxt<'_>,
+    outdir: &Path,
+) {
+
 }
