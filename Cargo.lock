@@ -3628,6 +3628,7 @@ dependencies = [
 name = "rustc_const_eval"
 version = "0.0.0"
 dependencies = [
+ "colored",
  "either",
  "rustc_apfloat",
  "rustc_ast",

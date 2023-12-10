@@ -12,6 +12,9 @@ use rustc_target::abi::{FieldIdx, FIRST_VARIANT};
 use super::{ImmTy, InterpCx, InterpResult, Machine, PlaceTy, Projectable, Scalar};
 use crate::util;
 
+use crate::interpret::dump;
+use rustc_middle::ty::TyCtxt;
+
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Returns `true` as long as there are more things to do.
     ///
@@ -20,6 +23,16 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// This is marked `#inline(always)` to work around adversarial codegen when `opt-level = 3`
     #[inline(always)]
     pub fn step(&mut self) -> InterpResult<'tcx, bool> {
+
+        match std::env::var_os("STEP") {
+            None => (),
+            Some(_val) => {
+                let tcx: TyCtxt<'_> = self.tcx.tcx;
+                let body: &mir::Body<'_> = self.body();
+                dump::dump_in_step(tcx, body);
+            }
+        }
+
         if self.stack().is_empty() {
             return Ok(false);
         }

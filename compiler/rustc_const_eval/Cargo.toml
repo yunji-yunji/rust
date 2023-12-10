@@ -24,4 +24,6 @@ rustc_target = { path = "../rustc_target" }
 rustc_trait_selection = { path = "../rustc_trait_selection" }
 rustc_type_ir = { path = "../rustc_type_ir" }
 tracing = "0.1"
+# ansi_term = "0.12.1"
+colored = "2.0.0"
 # tidy-alphabetical-end
