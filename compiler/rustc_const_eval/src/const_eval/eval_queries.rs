@@ -81,6 +81,24 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
     )?;
     ecx.storage_live_for_always_live_locals()?;
 
+    // DUMP
+    match std::env::var_os("DUMP_ON") {
+        None => (),
+        Some(val) => {
+            let outdir = std::path::PathBuf::from(val);
+
+            let tcx = ecx.tcx.tcx;
+            let body1: &mir::Body<'_> = ecx.body();
+            let _body2 = body;
+            dump::dump_in_eval_query(tcx, body1, &outdir);
+
+            // let bbs = &body1.basic_blocks;
+            // println!("basic blocks={:?}", bbs);
+            // println!("def id if not={:?}", instance_def.def_id_if_not_guaranteed_local_codegen());
+            // println!("def id key={:?}", instance_def.key_as_def_id());
+        }
+    }
+
     // The main interpreter loop.
     while ecx.step()? {
         if CTRL_C_RECEIVED.load(Relaxed) {
