@@ -33,6 +33,13 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             }
         }
 
+        match std::env::var_os("STEP2") {
+            None => (),
+            Some(_val) => {
+                self.bb_dump_in_step();
+            }
+        }
+
         if self.stack().is_empty() {
             return Ok(false);
         }
@@ -364,6 +371,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
     fn terminator(&mut self, terminator: &mir::Terminator<'tcx>) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
+
+
+        match std::env::var_os("TERMI") {
+            None => (),
+            Some(_val) => {
+                self.bb_dump_in_step();
+            }
+        }
 
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {

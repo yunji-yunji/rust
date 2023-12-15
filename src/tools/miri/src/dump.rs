@@ -8,7 +8,7 @@ use rustc_session::StableCrateId;
 use rustc_session::config::EntryFnType;
 
 use rustc_span::Symbol;
-use rustc_span::sym::crate_name;
+// use rustc_span::sym::crate_name;
 // use rustc_span::def_id::{LocalDefId, DefIndex, CrateNum};
 
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
@@ -23,7 +23,7 @@ struct ItemShort<'a> {
     _def_kind: DefKind,
 }
 
-pub fn dump_in_eval_entry(
+pub fn dump_in_eval_entry( // src/tools/miri/src/eval.rs => OUTDIR
     tcx: TyCtxt<'_>,
     _entry_id: DefId,
     _entry_type: EntryFnType,
@@ -53,8 +53,9 @@ pub fn dump_in_eval_entry(
         let _def_idx = def_id.index;
         let _crate_num = def_id.krate;
 
-        let crate_name2 = tcx.crate_name(LOCAL_CRATE);
+        let crate_name2 = tcx.crate_name(def_id.krate);
         content.push_str(&format!("[{:?}]", crate_name2));
+        // let stable_create_id2: StableCrateId = tcx.stable_crate_id(def_id.krate);
 
         let def_kind: DefKind = tcx.def_kind(def_id);
         content.push_str(&format!("[{:?}]", def_kind));
@@ -71,7 +72,7 @@ pub fn dump_in_eval_entry(
         content.push_str(&format!("\n"));
 
         let short_item = ItemShort {
-            _crate_name: crate_name,
+            _crate_name: crate_name2,
             _def_path: def_paths.clone(),
             _generics: generics,
             _def_kind: def_kind,
@@ -82,9 +83,3 @@ pub fn dump_in_eval_entry(
     file.write_all(content.as_bytes()).expect("Fail to write file.");
 }
 
-pub fn dump_in_step(
-    tcx: TyCtxt<'_>,
-    outdir: &Path,
-) {
-
-}
