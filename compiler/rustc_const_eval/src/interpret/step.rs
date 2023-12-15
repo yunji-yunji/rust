@@ -24,6 +24,23 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     /// This is marked `#inline(always)` to work around adversarial codegen when `opt-level = 3`
     #[inline(always)]
     pub fn step(&mut self) -> InterpResult<'tcx, bool> {
+
+        match std::env::var_os("STEP") {
+            None => (),
+            Some(_val) => {
+                let tcx: TyCtxt<'_> = self.tcx.tcx;
+                let body: &mir::Body<'_> = self.body();
+                dump::dump_in_step(tcx, body);
+            }
+        }
+
+        match std::env::var_os("STEP2") {
+            None => (),
+            Some(_val) => {
+                self.bb_dump_in_step();
+            }
+        }
+
         if self.stack().is_empty() {
             return Ok(false);
         }
@@ -381,6 +398,14 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
     fn terminator(&mut self, terminator: &mir::Terminator<'tcx>) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
+
+
+        match std::env::var_os("TERMI") {
+            None => (),
+            Some(_val) => {
+                self.bb_dump_in_step();
+            }
+        }
 
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
