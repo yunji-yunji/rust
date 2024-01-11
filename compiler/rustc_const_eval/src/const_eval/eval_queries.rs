@@ -1,3 +1,9 @@
+// #[macro_use]
+// extern crate lazy_static;
+// lazy_static! {
+//     let mut fin_trace : dump::Trace;
+// }
+
 use std::mem;
 
 use either::{Left, Right};
@@ -23,12 +29,15 @@ use crate::interpret::{
     InterpError, InterpResult, MPlaceTy, MemoryKind, OpTy, RefTracking, StackPopCleanup,
 };
 use crate::interpret::dump;
+use rustc_middle::ty::context::{Trace, Step, FnInstKey};
+
 
 // Returns a pointer to where the result lives
 fn eval_body_using_ecx<'mir, 'tcx>(
     ecx: &mut CompileTimeEvalContext<'mir, 'tcx>,
     cid: GlobalId<'tcx>,
     body: &'mir mir::Body<'tcx>,
+    exec_t: &mut Trace,
 ) -> InterpResult<'tcx, MPlaceTy<'tcx>> {
     debug!("eval_body_using_ecx: {:?}, {:?}", cid, ecx.param_env);
     let tcx = *ecx.tcx;
@@ -82,8 +91,9 @@ fn eval_body_using_ecx<'mir, 'tcx>(
         }
     }
 
+    // let mut steps : Vec<dump::Step> = vec![];
     // The main interpreter loop.
-    while ecx.step()? {}
+    while ecx.step(exec_t)? {}
 
     // Intern the result
     let intern_kind = if cid.promoted.is_some() {
@@ -276,6 +286,7 @@ pub fn eval_to_const_value_raw_provider<'tcx>(
 pub fn eval_to_allocation_raw_provider<'tcx>(
     tcx: TyCtxt<'tcx>,
     key: ty::ParamEnvAnd<'tcx, GlobalId<'tcx>>,
+    // steps: &mut Vec<dump::Step>,
 ) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
     // Const eval always happens in Reveal::All mode in order to be able to use the hidden types of
     // opaque types. This is needed for trivial things like `size_of`, but also for using associated
@@ -304,19 +315,32 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
         // they do not have to behave "as if" they were evaluated at runtime.
         CompileTimeInterpreter::new(CanAccessStatics::from(is_static), CheckAlignment::Error),
     );
-    eval_in_interpreter(ecx, cid, is_static)
+    // yj code
+    // let mut exec_t = dump2::create_empty_trace(tcx, def);
+    
+    let dummy_fn_inst_key = FnInstKey {
+        krate: None,
+        index: 0,
+        path: String::from(""),
+        generics: vec![],
+    };
+
+    let steps : Vec<Step> = vec![];
+    let mut exec_t = Trace { _entry: dummy_fn_inst_key, _steps: steps };
+    eval_in_interpreter(ecx, cid, is_static, &mut exec_t)
 }
 
 pub fn eval_in_interpreter<'mir, 'tcx>(
     mut ecx: InterpCx<'mir, 'tcx, CompileTimeInterpreter<'mir, 'tcx>>,
     cid: GlobalId<'tcx>,
     is_static: bool,
+    exec_t: &mut Trace
 ) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
     // `is_static` just means "in static", it could still be a promoted!
     debug_assert_eq!(is_static, ecx.tcx.static_mutability(cid.instance.def_id()).is_some());
 
     let res = ecx.load_mir(cid.instance.def, cid.promoted);
-    match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body)) {
+    match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body, exec_t)) {
         Err(error) => {
             let (error, backtrace) = error.into_parts();
             backtrace.print_backtrace();
