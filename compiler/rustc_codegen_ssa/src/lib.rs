@@ -269,4 +269,4 @@ impl CodegenResults {
 }
 
 /// Encapsulation for code logic related to path-aware AFL-style fuzzing
-mod pafl;
+pub mod pafl;
