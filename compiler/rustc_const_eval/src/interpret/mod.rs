@@ -18,6 +18,7 @@ mod util;
 mod validity;
 mod visitor;
 pub mod dump;
+pub mod dump2;
 
 pub use rustc_middle::mir::interpret::*; // have all the `interpret` symbols in one place: here
 

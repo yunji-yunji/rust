@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 use std::sync::atomic::Ordering::Relaxed;
+=======
+use std::mem;
+>>>>>>> 27ca9c83ccc (my dump files)
 
 use either::{Left, Right};
 
@@ -25,6 +29,9 @@ use crate::interpret::{
     StackPopCleanup,
 };
 use crate::CTRL_C_RECEIVED;
+use crate::interpret::dump;
+use rustc_middle::ty::context::{Trace, Step, FnInstKey};
+
 
 // Returns a pointer to where the result lives
 #[instrument(level = "trace", skip(ecx, body))]
@@ -32,7 +39,12 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
     ecx: &mut CompileTimeEvalContext<'mir, 'tcx>,
     cid: GlobalId<'tcx>,
     body: &'mir mir::Body<'tcx>,
+<<<<<<< HEAD
 ) -> InterpResult<'tcx, R> {
+=======
+    exec_t: &mut Trace,
+) -> InterpResult<'tcx, MPlaceTy<'tcx>> {
+>>>>>>> 27ca9c83ccc (my dump files)
     trace!(?ecx.param_env);
     let tcx = *ecx.tcx;
     assert!(
@@ -99,12 +111,17 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
         }
     }
 
+    // let mut steps : Vec<dump::Step> = vec![];
     // The main interpreter loop.
+<<<<<<< HEAD
     while ecx.step()? {
         if CTRL_C_RECEIVED.load(Relaxed) {
             throw_exhaust!(Interrupted);
         }
     }
+=======
+    while ecx.step(exec_t)? {}
+>>>>>>> 27ca9c83ccc (my dump files)
 
     // Intern the result
     intern_const_alloc_recursive(ecx, intern_kind, &ret)?;
@@ -336,6 +353,7 @@ impl<'tcx> InterpretationResult<'tcx> for ConstAlloc<'tcx> {
 pub fn eval_to_allocation_raw_provider<'tcx>(
     tcx: TyCtxt<'tcx>,
     key: ty::ParamEnvAnd<'tcx, GlobalId<'tcx>>,
+    // steps: &mut Vec<dump::Step>,
 ) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
     // This shouldn't be used for statics, since statics are conceptually places,
     // not values -- so what we do here could break pointer identity.
@@ -376,10 +394,40 @@ fn eval_in_interpreter<'tcx, R: InterpretationResult<'tcx>>(
         // so we have to reject reading mutable global memory.
         CompileTimeInterpreter::new(CanAccessMutGlobal::from(is_static), CheckAlignment::Error),
     );
+<<<<<<< HEAD
     let res = ecx.load_mir(cid.instance.def, cid.promoted);
     res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body)).map_err(|error| {
         let (error, backtrace) = error.into_parts();
         backtrace.print_backtrace();
+=======
+
+    let dummy_fn_inst_key = FnInstKey {
+        krate: None,
+        index: 0,
+        path: String::from(""),
+        generics: vec![],
+    };
+
+    let steps : Vec<Step> = vec![];
+    let mut exec_t = Trace { _entry: dummy_fn_inst_key, _steps: steps };
+    eval_in_interpreter(ecx, cid, is_static, &mut exec_t)
+}
+
+pub fn eval_in_interpreter<'mir, 'tcx>(
+    ecx: &mut InterpCx<'mir, 'tcx, CompileTimeInterpreter<'mir, 'tcx>>,
+    cid: GlobalId<'tcx>,
+    is_static: bool,
+    exec_t: &mut Trace
+) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
+    // `is_static` just means "in static", it could still be a promoted!
+    debug_assert_eq!(is_static, ecx.tcx.static_mutability(cid.instance.def_id()).is_some());
+
+    let res = ecx.load_mir(cid.instance.def, cid.promoted);
+    match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body, exec_t)) {
+        Err(error) => {
+            let (error, backtrace) = error.into_parts();
+            backtrace.print_backtrace();
+>>>>>>> 27ca9c83ccc (my dump files)
 
         let (kind, instance) = if ecx.tcx.is_static(cid.instance.def_id()) {
             ("static", String::new())
