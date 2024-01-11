@@ -128,7 +128,7 @@ mod adt;
 mod assoc;
 mod closure;
 mod consts;
-mod context;
+pub mod context;
 mod diagnostics;
 mod erase_regions;
 mod generic_args;
