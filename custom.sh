@@ -37,7 +37,7 @@ done
 # configure
 if [ ! -f config.toml ]; then
     ./configure \
-        --tools="cargo,miri,src,analysis" \
+        --tools="cargo,miri,src,analysis,cargo-miri" \
         --set install.prefix=${PREFIX} \
         --set install.sysconfdir=sysconf \
         --disable-docs \

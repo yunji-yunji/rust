@@ -3633,6 +3633,7 @@ dependencies = [
  "rustc_apfloat",
  "rustc_ast",
  "rustc_attr",
+ "rustc_codegen_ssa",
  "rustc_data_structures",
  "rustc_errors",
  "rustc_fluent_macro",
@@ -3647,6 +3648,8 @@ dependencies = [
  "rustc_target",
  "rustc_trait_selection",
  "rustc_type_ir",
+ "serde",
+ "serde_json",
  "tracing",
 ]
 
@@ -4183,6 +4186,8 @@ dependencies = [
  "rustc_span",
  "rustc_target",
  "rustc_type_ir",
+ "serde",
+ "serde_json",
  "smallvec",
  "thin-vec",
  "tracing",
