@@ -56,96 +56,100 @@ impl Native {
     }
 }
 
-/// Identifier mimicking `DefId`
-#[derive(Serialize, Clone)]
-struct Ident {
-    krate: usize,
-    index: usize,
-}
+use rustc_middle::ty::context::{
+    /*Ident2,*/ ValueTree, PaflConst,PaflType, PaflGeneric, TyInstKey, FnInstKey,
+};
 
-impl From<DefId> for Ident {
-    fn from(id: DefId) -> Self {
-        Self { krate: id.krate.as_usize(), index: id.index.as_usize() }
-    }
-}
+// /// Identifier mimicking `DefId`
+// #[derive(Serialize, Clone, Debug)]
+// pub struct Ident {
+//     krate: usize,
+//     index: usize,
+// }
 
-/// Constant value or aggregates
-#[derive(Serialize, Clone)]
-enum ValueTree {
-    Scalar { bit: usize, val: u128 },
-    Struct(Vec<ValueTree>),
-}
+// impl From<DefId> for Ident {
+//     fn from(id: DefId) -> Self {
+//         Self { krate: id.krate.as_usize(), index: id.index.as_usize() }
+//     }
+// }
 
-/// Serializable information about a Rust const
-#[derive(Serialize, Clone)]
-enum PaflConst {
-    Param { index: u32, name: String },
-    Value(ValueTree),
-}
+// /// Constant value or aggregates
+// #[derive(Serialize, Clone, Debug)]
+// pub enum ValueTree {
+//     Scalar { bit: usize, val: u128 },
+//     Struct(Vec<ValueTree>),
+// }
 
-/// Serializable information about a Rust type
-#[derive(Serialize, Clone)]
-enum PaflType {
-    Never,
-    Bool,
-    Char,
-    Isize,
-    I8,
-    I16,
-    I32,
-    I64,
-    I128,
-    Usize,
-    U8,
-    U16,
-    U32,
-    U64,
-    U128,
-    F32,
-    F64,
-    Str,
-    Param { index: u32, name: String },
-    Adt(TyInstKey),
-    Alias(TyInstKey),
-    Opaque(Ident),
-    FnPtr(Vec<PaflType>, Box<PaflType>),
-    FnDef(FnInstKey),
-    Closure(FnInstKey),
-    Dynamic(Vec<Ident>),
-    ImmRef(Box<PaflType>),
-    MutRef(Box<PaflType>),
-    ImmPtr(Box<PaflType>),
-    MutPtr(Box<PaflType>),
-    Slice(Box<PaflType>),
-    Array(Box<PaflType>, PaflConst),
-    Tuple(Vec<PaflType>),
-}
+// /// Serializable information about a Rust const
+// #[derive(Serialize, Clone, Debug)]
+// pub enum PaflConst {
+//     Param { index: u32, name: String },
+//     Value(ValueTree),
+// }
 
-/// Serializable information about a Rust generic argument
-#[derive(Serialize, Clone)]
-enum PaflGeneric {
-    Lifetime,
-    Type(PaflType),
-    Const(PaflConst),
-}
+// /// Serializable information about a Rust type
+// #[derive(Serialize, Clone, Debug)]
+// pub enum PaflType {
+//     Never,
+//     Bool,
+//     Char,
+//     Isize,
+//     I8,
+//     I16,
+//     I32,
+//     I64,
+//     I128,
+//     Usize,
+//     U8,
+//     U16,
+//     U32,
+//     U64,
+//     U128,
+//     F32,
+//     F64,
+//     Str,
+//     Param { index: u32, name: String },
+//     Adt(TyInstKey),
+//     Alias(TyInstKey),
+//     Opaque(Ident),
+//     FnPtr(Vec<PaflType>, Box<PaflType>),
+//     FnDef(FnInstKey),
+//     Closure(FnInstKey),
+//     Dynamic(Vec<Ident>),
+//     ImmRef(Box<PaflType>),
+//     MutRef(Box<PaflType>),
+//     ImmPtr(Box<PaflType>),
+//     MutPtr(Box<PaflType>),
+//     Slice(Box<PaflType>),
+//     Array(Box<PaflType>, PaflConst),
+//     Tuple(Vec<PaflType>),
+// }
 
-/// Identifier for type instance
-#[derive(Serialize, Clone)]
-struct TyInstKey {
-    krate: Option<String>,
-    index: usize,
-    path: String,
-    generics: Vec<PaflGeneric>,
-}
+// /// Serializable information about a Rust generic argument
+// #[derive(Serialize, Clone, Debug)]
+// pub enum PaflGeneric {
+//     Lifetime,
+//     Type(PaflType),
+//     Const(PaflConst),
+// }
 
-/// Identifier for function instance
-#[derive(Serialize, Clone)]
-struct FnInstKey {
-    krate: Option<String>,
-    index: usize,
-    path: String,
-    generics: Vec<PaflGeneric>,
-}
+// /// Identifier for type instance
+// #[derive(Serialize, Clone, Debug)]
+// pub struct TyInstKey {
+//     krate: Option<String>,
+//     index: usize,
+//     path: String,
+//     generics: Vec<PaflGeneric>,
+// }
+
+// /// Identifier for function instance
+// #[derive(Serialize, Clone, Debug)]
+// pub struct FnInstKey {
+//     pub krate: Option<String>,
+//     pub index: usize,
+//     pub path: String,
+//     pub generics: Vec<PaflGeneric>,
+// }
 
 /// Kind of a call instruction
 #[derive(Serialize)]
@@ -234,42 +238,42 @@ enum FnBody {
 
 /// Serializable information about a user-defined function
 #[derive(Serialize)]
-struct PaflFunction {
+pub struct PaflFunction {
     inst: FnInstKey,
     body: FnBody,
 }
 
 /// Serializable information about the entire crate
 #[derive(Serialize)]
-struct PaflCrate {
-    functions: Vec<PaflFunction>,
+pub struct PaflCrate {
+    pub functions: Vec<PaflFunction>,
 }
 
 /// Helper for dumping path-AFL related information
-struct PaflDump<'sum, 'tcx> {
+pub struct PaflDump<'sum, 'tcx> {
     /// context provider
-    tcx: TyCtxt<'tcx>,
+    pub tcx: TyCtxt<'tcx>,
     /// parameter environment
-    param_env: ParamEnv<'tcx>,
+    pub param_env: ParamEnv<'tcx>,
     /// verbosity
-    verbose: bool,
+    pub verbose: bool,
     /// path to meta directory
-    path_meta: PathBuf,
+    pub path_meta: PathBuf,
     /// path to data directory
-    path_data: PathBuf,
+    pub path_data: PathBuf,
     /// path to the data file
-    path_prefix: PathBuf,
+    pub path_prefix: PathBuf,
     /// call stack
-    stack: &'sum mut Vec<Instance<'tcx>>,
+    pub stack: &'sum mut Vec<Instance<'tcx>>,
     /// information cache
-    cache: &'sum mut FxHashMap<Instance<'tcx>, FnInstKey>,
+    pub cache: &'sum mut FxHashMap<Instance<'tcx>, FnInstKey>,
     /// summary repository
-    summary: &'sum mut Vec<PaflFunction>,
+    pub summary: &'sum mut Vec<PaflFunction>,
 }
 
 impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     /// initialize the context for information dumping
-    fn initialize(&self, instance: Instance<'tcx>) {
+    pub fn initialize(&self, instance: Instance<'tcx>) {
         // normalize and check consistency
         let normalized_ty = instance.ty(self.tcx, self.param_env);
         match normalized_ty.kind() {
@@ -305,7 +309,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     }
 
     /// Resolve an instantiation to a fn key
-    fn resolve_fn_key(&self, id: DefId, args: GenericArgsRef<'tcx>) -> FnInstKey {
+    pub fn resolve_fn_key(&self, id: DefId, args: GenericArgsRef<'tcx>) -> FnInstKey {
         let krate =
             if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
         FnInstKey {
@@ -336,7 +340,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     }
 
     /// Process a constant
-    fn process_const(&self, item: Const<'tcx>) -> PaflConst {
+    pub fn process_const(&self, item: Const<'tcx>) -> PaflConst {
         match item.kind() {
             ConstKind::Param(param) => {
                 PaflConst::Param { index: param.index, name: param.name.to_string() }
@@ -347,7 +351,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     }
 
     /// Process the type
-    fn process_type(&self, item: Ty<'tcx>) -> PaflType {
+    pub fn process_type(&self, item: Ty<'tcx>) -> PaflType {
         match item.kind() {
             ty::Never => PaflType::Never,
             ty::Bool => PaflType::Bool,
@@ -699,8 +703,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
         match std::env::var_os("PAFL_CFG") {
             None => (),
             Some(v) => {
+                println!("PAFL CFG v={:?}, path = {:?}", v, path.as_str());
                 if v.to_str().map_or(false, |s| s == path.as_str()) {
                     let dot_path = self.path_prefix.with_extension("dot");
+                    println!("PAFL CFG dot_path={:?}", dot_path);
                     let mut dot_file = OpenOptions::new()
                         .write(true)
                         .create_new(true)

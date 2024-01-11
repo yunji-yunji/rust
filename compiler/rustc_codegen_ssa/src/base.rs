@@ -608,9 +608,12 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
 
     // Hijack the process for collecting information for path-based fuzzing
     match std::env::var_os("PAFL") {
-        None => (),
+        None => {
+            println!("NO PAFL");
+        },
         Some(val) => {
             let outdir = std::path::PathBuf::from(val);
+            println!("outdir 1@@#$% {:?}", outdir);
             let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
                 None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
                 Some(v) => std::path::PathBuf::from(v),
@@ -620,6 +623,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
                 Some(src) => {
                     if src.starts_with(&prefix) {
                         // we are compiling a target crate
+                        println!("outdir [{:?}[{:?}]", val, outdir);
                         crate::pafl::dump(tcx, &outdir);
                     }
                 }
