@@ -41,6 +41,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::{Index, IndexMut};
 use std::{iter, mem};
 
+use serde::Serialize;
+
 pub use self::query::*;
 pub use basic_blocks::BasicBlocks;
 
@@ -1189,7 +1191,7 @@ rustc_index::newtype_index! {
     ///     https://rustc-dev-guide.rust-lang.org/appendix/background.html#what-is-a-dataflow-analysis
     /// [`CriticalCallEdges`]: ../../rustc_const_eval/transform/add_call_guards/enum.AddCallGuards.html#variant.CriticalCallEdges
     /// [guide-mir]: https://rustc-dev-guide.rust-lang.org/mir/
-    #[derive(HashStable)]
+    #[derive(HashStable, Serialize)]
     #[encodable]
     #[orderable]
     #[debug_format = "bb{}"]
