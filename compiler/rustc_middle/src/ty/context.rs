@@ -72,6 +72,7 @@ use rustc_type_ir::WithCachedTypeInfo;
 use rustc_type_ir::{CollectAndApply, Interner, TypeFlags};
 
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -864,9 +865,10 @@ pub struct GlobalCtxt<'tcx> {
 
     /// Stores memory for globals (statics/consts).
     pub(crate) alloc_map: Lock<interpret::AllocMap<'tcx>>,
-    // pub _trace: Cell<Trace>,
+
+    pub _trace: RefCell<Trace>,
     // pub _trace: &'tcx mut Trace,
-    pub _trace: Trace,
+    // pub _trace: Trace,
 }
 
 impl<'tcx> GlobalCtxt<'tcx> {
@@ -1038,8 +1040,8 @@ impl<'tcx> TyCtxt<'tcx> {
             canonical_param_env_cache: Default::default(),
             data_layout,
             alloc_map: Lock::new(interpret::AllocMap::new()),
-            // _trace: Cell::new(trace),
-            _trace: trace,
+            _trace: RefCell::new(trace),
+            // _trace: trace,
         }
     }
 

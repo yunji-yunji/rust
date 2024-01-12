@@ -377,9 +377,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         match std::env::var_os("DUMP_DIR") {
             None => (),
             Some(path_str) => {
-                // let mut steps: Vec<Step> = vec![];
-                // self.dump_in_term(terminator, &mut steps);
-                self.dump2(terminator, path_str);
+                let mut steps: Vec<Step> = vec![];
+                self.dump_in_term(terminator, &mut steps);
+                // self.dump2(terminator, path_str);
             }
         }
 
