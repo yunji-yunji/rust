@@ -203,21 +203,22 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 print!("{}", s3.green());
             }
              */
+            let tcx = self.tcx.tcx; // self.tcx.tcx 
+            let mut prev_trace = tcx._trace.borrow_mut();
 
-            // let dummy_fn_inst_key = FnInstKey {
-            //     krate: None,
-            //     index: 0,
-            //     path: String::from(""),
-            //     generics: vec![],
-            // };
+            let dummy_fn_inst_key = FnInstKey {
+                krate: None,
+                index: 100,
+                path: String::from("modified"),
+                generics: vec![],
+            };
+            *prev_trace._entry = dummy_fn_inst_key;
+            *prev_trace._entry.index += 1;
+
             // let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: vec![] };
-            // self.tcx._trace = trace;
-
             // let tt = last.tcx._trace;
             // let tcx= &mut self.tcx;
             // let trace1 = &mut tcx._trace;
-            // trace1._entry.index += 1;
-
 
             let loc = last.loc;
 
@@ -227,6 +228,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 print!(":[{:?}]", block);
 
                 let step = Step::Block(block);
+                *prev_trace._steps.push(step);
+
                 step
             } else {
                 bug!("yj: bb_trace: loc doesn't exist");
@@ -534,6 +537,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
                         }
                         // *steps = vec![];
+                        println!("(Call) tcx_trace {:?}", tcx._trace);
 
                         // let dummy_generics: Vec<PaflGeneric> = vec![];
                         let dummy_fn_inst_key = FnInstKey {

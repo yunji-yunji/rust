@@ -4283,6 +4283,8 @@ dependencies = [
  "rustc_span",
  "rustc_target",
  "rustc_type_ir",
+ "serde",
+ "serde_json",
  "smallvec",
  "thin-vec",
  "tracing",
