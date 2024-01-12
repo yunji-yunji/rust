@@ -338,6 +338,8 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
     // yj code
     // let mut exec_t = dump2::create_empty_trace(tcx, def);
     
+    // yj: okay to remove if tcx trace
+    println!("tcx_trace {:?}", tcx._trace);
     let dummy_fn_inst_key = FnInstKey {
         krate: None,
         index: 0,
