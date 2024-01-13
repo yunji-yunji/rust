@@ -25,6 +25,7 @@ use crate::interpret::{
     StackPopCleanup,
 };
 use crate::CTRL_C_RECEIVED;
+use crate::interpret::dump;
 
 // Returns a pointer to where the result lives
 #[instrument(level = "trace", skip(ecx, body))]
@@ -87,6 +88,10 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
             throw_exhaust!(Interrupted);
         }
     }
+
+    // let mut steps : Vec<dump::Step> = vec![];
+    // The main interpreter loop.
+    while ecx.step()? {}
 
     // Intern the result
     intern_const_alloc_recursive(ecx, intern_kind, &ret)?;

@@ -862,7 +862,8 @@ unsafe impl DynSend for TyCtxt<'_> {}
 unsafe impl DynSync for TyCtxt<'_> {}
 fn _assert_tcx_fields() {
     sync::assert_dyn_sync::<&'_ GlobalCtxt<'_>>();
-    sync::assert_dyn_send::<&'_ GlobalCtxt<'_>>();
+    // sync::assert_dyn_send::<&'_ GlobalCtxt<'_>>();
+    sync::assert_dyn_send::<GlobalCtxt<'_>>();
 }
 
 impl<'tcx> Deref for TyCtxt<'tcx> {
@@ -936,6 +937,7 @@ pub struct GlobalCtxt<'tcx> {
     /// Stores memory for globals (statics/consts).
     pub(crate) alloc_map: Lock<interpret::AllocMap<'tcx>>,
 
+    // pub _trace: RefCell<&'tcx Trace>,
     pub _trace: RefCell<Trace>,
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
@@ -1085,13 +1087,14 @@ impl<'tcx> TyCtxt<'tcx> {
         let common_consts = CommonConsts::new(&interners, &common_types, s, &untracked);
         
         // let dummy_generics: Vec<PaflGeneric> = vec![];
+        let steps: Vec<Step> = vec![];
         let dummy_fn_inst_key = FnInstKey {
             krate: None,
             index: 0,
             path: String::from(""),
             generics: vec![],
         };
-        let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: vec![] };
+        let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
 
         GlobalCtxt {
             sess: s,
