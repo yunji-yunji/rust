@@ -13,7 +13,7 @@ use rustc_middle::mir::Body;
 use rustc_middle::mir::TerminatorKind;
 use rustc_middle::mir::Terminator;
 use rustc_middle::ty;
-use rustc_middle::ty::GenericArgsRef;
+// use rustc_middle::ty::GenericArgsRef;
 use rustc_middle::ty::TyCtxt;
 use rustc_middle::ty::ParamEnv;
 use rustc_middle::ty::GenericArgKind;
@@ -29,8 +29,8 @@ use rustc_middle::ty::context::{
 use std::fs;
 use std::fs::OpenOptions;
 // use serde::{Serialize, Deserialize};
-use std::fs::File;
-use std::io::Write;
+// use std::fs::File;
+// use std::io::Write;
 
 
 use rustc_hir::def::DefKind;
@@ -212,10 +212,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 path: String::from("modified"),
                 generics: vec![],
             };
-            *prev_trace._entry = dummy_fn_inst_key;
-            *prev_trace._entry.index += 1;
 
-            // let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: vec![] };
+            // *prev_trace._entry = dummy_fn_inst_key;
+            // *prev_trace._entry.index += 1;
+
             // let tt = last.tcx._trace;
             // let tcx= &mut self.tcx;
             // let trace1 = &mut tcx._trace;
@@ -228,7 +228,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 print!(":[{:?}]", block);
 
                 let step = Step::Block(block);
-                *prev_trace._steps.push(step);
+                let mut vec: Vec<Step> = prev_trace._steps.to_vec();
+                vec.push(step.clone());
+                let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: vec };
+                *prev_trace = trace;
 
                 step
             } else {
@@ -352,169 +355,159 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
     }
 
-    pub fn inst_dump(&mut self, args: GenericArgsRef<'tcx>, outdir: &Path, prev_steps: &mut Vec<Step> ) 
-    -> Step { // step.rs => 
+    // pub fn inst_dump(&mut self, args: GenericArgsRef<'tcx>, outdir: &Path ) 
+    // -> Step { // step.rs => 
 
-        if let Some(last) = self.stack().last() {
+    //     if let Some(last) = self.stack().last() {
 
-            // crate information
-            let body = self.body();
-            // what is DIFFerence BETWEEN TyCtxt and TCXtxtAt
-            let tcx = self.tcx; // self.tcx.tcx 
-            let tcx2 = tcx.tcx;
-            // get generic arg ref
-            let param_env: ParamEnv<'_> = self.param_env;
-            // let inst = Instance::expect_resolve(self.tcx, self.param_env, def_id, generic_args);
+    //         // crate information
+    //         let body = self.body();
+    //         // what is DIFFerence BETWEEN TyCtxt and TCXtxtAt
+    //         let tcx = self.tcx; // self.tcx.tcx 
+    //         let tcx2 = tcx.tcx;
+    //         // get generic arg ref
+    //         let param_env: ParamEnv<'_> = self.param_env;
+    //         // let inst = Instance::expect_resolve(self.tcx, self.param_env, def_id, generic_args);
 
-            let path_prefix: PathBuf = PathBuf::default();
+    //         let path_prefix: PathBuf = PathBuf::default();
 
-            fs::create_dir_all(outdir).expect("unable to create output directory");
-            let path_meta = outdir.join("meta");
-            fs::create_dir_all(&path_meta).expect("unable to create meta directory");
-            let path_data = outdir.join("data");
-            fs::create_dir_all(&path_data).expect("unable to create meta directory");
-            let verbose = false;
-            let mut stack = vec![];
-            let mut cache = FxHashMap::default();
-            let summary1 = PaflCrate { functions: Vec::new() };
-            let mut summary = summary1.functions;
-            //summary: &'sum mut Vec<PaflFunction>,
+    //         fs::create_dir_all(outdir).expect("unable to create output directory");
+    //         let path_meta = outdir.join("meta");
+    //         fs::create_dir_all(&path_meta).expect("unable to create meta directory");
+    //         let path_data = outdir.join("data");
+    //         fs::create_dir_all(&path_data).expect("unable to create meta directory");
+    //         let verbose = false;
+    //         let mut stack = vec![];
+    //         let mut cache = FxHashMap::default();
+    //         let summary1 = PaflCrate { functions: Vec::new() };
+    //         let mut summary = summary1.functions;
+    //         //summary: &'sum mut Vec<PaflFunction>,
 
-            let dumper: PaflDump<'_, '_> = PaflDump {
-                tcx: tcx2,
-                param_env: param_env,
-                verbose: verbose,
-                path_meta: path_meta.to_path_buf(),
-                path_data: path_data.to_path_buf(),
-                path_prefix: path_prefix,
-                stack: &mut stack,
-                cache: &mut cache,
-                summary: &mut summary,
-            };
+    //         let dumper: PaflDump<'_, '_> = PaflDump {
+    //             tcx: tcx2,
+    //             param_env: param_env,
+    //             verbose: verbose,
+    //             path_meta: path_meta.to_path_buf(),
+    //             path_data: path_data.to_path_buf(),
+    //             path_prefix: path_prefix,
+    //             stack: &mut stack,
+    //             cache: &mut cache,
+    //             summary: &mut summary,
+    //         };
 
-            // ty.kind 
-            // FieldDef, Param, StaticItem, ConstItem
-            let instance_def = body.source.instance;
-            let def_id: DefId = instance_def.def_id();
+    //         // ty.kind 
+    //         // FieldDef, Param, StaticItem, ConstItem
+    //         let instance_def = body.source.instance;
+    //         let def_id: DefId = instance_def.def_id();
 
-            // let inst = self.resolve_fn_key(def_id, generic_args);
+    //         // let inst = self.resolve_fn_key(def_id, generic_args);
 
-            // let inst_args = my_instance.args;
-            // let args_ref: GenericArgsRef<'tcx> = inst_args;
-            let krate =
-            if def_id.is_local() { None } else { Some(self.tcx.crate_name(def_id.krate).to_string()) };
-            // let dumper :PaflDump = Default::default();
-            // dumper.initialize(my_instance);
-            let mut my_generics: Vec<PaflGeneric> = vec![];
-            for arg in args {
-                let sub = match arg.unpack() {
-                    GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
-                    GenericArgKind::Type(_item) => PaflGeneric::Type(PaflType::Never),
-                    // GenericArgKind::Type(item) => PaflGeneric::Type(dumper.process_type(item)),
-                    GenericArgKind::Const(item) => PaflGeneric::Const(dumper.process_const(item)),
-                    // _ => {},
-                };
-                my_generics.push(sub);
-            }
+    //         // let inst_args = my_instance.args;
+    //         // let args_ref: GenericArgsRef<'tcx> = inst_args;
+    //         let krate =
+    //         if def_id.is_local() { None } else { Some(self.tcx.crate_name(def_id.krate).to_string()) };
+    //         // let dumper :PaflDump = Default::default();
+    //         // dumper.initialize(my_instance);
+    //         let mut my_generics: Vec<PaflGeneric> = vec![];
+    //         for arg in args {
+    //             let sub = match arg.unpack() {
+    //                 GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
+    //                 GenericArgKind::Type(_item) => PaflGeneric::Type(PaflType::Never),
+    //                 // GenericArgKind::Type(item) => PaflGeneric::Type(dumper.process_type(item)),
+    //                 GenericArgKind::Const(item) => PaflGeneric::Const(dumper.process_const(item)),
+    //                 // _ => {},
+    //             };
+    //             my_generics.push(sub);
+    //         }
             
-            let fn_inst_key = FnInstKey {
-                krate,
-                index: def_id.index.as_usize(),
-                path: self.tcx.def_path(def_id).to_string_no_crate_verbose(),
-                generics: my_generics,
-            };
+    //         let fn_inst_key = FnInstKey {
+    //             krate,
+    //             index: def_id.index.as_usize(),
+    //             path: self.tcx.def_path(def_id).to_string_no_crate_verbose(),
+    //             generics: my_generics,
+    //         };
 
-            print!("[Inst][{:?}];", fn_inst_key.generics.len()); 
+    //         print!("[Inst][{:?}];", fn_inst_key.generics.len()); 
 
-            print!("[{:?}]", prev_steps);
-                        // let prev_steps = vec![];
-            let trace = Trace {
-                _entry: fn_inst_key,
-                _steps: prev_steps.to_vec(),
-            };
-            // *steps = vec![];
-            // *prev_steps = vec![];
+    //         print!("[{:?}]", prev_steps);
+    //                     // let prev_steps = vec![];
+    //         let trace = Trace {
+    //             _entry: fn_inst_key,
+    //             _steps: prev_steps.to_vec(),
+    //         };
+    //         // *steps = vec![];
+    //         // *prev_steps = vec![];
 
-            let step = Step::Call(trace.clone());
+    //         let step = Step::Call(trace.clone());
 
-            // print!("[{:?}]", step);
+    //         // print!("[{:?}]", step);
 
-                // fn_inst_key.krate, 
-                // fn_inst_key.index, 
-                // fn_inst_key.path);
-            let crate_name2 = tcx.crate_name(def_id.krate);
-            let s1 = format!(":[{:?}]", crate_name2);
-            print!("{}", s1.red());
+    //             // fn_inst_key.krate, 
+    //             // fn_inst_key.index, 
+    //             // fn_inst_key.path);
+    //         let crate_name2 = tcx.crate_name(def_id.krate);
+    //         let s1 = format!(":[{:?}]", crate_name2);
+    //         print!("{}", s1.red());
         
-            let def_kind: DefKind = tcx.def_kind(def_id);
-            let s2 = format!("[{:?}]", def_kind);
-            print!("{}", s2.blue());
+    //         let def_kind: DefKind = tcx.def_kind(def_id);
+    //         let s2 = format!("[{:?}]", def_kind);
+    //         print!("{}", s2.blue());
         
-            let def_path: DefPath = tcx.def_path(def_id);
-            let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
-            for item in &def_paths {
-                let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-                print!("{}", s3.green());
-            }
-            // println!("");
+    //         let def_path: DefPath = tcx.def_path(def_id);
+    //         let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
+    //         for item in &def_paths {
+    //             let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
+    //             print!("{}", s3.green());
+    //         }
+    //         // println!("");
 
-            // BASIC BLOCK and statement number
-            let loc = last.loc;
-            if let Either::Left(l_loc) = loc {
-                let block = l_loc.block;
-                // let statement_idx = l_loc.statement_index;
-                print!(":[{:?}][{:?}]", block, trace._steps);
-                // let bb_id = 
-                // info!("// executing {:?}", loc.block);
-            }
-            step
-        } else {
-            Step::Err
-        }
-        // let loc= self.frame().loc;
-        // // let bb_id = ecx.frame().loc.left();
-        // if let Either::Left(l_loc) = loc {
-        //     let block = l_loc.block;
-        //     let statement_idx = l_loc.statement_index;
-        //     println!("[{:?}][{:?}]\n", block, statement_idx);
-        //     // let bb_id = 
-        //     // info!("// executing {:?}", loc.block);
-        // }
-    }
+    //         // BASIC BLOCK and statement number
+    //         let loc = last.loc;
+    //         if let Either::Left(l_loc) = loc {
+    //             let block = l_loc.block;
+    //             // let statement_idx = l_loc.statement_index;
+    //             print!(":[{:?}][{:?}]", block, trace._steps);
+    //             // let bb_id = 
+    //             // info!("// executing {:?}", loc.block);
+    //         }
+    //         step
+    //     } else {
+    //         Step::Err
+    //     }
+    //     // let loc= self.frame().loc;
+    //     // // let bb_id = ecx.frame().loc.left();
+    //     // if let Either::Left(l_loc) = loc {
+    //     //     let block = l_loc.block;
+    //     //     let statement_idx = l_loc.statement_index;
+    //     //     println!("[{:?}][{:?}]\n", block, statement_idx);
+    //     //     // let bb_id = 
+    //     //     // info!("// executing {:?}", loc.block);
+    //     // }
+    // }
 
-
-    pub fn dump_in_term(&mut self, term: &Terminator<'tcx>, steps: &mut Vec<Step> ) { // step.rs => TERM
-        // let term = terminator;
-
+    pub fn dump_in_term(&mut self, term: &Terminator<'tcx> ) { // step.rs => TERM
         match std::env::var_os("TERM") {
             None => (),
-            Some(val) => {
-                let outdir = std::path::PathBuf::from(val);
+            Some(_val) => {
+                // let outdir = std::path::PathBuf::from(val);
                 let kind = &term.kind;
                 let s1 = format!("[{:?}]", kind.name());
                 print!("{}", s1.red());
                 
-                // let step : Step = 
                 match kind {
-                    // TerminatorKind::Goto { target } => todo!(),
-                    // TerminatorKind::SwitchInt { discr, targets } => todo!(),
-                    // TerminatorKind::UnwindResume => todo!(),
-                    // TerminatorKind::UnwindTerminate(_) => todo!(),
                     // TerminatorKind::Return => {
                     //     let _step = self.dump_return(&outdir, steps);
                     //     // if let Step::Call(t) = step {
                     //     //     println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
                     //     // }
                     // },
-                    // TerminatorKind::Unreachable => todo!(),
-                    // TerminatorKind::Drop { place, target, unwind, replace } => todo!(),
                     TerminatorKind::Call { func, args: _, destination: _, target: _, unwind: _, call_source: _, fn_span: _ } => 
                     {
                         let body = self.body();
                         let instance_def = body.source.instance;
                         let def_id: DefId = instance_def.def_id();
-                        let crate_name2 = self.tcx.crate_name(def_id.krate);
-                        let filename = format!("yj_{}.json", crate_name2);
+                        // let crate_name2 = self.tcx.crate_name(def_id.krate);
+                        // let filename = format!("yj_{}.json", crate_name2);
                         let const_ty = match func.constant() {
                             None => {
                                 println!("callee is not a constant:");
@@ -523,34 +516,43 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             Some(const_op) => const_op.const_.ty(),
                         };
 
-                        let (_def_id, generic_args) = match const_ty.kind() {
+                        let (_def_id, _generic_args) = match const_ty.kind() {
                             ty::Closure(def_id, generic_args)
                             | ty::FnDef(def_id, generic_args) => {
                                 (*def_id, *generic_args)
                             },
                             _ => bug!("callee is not a function or closure"),
                         };
+
                         // let fn_inst_key = pafl::resolve_fn_key(def_id, generic_args);
-                        print!("//[{:?}]", steps);
-                        let step = self.inst_dump(generic_args, &outdir, steps);
-                        if let Step::Call(t) = step {
-                            println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
-                        }
+                        let fn_inst_key = self.create_fn_inst_key(def_id, term);
+                        let mut prev_trace = self.tcx._trace.borrow_mut();
+                        let vec: Vec<Step> = prev_trace._steps.to_vec();
+                        let trace : Trace = Trace { _entry: fn_inst_key, _steps: vec };
+                        *prev_trace = trace;
+
+                        // let trace = self.tcx._trace.borrow();
+                        // let step = Step::Call(*trace);
+                        // let step = self.inst_dump(generic_args, &outdir);
+                        
+                        // if let Step::Call(t) = step {
+                        //     println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
+                        // }
                         // *steps = vec![];
-                        println!("(Call) tcx_trace {:?}", tcx._trace);
+                        println!("(Call) {:?}", self.tcx._trace.borrow());
 
-                        // let dummy_generics: Vec<PaflGeneric> = vec![];
-                        let dummy_fn_inst_key = FnInstKey {
-                            krate: None,
-                            index: 0,
-                            path: String::from(""),
-                            generics: vec![],
-                        };
-                        let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
+                        // // let dummy_generics: Vec<PaflGeneric> = vec![];
+                        // let dummy_fn_inst_key = FnInstKey {
+                        //     krate: None,
+                        //     index: 0,
+                        //     path: String::from(""),
+                        //     generics: vec![],
+                        // };
+                        // let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
 
-                        let serialized_data = serde_json::to_string(&trace);
-                        let file = File::create(filename);
-                        let _ = file.expect("file created").write_all(serialized_data.expect("serialzed yj").as_bytes());
+                        // let serialized_data = serde_json::to_string(&trace);
+                        // let file = File::create(filename);
+                        // let _ = file.expect("file created").write_all(serialized_data.expect("serialzed yj").as_bytes());
 
                         // func == callee: &Operand<'tcx>, span: Span
                         // let my_instance = Instance::
@@ -565,9 +567,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     // TerminatorKind::FalseUnwind { real_target, unwind } => todo!(),
                     // TerminatorKind::InlineAsm { template, operands, options, line_spans, destination, unwind } => todo!(),
                     _ => { 
-                        let step = self.bb_trace();
-                        steps.push(step);
-                        println!(":[{:?}]", steps);
+                        let _step = self.bb_trace();
                     },
                 }
                 // ;

@@ -22,9 +22,6 @@ use crate::concurrency::data_race;
 use crate::concurrency::sync::SynchronizationState;
 use crate::shims::tls;
 use crate::*;
-use rustc_middle::ty::context::{
-    Trace, Step, FnInstKey,
-};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SchedulingAction {
@@ -1059,19 +1056,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             }
             match this.machine.threads.schedule(&this.machine.clock)? {
                 SchedulingAction::ExecuteStep => {
-                    //rustc_const_eval::interpret::dump::Step
-                    let dummy_fn_inst_key = FnInstKey {
-                        krate: None,
-                        index: 0,
-                        path: String::from(""),
-                        generics: vec![],
-                    };
-                
-                    let steps : Vec<Step> = vec![];
-                    let mut exec_t = Trace { _entry: dummy_fn_inst_key, _steps: steps };
-
-
-                    if !this.step(&mut exec_t)? {
+                    if !this.step()? {
                         // See if this thread can do something else.
                         match this.run_on_stack_empty()? {
                             Poll::Pending => {} // keep going

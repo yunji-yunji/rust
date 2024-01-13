@@ -13,8 +13,6 @@ use super::{ImmTy, InterpCx, InterpResult, Machine, PlaceTy, Projectable, Scalar
 use crate::util;
 
 // use crate::interpret::dump;
-use rustc_middle::ty::context::{Trace/* , Step*/};
-// use rustc_middle::ty::TyCtxt;
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Returns `true` as long as there are more things to do.
@@ -23,7 +21,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     ///
     /// This is marked `#inline(always)` to work around adversarial codegen when `opt-level = 3`
     #[inline(always)]
-    pub fn step(&mut self,  exec_t: &mut Trace ) -> InterpResult<'tcx, bool> {
+    pub fn step(&mut self) -> InterpResult<'tcx, bool> {
 
         // match std::env::var_os("STEP") {
         //     None => (),
@@ -67,7 +65,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         M::before_terminator(self)?;
 
         let terminator = basic_block.terminator();
-        self.terminator(terminator, exec_t)?;
+        self.terminator(terminator)?;
         Ok(true)
     }
 
@@ -371,14 +369,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
     // fn terminator(&mut self, terminator: &mir::Terminator<'tcx>, steps: &mut Vec<Step> ) -> InterpResult<'tcx> {
-    fn terminator(&mut self, terminator: &mir::Terminator<'tcx>, _exec_t: &mut Trace ) -> InterpResult<'tcx> {
+    fn terminator(&mut self, terminator: &mir::Terminator<'tcx> ) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
 
         match std::env::var_os("DUMP_DIR") {
             None => (),
-            Some(path_str) => {
-                let mut steps: Vec<Step> = vec![];
-                self.dump_in_term(terminator, &mut steps);
+            Some(_path_str) => {
+                // let mut steps: Vec<Step> = vec![];
+                self.dump_in_term(terminator);
+                // println!("dump_dir={:?}", path_str);
                 // self.dump2(terminator, path_str);
             }
         }

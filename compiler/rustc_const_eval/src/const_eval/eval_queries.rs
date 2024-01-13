@@ -29,15 +29,12 @@ use crate::interpret::{
     InterpError, InterpResult, MPlaceTy, MemoryKind, OpTy, RefTracking, StackPopCleanup,
 };
 use crate::interpret::dump;
-use rustc_middle::ty::context::{Trace, Step, FnInstKey};
-
 
 // Returns a pointer to where the result lives
 fn eval_body_using_ecx<'mir, 'tcx>(
     ecx: &mut CompileTimeEvalContext<'mir, 'tcx>,
     cid: GlobalId<'tcx>,
     body: &'mir mir::Body<'tcx>,
-    exec_t: &mut Trace,
 ) -> InterpResult<'tcx, MPlaceTy<'tcx>> {
     debug!("eval_body_using_ecx: {:?}, {:?}", cid, ecx.param_env);
     let tcx = *ecx.tcx;
@@ -93,7 +90,7 @@ fn eval_body_using_ecx<'mir, 'tcx>(
 
     // let mut steps : Vec<dump::Step> = vec![];
     // The main interpreter loop.
-    while ecx.step(exec_t)? {}
+    while ecx.step()? {}
 
     // Intern the result
     let intern_kind = if cid.promoted.is_some() {
@@ -316,33 +313,26 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
         CompileTimeInterpreter::new(CanAccessStatics::from(is_static), CheckAlignment::Error),
     );
     // yj code
-    // let mut exec_t = dump2::create_empty_trace(tcx, def);
-    
-    // yj: okay to remove if tcx trace
-    println!("tcx_trace {:?}", tcx._trace);
-    let dummy_fn_inst_key = FnInstKey {
-        krate: None,
-        index: 0,
-        path: String::from(""),
-        generics: vec![],
-    };
+    match std::env::var_os("PROV") {
+        None => (),
+        Some(_val) => {
+            println!("provider {:?}", tcx._trace);
+        }
+    }
 
-    let steps : Vec<Step> = vec![];
-    let mut exec_t = Trace { _entry: dummy_fn_inst_key, _steps: steps };
-    eval_in_interpreter(ecx, cid, is_static, &mut exec_t)
+    eval_in_interpreter(ecx, cid, is_static)
 }
 
 pub fn eval_in_interpreter<'mir, 'tcx>(
     mut ecx: InterpCx<'mir, 'tcx, CompileTimeInterpreter<'mir, 'tcx>>,
     cid: GlobalId<'tcx>,
     is_static: bool,
-    exec_t: &mut Trace
 ) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
     // `is_static` just means "in static", it could still be a promoted!
     debug_assert_eq!(is_static, ecx.tcx.static_mutability(cid.instance.def_id()).is_some());
 
     let res = ecx.load_mir(cid.instance.def, cid.promoted);
-    match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body, exec_t)) {
+    match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body)) {
         Err(error) => {
             let (error, backtrace) = error.into_parts();
             backtrace.print_backtrace();
