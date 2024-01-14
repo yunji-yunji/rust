@@ -31,7 +31,7 @@ use std::fs::OpenOptions;
 // use serde::{Serialize, Deserialize};
 // use std::fs::File;
 // use std::io::Write;
-
+// use std::cell::RefCell;
 
 use rustc_hir::def::DefKind;
 use rustc_hir::def_id::{LOCAL_CRATE, DefId};
@@ -114,17 +114,6 @@ pub fn bb_dump<'mir, 'tcx>(
     // println!("{:?}", bbs);
 }
 
-
-// pub fn dump_in_step( // step.rs => STEP
-//     // ecx: &CompileTimeEvalContext<'mir, 'tcx>
-//     tcx: TyCtxt<'_>,
-//     body: &Body<'_>,
-//     // outdir: &Path,
-// ) {
-//     print!("{}", "[step]".green());
-//     let outdir = std::path::PathBuf::from("/home/y23kim/aptos-core/third_party/move/move-bytecode-verifier/src/regression_tests/dump_yj");
-//     dump_in_eval_query(tcx, body, &outdir);
-// }
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     #[inline(always)]
     pub fn bb_dump_in_step(&mut self) { // step.rs => STEPP
@@ -167,51 +156,23 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 // let bb_id = 
                 // info!("// executing {:?}", loc.block);
             }
-
         }
-        // let loc= self.frame().loc;
-        // // let bb_id = ecx.frame().loc.left();
-        // if let Either::Left(l_loc) = loc {
-        //     let block = l_loc.block;
-        //     let statement_idx = l_loc.statement_index;
-        //     println!("[{:?}][{:?}]\n", block, statement_idx);
-        //     // let bb_id = 
-        //     // info!("// executing {:?}", loc.block);
-        // }
     }
 
     pub fn bb_trace(&mut self) -> Step {
         if let Some(last) = self.stack().last() {
-            /*
-            let body = self.body();
-            let tcx = self.tcx; // self.tcx.tcx 
-            let instance_def = body.source.instance;
-            let def_id: DefId = instance_def.def_id();
 
-            let crate_name2 = tcx.crate_name(def_id.krate);
-            let s1 = format!(":[{:?}]", crate_name2);
-            print!("{}", s1.red());
-        
-            let def_kind: DefKind = tcx.def_kind(def_id);
-            let s2 = format!("[{:?}]", def_kind);
-            print!("{}", s2.blue());
-        
-            let def_path: DefPath = tcx.def_path(def_id);
-            let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
-            for item in &def_paths {
-                let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-                print!("{}", s3.green());
-            }
-             */
-            let tcx = self.tcx.tcx; // self.tcx.tcx 
-            let mut prev_trace = tcx._trace.borrow_mut();
-
-            let dummy_fn_inst_key = FnInstKey {
-                krate: None,
-                index: 100,
-                path: String::from("modified"),
-                generics: vec![],
-            };
+            // let mut prev_trace = tcx._trace.borrow_mut();
+            // let mut idx_v = self.tcx._t_idx_stk.borrow_mut();
+            
+            // let mut curr_steps;
+            // if let Some(curr_idx) = idx_v.last() {
+            //     if curr_idx == 0 {
+            //         curr_steps = outer_steps;
+            //     } else {
+            //         curr_steps = outer_steps[curr_idx];
+            //     }
+            // }
 
             // *prev_trace._entry = dummy_fn_inst_key;
             // *prev_trace._entry.index += 1;
@@ -228,10 +189,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 print!(":[{:?}]", block);
 
                 let step = Step::Block(block);
-                let mut vec: Vec<Step> = prev_trace._steps.to_vec();
-                vec.push(step.clone());
-                let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: vec };
-                *prev_trace = trace;
+                // let mut vec: Vec<Step> = prev_trace._steps.to_vec();
+                // vec.push(step.clone());
+                // let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: vec };
+                // *prev_trace = trace;
+                let mut fin_trace = self.tcx._trace.borrow_mut();
+                fin_trace._steps.push(step.clone());
 
                 step
             } else {
@@ -343,147 +306,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             let step = Step::Call(trace.clone());
             step
 
-
-            // =======================
-
-
-
-
-
         } else {
             Step::Err
         }
     }
-
-    // pub fn inst_dump(&mut self, args: GenericArgsRef<'tcx>, outdir: &Path ) 
-    // -> Step { // step.rs => 
-
-    //     if let Some(last) = self.stack().last() {
-
-    //         // crate information
-    //         let body = self.body();
-    //         // what is DIFFerence BETWEEN TyCtxt and TCXtxtAt
-    //         let tcx = self.tcx; // self.tcx.tcx 
-    //         let tcx2 = tcx.tcx;
-    //         // get generic arg ref
-    //         let param_env: ParamEnv<'_> = self.param_env;
-    //         // let inst = Instance::expect_resolve(self.tcx, self.param_env, def_id, generic_args);
-
-    //         let path_prefix: PathBuf = PathBuf::default();
-
-    //         fs::create_dir_all(outdir).expect("unable to create output directory");
-    //         let path_meta = outdir.join("meta");
-    //         fs::create_dir_all(&path_meta).expect("unable to create meta directory");
-    //         let path_data = outdir.join("data");
-    //         fs::create_dir_all(&path_data).expect("unable to create meta directory");
-    //         let verbose = false;
-    //         let mut stack = vec![];
-    //         let mut cache = FxHashMap::default();
-    //         let summary1 = PaflCrate { functions: Vec::new() };
-    //         let mut summary = summary1.functions;
-    //         //summary: &'sum mut Vec<PaflFunction>,
-
-    //         let dumper: PaflDump<'_, '_> = PaflDump {
-    //             tcx: tcx2,
-    //             param_env: param_env,
-    //             verbose: verbose,
-    //             path_meta: path_meta.to_path_buf(),
-    //             path_data: path_data.to_path_buf(),
-    //             path_prefix: path_prefix,
-    //             stack: &mut stack,
-    //             cache: &mut cache,
-    //             summary: &mut summary,
-    //         };
-
-    //         // ty.kind 
-    //         // FieldDef, Param, StaticItem, ConstItem
-    //         let instance_def = body.source.instance;
-    //         let def_id: DefId = instance_def.def_id();
-
-    //         // let inst = self.resolve_fn_key(def_id, generic_args);
-
-    //         // let inst_args = my_instance.args;
-    //         // let args_ref: GenericArgsRef<'tcx> = inst_args;
-    //         let krate =
-    //         if def_id.is_local() { None } else { Some(self.tcx.crate_name(def_id.krate).to_string()) };
-    //         // let dumper :PaflDump = Default::default();
-    //         // dumper.initialize(my_instance);
-    //         let mut my_generics: Vec<PaflGeneric> = vec![];
-    //         for arg in args {
-    //             let sub = match arg.unpack() {
-    //                 GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
-    //                 GenericArgKind::Type(_item) => PaflGeneric::Type(PaflType::Never),
-    //                 // GenericArgKind::Type(item) => PaflGeneric::Type(dumper.process_type(item)),
-    //                 GenericArgKind::Const(item) => PaflGeneric::Const(dumper.process_const(item)),
-    //                 // _ => {},
-    //             };
-    //             my_generics.push(sub);
-    //         }
-            
-    //         let fn_inst_key = FnInstKey {
-    //             krate,
-    //             index: def_id.index.as_usize(),
-    //             path: self.tcx.def_path(def_id).to_string_no_crate_verbose(),
-    //             generics: my_generics,
-    //         };
-
-    //         print!("[Inst][{:?}];", fn_inst_key.generics.len()); 
-
-    //         print!("[{:?}]", prev_steps);
-    //                     // let prev_steps = vec![];
-    //         let trace = Trace {
-    //             _entry: fn_inst_key,
-    //             _steps: prev_steps.to_vec(),
-    //         };
-    //         // *steps = vec![];
-    //         // *prev_steps = vec![];
-
-    //         let step = Step::Call(trace.clone());
-
-    //         // print!("[{:?}]", step);
-
-    //             // fn_inst_key.krate, 
-    //             // fn_inst_key.index, 
-    //             // fn_inst_key.path);
-    //         let crate_name2 = tcx.crate_name(def_id.krate);
-    //         let s1 = format!(":[{:?}]", crate_name2);
-    //         print!("{}", s1.red());
-        
-    //         let def_kind: DefKind = tcx.def_kind(def_id);
-    //         let s2 = format!("[{:?}]", def_kind);
-    //         print!("{}", s2.blue());
-        
-    //         let def_path: DefPath = tcx.def_path(def_id);
-    //         let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
-    //         for item in &def_paths {
-    //             let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-    //             print!("{}", s3.green());
-    //         }
-    //         // println!("");
-
-    //         // BASIC BLOCK and statement number
-    //         let loc = last.loc;
-    //         if let Either::Left(l_loc) = loc {
-    //             let block = l_loc.block;
-    //             // let statement_idx = l_loc.statement_index;
-    //             print!(":[{:?}][{:?}]", block, trace._steps);
-    //             // let bb_id = 
-    //             // info!("// executing {:?}", loc.block);
-    //         }
-    //         step
-    //     } else {
-    //         Step::Err
-    //     }
-    //     // let loc= self.frame().loc;
-    //     // // let bb_id = ecx.frame().loc.left();
-    //     // if let Either::Left(l_loc) = loc {
-    //     //     let block = l_loc.block;
-    //     //     let statement_idx = l_loc.statement_index;
-    //     //     println!("[{:?}][{:?}]\n", block, statement_idx);
-    //     //     // let bb_id = 
-    //     //     // info!("// executing {:?}", loc.block);
-    //     // }
-    // }
 
     pub fn dump_in_term(&mut self, term: &Terminator<'tcx> ) { // step.rs => TERM
         match std::env::var_os("TERM") {
@@ -495,12 +321,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 print!("{}", s1.red());
                 
                 match kind {
-                    // TerminatorKind::Return => {
-                    //     let _step = self.dump_return(&outdir, steps);
-                    //     // if let Step::Call(t) = step {
-                    //     //     println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
-                    //     // }
-                    // },
+
                     TerminatorKind::Call { func, args: _, destination: _, target: _, unwind: _, call_source: _, fn_span: _ } => 
                     {
                         let body = self.body();
@@ -524,13 +345,50 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             _ => bug!("callee is not a function or closure"),
                         };
 
-                        // let fn_inst_key = pafl::resolve_fn_key(def_id, generic_args);
-                        let fn_inst_key = self.create_fn_inst_key(def_id, term);
-                        let mut prev_trace = self.tcx._trace.borrow_mut();
-                        let vec: Vec<Step> = prev_trace._steps.to_vec();
-                        let trace : Trace = Trace { _entry: fn_inst_key, _steps: vec };
-                        *prev_trace = trace;
+                        let fin_trace = self.tcx._trace.borrow_mut();
+                        // let mut idx_v = self.tcx._t_idx_stk.borrow_mut();
+                        // let mut curr_t = self.tcx._curr_t.borrow_mut();
 
+                        // 1. Create new trace for callee
+
+                        // 2.1. create FnInst key (Entry)
+                        // let fn_inst_key = pafl::resolve_fn_key(def_id, generic_args);
+                        let entry_fn_key = self.create_fn_inst_key(def_id, term);
+
+                        // 2.2. Steps
+                        // let steps: Vec<Step> = fin_trace._steps.to_vec();
+                        let empty_steps: Vec<Step> = vec![];
+
+                        // 2.3. Trace
+                        let new_trace : Trace = Trace { _entry: entry_fn_key, _steps: empty_steps };
+                        
+                        // 3. push new trace to previous trace's steps
+                        let mut outer_steps = fin_trace._steps.to_vec();
+                        // let mut curr_steps;
+                        // if let Some(curr_idx) = idx_v.last() {
+                        //     if *curr_idx == 0 {
+                        //         curr_steps = outer_steps;
+                        //     } else {
+                        //         if let Step::Call(trace) = &outer_steps[*curr_idx] {
+                        //             curr_steps = trace._steps;
+                        //         };
+                        //         idx_v.push(curr_steps.clone().len());
+                        //     }
+
+                        // } else { // None
+                        //     bug!("vector is empty bug!");
+                        // }
+
+                        outer_steps.push(Step::Call(new_trace.clone()));
+                        // curr_steps.push(Step::Call(new_trace.clone()));
+
+
+                        // let curr_steps = &curr_t._steps;
+                        // let mut curr_steps = &curr_t.borrow_mut()._steps;
+                        // let mut curr_steps = *curr_t._steps;
+                        // *curr_t = new_trace.clone().into();
+
+                        // *fin_trace = trace;
                         // let trace = self.tcx._trace.borrow();
                         // let step = Step::Call(*trace);
                         // let step = self.inst_dump(generic_args, &outdir);
@@ -539,16 +397,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         //     println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
                         // }
                         // *steps = vec![];
-                        println!("(Call) {:?}", self.tcx._trace.borrow());
-
-                        // // let dummy_generics: Vec<PaflGeneric> = vec![];
-                        // let dummy_fn_inst_key = FnInstKey {
-                        //     krate: None,
-                        //     index: 0,
-                        //     path: String::from(""),
-                        //     generics: vec![],
-                        // };
-                        // let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
+                        println!("(Call) {:?}", fin_trace.clone());
 
                         // let serialized_data = serde_json::to_string(&trace);
                         // let file = File::create(filename);
@@ -561,67 +410,18 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     // {
                     //     todo!()
                     // },
-                    // TerminatorKind::Yield { value, resume, resume_arg, drop } => todo!(),
-                    // TerminatorKind::CoroutineDrop => todo!(),
-                    // TerminatorKind::FalseEdge { real_target, imaginary_target } => todo!(),
-                    // TerminatorKind::FalseUnwind { real_target, unwind } => todo!(),
-                    // TerminatorKind::InlineAsm { template, operands, options, line_spans, destination, unwind } => todo!(),
+                    // TerminatorKind::Return => {
+                    //     let _step = self.dump_return(&outdir, steps);
+                    //     // if let Step::Call(t) = step {
+                    //     //     println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
+                    //     // }
+                    // },
                     _ => { 
                         let _step = self.bb_trace();
                     },
                 }
-                // ;
-                // match step {
-                //     Step::Block(id) => print!("[{:?}]", id),
-                //     Step::Call(ref t) => print!("[{:?}]", t._steps.len()),
-                //     Step::Err => print!("[ERR]"),
-                // }
             }
         }
-
-        // let kind = match &term.kind {
-        //     // basics
-        //     TerminatorKind::Goto { target } => TermKind::Goto((*target).into()),
-        //     TerminatorKind::SwitchInt { discr: _, targets } => {
-        //         TermKind::Switch(targets.all_targets().iter().map(|b| (*b).into()).collect())
-        //     }
-        //     TerminatorKind::Unreachable => TermKind::Unreachable,
-        //     TerminatorKind::Return => TermKind::Return,
-        //     // call (which may unwind)
-        //     TerminatorKind::Call {
-        //         func,
-        //         args: _,
-        //         destination: _,
-        //         target,
-        //         unwind,
-        //         call_source: _,
-        //         fn_span: _,
-        //     } => TermKind::Call {
-        //         site: self.process_callsite(func, term.source_info.span),
-        //         target: target.as_ref().map(|t| (*t).into()),
-        //         unwind: unwind.into(),
-        //     },
-        //     TerminatorKind::Drop { place: _, target, unwind, replace: _ } => {
-        //         TermKind::Drop { target: (*target).into(), unwind: unwind.into() }
-        //     }
-        //     TerminatorKind::Assert { cond: _, expected: _, msg: _, target, unwind } => {
-        //         TermKind::Assert { target: (*target).into(), unwind: unwind.into() }
-        //     }
-        //     // unwinding
-        //     TerminatorKind::UnwindResume => TermKind::UnwindResume,
-        //     TerminatorKind::UnwindTerminate(..) => TermKind::UnwindFinish,
-        //     // imaginary
-        //     TerminatorKind::FalseEdge { real_target, imaginary_target: _ }
-        //     | TerminatorKind::FalseUnwind { real_target, unwind: _ } => {
-        //         TermKind::Goto((*real_target).into())
-        //     }
-        //     // coroutine
-        //     TerminatorKind::Yield { .. } | TerminatorKind::CoroutineDrop => {
-        //         bug!("unexpected coroutine")
-        //     }
-        //     // assembly
-        //     TerminatorKind::InlineAsm { .. } => bug!("unexpected inline assembly"),
-        // };
     }
 
 }
