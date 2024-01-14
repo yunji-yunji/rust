@@ -4,11 +4,14 @@ use std::fs::OpenOptions;
 use std::io::{Write};
 use std::path::PathBuf;
 use either::Either;
+use colored::Colorize;
 
 use super::InterpCx;
 use super::Machine;
 
-use rustc_hir::def_id::{DefId};
+use rustc_hir::def::DefKind;
+use rustc_hir::def_id::DefId;
+use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 
 use rustc_data_structures::fx::FxHashMap;
 use rustc_codegen_ssa::pafl::{PaflDump, PaflCrate};
@@ -18,19 +21,18 @@ use rustc_middle::ty::{self, GenericArgKind};
 use rustc_middle::ty::context::{
     PaflType, PaflGeneric, FnInstKey,
 };
-// use crate::ty::ParamEnv;
 use rustc_middle::ty::ParamEnv;
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
+    //pub fn inst_dump(&mut self, args: GenericArgsRef<'tcx>, outdir: &Path ) 
+    // term -> generic_args
     pub fn create_fn_inst_key(&mut self, def: DefId, term: &Terminator<'tcx>) -> FnInstKey {
-
         let tcx = self.tcx.tcx;
         // 1. krate
         let krate = if def.is_local() { None } else { Some(tcx.crate_name(def.krate).to_string()) };
 
-
-        // 2.1. dumper
+        // 2.1. dumper ===============================================
         let param_env: ParamEnv<'_> = self.param_env;
         let verbose = false;
 
@@ -60,12 +62,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             summary: &mut summary,
         };
 
+        // ================ ===============================================
+
         let kind = &term.kind;
         match kind {
             TerminatorKind::Call { func, args: _, destination: _, target: _, unwind: _, call_source: _, fn_span: _ } => 
             {
-
-
                 // 2.2. args
                 let const_ty = match func.constant() {
                     None => {
@@ -94,13 +96,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     my_generics.push(sub);
                 }
 
-                // 3. FnInstKey
+                // 3. FnInstKey ===============================================
                 let fn_inst_key = FnInstKey {
                     krate,
                     index: def.index.as_usize(),
                     path: tcx.def_path(def).to_string_no_crate_verbose(),
                     generics: my_generics,
                 };
+                print!("[keyGenerics][{:?}];", fn_inst_key.generics.len()); 
+
                 fn_inst_key
             },
             _ => {
@@ -108,18 +112,75 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             }
         }
     }
+
+    fn _print_crate_info(&mut self, /*def: DefId, */ _term: &Terminator<'tcx>) {
+        if let Some(last) = self.stack().last() {
+
+            let tcx = self.tcx;
+            // 1. def_id
+            let body = self.body();
+            let instance_def = body.source.instance;
+            let def_id: DefId = instance_def.def_id();
+
+            // 2. crate name
+            let crate_name2 = tcx.crate_name(def_id.krate);
+            let s1 = format!(":[{:?}]", crate_name2);
+            print!("{}", s1.red());
+        
+            // 3. def_kind
+            let def_kind: DefKind = tcx.def_kind(def_id);
+            let s2 = format!("[{:?}]", def_kind);
+            print!("{}", s2.blue());
+        
+            let def_path: DefPath = tcx.def_path(def_id);
+            let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
+            for item in &def_paths {
+                let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
+                print!("{}", s3.green());
+            }
+            // println!("");
+
+            // 4. terminator kind
+
+            // 5. BASIC BLOCK and statement number
+            let loc = last.loc;
+            if let Either::Left(l_loc) = loc {
+                let block = l_loc.block;
+                // let statement_idx = l_loc.statement_index;
+                print!(":[{:?}]", block);
+                // info!("// executing {:?}", loc.block);
+            }
+        }
+
+    }
 }
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn dump2(&mut self, term: &Terminator<'tcx>, dump_str: OsString) {
         let outdir = std::path::PathBuf::from(dump_str);
         fs::create_dir_all(outdir).expect("Fail to open directory.");
-        let tcx = self.tcx;
+        let tcx = self.tcx; // self.tcx.tcx 
         let body = self.body();
         let instance_def = body.source.instance;
         let def_id: DefId = instance_def.def_id();
 
-        // let krate_name =
+        /*
+            let crate_name2 = tcx.crate_name(def_id.krate);
+            let s1 = format!(":[{:?}]", crate_name2);
+            print!("{}", s1.red());
+        
+            let def_kind: DefKind = tcx.def_kind(def_id);
+            let s2 = format!("[{:?}]", def_kind);
+            print!("{}", s2.blue());
+        
+            let def_path: DefPath = tcx.def_path(def_id);
+            let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
+            for item in &def_paths {
+                let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
+                print!("{}", s3.green());
+            }
+        */
+
         // if def_id.is_local() { None } else { Some(self.tcx.crate_name(def_id.krate).to_string()) };
         let krate_name = tcx.crate_name(def_id.krate).to_string();
         // let file_name = krate_name;
