@@ -41,7 +41,7 @@ cfg_match! {
             [*const T where T: ?Sized]
             [*mut T where T: ?Sized]
             [std::ptr::NonNull<T> where T: ?Sized]
-            [std::rc::Rc<T> where T: ?Sized]
+            // [std::rc::Rc<T> where T: ?Sized]
             [std::rc::Weak<T> where T: ?Sized]
             [std::sync::MutexGuard<'_, T> where T: ?Sized]
             [std::sync::RwLockReadGuard<'_, T> where T: ?Sized]
@@ -97,6 +97,7 @@ cfg_match! {
             [indexmap::IndexMap<K, V, S> where K: DynSend, V: DynSend, S: DynSend]
             [thin_vec::ThinVec<T> where T: DynSend]
             [smallvec::SmallVec<A> where A: smallvec::Array + DynSend]
+            [std::rc::Rc<T> where T: ?Sized]
         );
 
         macro_rules! impls_dyn_sync_neg {
@@ -115,7 +116,7 @@ cfg_match! {
             // [std::cell::RefCell<T> where T: ?Sized]
             // [std::cell::UnsafeCell<T> where T: ?Sized]
             [std::ptr::NonNull<T> where T: ?Sized]
-            [std::rc::Rc<T> where T: ?Sized]
+            // [std::rc::Rc<T> where T: ?Sized]
             [std::rc::Weak<T> where T: ?Sized]
             [std::cell::OnceCell<T> where T]
             [std::sync::mpsc::Receiver<T> where T]
@@ -187,6 +188,7 @@ cfg_match! {
             [indexmap::IndexMap<K, V, S> where K: DynSync, V: DynSync, S: DynSync]
             [smallvec::SmallVec<A> where A: smallvec::Array + DynSync]
             [thin_vec::ThinVec<T> where T: DynSync]
+            [std::rc::Rc<T> where T: ?Sized]
         );
     }
 }

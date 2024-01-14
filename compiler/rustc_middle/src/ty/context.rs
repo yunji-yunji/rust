@@ -73,6 +73,7 @@ use rustc_type_ir::{CollectAndApply, Interner, TypeFlags};
 
 use std::borrow::Borrow;
 use std::cell::RefCell;
+// use std::rc::Rc;
 use std::cmp::Ordering;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -576,33 +577,12 @@ pub enum ValueTree {
     Struct(Vec<ValueTree>),
 }
 
-// impl ValueTree {
-//     fn Copy(&self) -> ValueTree {
-//         match self {
-//             ValueTree::Scalar { bit, val } => ValueTree::Scalar { bit: *bit, val: *val },
-//             ValueTree::Struct(vec) => ValueTree::Struct(vec.clone()),
-//         }
-//     }
-// }
-
 /// Serializable information about a Rust const
 #[derive(Serialize, Clone, Debug)]
 pub enum PaflConst {
     Param { index: u32, name: String },
     Value(ValueTree),
 }
-
-// impl PaflConst {
-//     fn Copy(&self) -> PaflConst {
-//         match self {
-//             PaflConst::Param { index, name } => PaflConst::Param {
-//                 index: *index,
-//                 name: name.clone(),
-//             },
-//             PaflConst::Value(value_tree) => PaflConst::Value(value_tree.Copy()),
-//         }
-//     }
-// }
 
 /// Serializable information about a Rust type
 #[derive(Serialize, Clone, Debug)]
@@ -642,42 +622,6 @@ pub enum PaflType {
     Tuple(Vec<PaflType>),
 }
 
-// impl PaflType {
-//     fn Copy(&self) -> PaflType {
-//         match self {
-//             PaflType::Never | PaflType::Bool | PaflType::Char |
-//             PaflType::Isize | PaflType::I8 | PaflType::I16 | PaflType::I32 |
-//             PaflType::I64 | PaflType::I128 | PaflType::Usize | PaflType::U8 |
-//             PaflType::U16 | PaflType::U32 | PaflType::U64 | PaflType::U128 |
-//             PaflType::F32 | PaflType::F64 | PaflType::Str => *self,
-
-//             PaflType::Param { index, name } => PaflType::Param {
-//                 index: *index,
-//                 name: name.clone(),
-//             },
-
-//             PaflType::Adt(ty_inst_key) => PaflType::Adt(*ty_inst_key),
-//             PaflType::Alias(ty_inst_key) => PaflType::Alias(*ty_inst_key),
-//             PaflType::Opaque(ident2) => PaflType::Opaque(ident2.clone()),
-
-//             PaflType::FnPtr(params, ret) => PaflType::FnPtr(params.clone(), Box::new(ret.custom_copy())),
-//             PaflType::FnDef(fn_inst_key) => PaflType::FnDef(*fn_inst_key),
-//             PaflType::Closure(fn_inst_key) => PaflType::Closure(*fn_inst_key),
-
-//             PaflType::Dynamic(ident2) => PaflType::Dynamic(ident2.clone()),
-
-//             PaflType::ImmRef(inner) => PaflType::ImmRef(Box::new(inner.Copy())),
-//             PaflType::MutRef(inner) => PaflType::MutRef(Box::new(inner.Copy())),
-//             PaflType::ImmPtr(inner) => PaflType::ImmPtr(Box::new(inner.Copy())),
-//             PaflType::MutPtr(inner) => PaflType::MutPtr(Box::new(inner.Copy())),
-
-//             PaflType::Slice(inner) => PaflType::Slice(Box::new(inner.Copy())),
-//             PaflType::Array(inner, pafl_const) => PaflType::Array(Box::new(inner.Copy()), pafl_const.custom_copy()),
-//             PaflType::Tuple(elements) => PaflType::Tuple(elements.clone()),
-//         }
-//     }
-// }
-
 /// Serializable information about a Rust generic argument
 #[derive(Serialize, Clone, Debug)]
 pub enum PaflGeneric {
@@ -685,16 +629,6 @@ pub enum PaflGeneric {
     Type(PaflType),
     Const(PaflConst),
 }
-
-// impl PaflGeneric {
-//     fn Copy(&self) -> PaflGeneric {
-//         match self {
-//             PaflGeneric::Lifetime => PaflGeneric::Lifetime,
-//             PaflGeneric::Type(t) => PaflGeneric::Type(t.Copy()),
-//             PaflGeneric::Const(c) => PaflGeneric::Const(c.Copy()),
-//         }
-//     }
-// }
 
 /// Identifier for type instance
 #[derive(Serialize, Clone, Debug)]
@@ -714,17 +648,6 @@ pub struct FnInstKey {
     pub generics: Vec<PaflGeneric>,
 }
 
-// impl FnInstKey {
-//     fn Copy(&self) -> FnInstKey {
-//         FnInstKey {
-//             krate: self.krate.clone(),
-//             index: self.index,
-//             path: self.path.clone(),
-//             generics: self.generics.iter().map(|g| g.Copy()).collect(),
-//         }
-//     }
-// }
-
 #[allow(dead_code)]
 
 #[derive(Serialize, Clone, Debug)]
@@ -734,30 +657,11 @@ pub enum Step {
     Err,
 }
 
-// impl Step {
-//     fn Copy(&self) -> Step {
-//         match self {
-//             Step::Block(bb) => Step::Block(*bb), // Assuming BasicBlock is Copy
-//             Step::Call(trace) => Step::Call(trace.Copy()),
-//             Step::Err => Step::Err,
-//         }
-//     }
-// }
-
 #[derive(Serialize, Clone, Debug)]
 pub struct Trace {
     pub _entry: FnInstKey,
     pub _steps: Vec<Step>,
 }
-
-// impl Trace {
-//     fn Copy(&self) -> Trace {
-//         Trace {
-//             _entry: self._entry.Copy(),
-//             _steps: self._steps.clone(), // Vec<T> has a Copy implementation if T is Copy
-//         }
-//     }
-// }
 
 // ======
 
@@ -869,6 +773,8 @@ pub struct GlobalCtxt<'tcx> {
 
     // pub _trace: RefCell<&'tcx Trace>,
     pub _trace: RefCell<Trace>,
+    // pub _curr_t: RefCell<Rc<Trace>>,
+    pub _t_idx_stk: RefCell<Vec<usize>>,
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
 }
@@ -1016,7 +922,8 @@ impl<'tcx> TyCtxt<'tcx> {
             path: String::from(""),
             generics: vec![],
         };
-        let trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
+        let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
+        let trace_idx_vec : Vec<usize> = vec![0];
 
         GlobalCtxt {
             sess: s,
@@ -1043,7 +950,9 @@ impl<'tcx> TyCtxt<'tcx> {
             canonical_param_env_cache: Default::default(),
             data_layout,
             alloc_map: Lock::new(interpret::AllocMap::new()),
-            _trace: RefCell::new(trace),
+            _trace: RefCell::new(fin_trace.clone()),
+            // _curr_t: RefCell::new(fin_trace.clone().into()),
+            _t_idx_stk: RefCell::new(trace_idx_vec),
             // _trace: trace,
         }
     }
