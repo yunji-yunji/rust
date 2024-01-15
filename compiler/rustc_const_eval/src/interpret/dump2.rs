@@ -30,7 +30,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn create_fn_inst_key(&mut self, def: DefId, term: &Terminator<'tcx>) -> FnInstKey {
         let tcx = self.tcx.tcx;
         // 1. krate
-        let krate = if def.is_local() { None } else { Some(tcx.crate_name(def.krate).to_string()) };
+        // let krate = if def.is_local() { None } else { Some(tcx.crate_name(def.krate).to_string()) };
+        let krate = Some(tcx.crate_name(def.krate).to_string());
 
         // 2.1. dumper ===============================================
         let param_env: ParamEnv<'_> = self.param_env;
@@ -103,7 +104,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     path: tcx.def_path(def).to_string_no_crate_verbose(),
                     generics: my_generics,
                 };
-                print!("[keyGenerics][{:?}];", fn_inst_key.generics.len()); 
+                // print!("[createFnKey({:?})];", fn_inst_key.generics.len()); 
 
                 fn_inst_key
             },
