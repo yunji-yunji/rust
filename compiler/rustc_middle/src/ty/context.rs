@@ -652,7 +652,7 @@ pub struct FnInstKey {
 
 #[derive(Serialize, Clone, Debug)]
 pub enum Step {
-    Block(BasicBlock),
+    B(BasicBlock),
     Call(Trace),
     Err,
 }
@@ -774,7 +774,10 @@ pub struct GlobalCtxt<'tcx> {
     // pub _trace: RefCell<&'tcx Trace>,
     pub _trace: RefCell<Trace>,
     // pub _curr_t: RefCell<Rc<Trace>>,
-    pub _t_idx_stk: RefCell<Vec<usize>>,
+    // pub _t_idx_stk: RefCell<Vec<usize>>,
+    // pub _curr_t: RefCell<Option<Vec<Step>>>,
+    // pub _curr_t: RefCell<Option<&'tcx RefCell<Trace>>>,
+    pub _curr_t: RefCell<Option<Box<RefCell<Trace>>>>,
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
 }
@@ -923,8 +926,8 @@ impl<'tcx> TyCtxt<'tcx> {
             generics: vec![],
         };
         let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
-        let trace_idx_vec : Vec<usize> = vec![0];
-
+        // let trace_idx_vec : Vec<usize> = vec![0];
+        // let curr = Some(&)
         GlobalCtxt {
             sess: s,
             crate_types,
@@ -952,7 +955,8 @@ impl<'tcx> TyCtxt<'tcx> {
             alloc_map: Lock::new(interpret::AllocMap::new()),
             _trace: RefCell::new(fin_trace.clone()),
             // _curr_t: RefCell::new(fin_trace.clone().into()),
-            _t_idx_stk: RefCell::new(trace_idx_vec),
+            // _curr_t: RefCell::new(None),
+            _curr_t: RefCell::new(Some(Box::new(RefCell::new(fin_trace)))),
             // _trace: trace,
         }
     }
