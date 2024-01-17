@@ -23,7 +23,7 @@ use rustc_middle::ty::Instance;
 // use std::intrinsics::mir::BasicBlock;
 // use rustc_middle::mir::BasicBlock;
 use rustc_middle::ty::context::{
-    Trace, Step,
+   /*  Trace,*/ Step,
     /*Ident2,ValueTree, TyInstKey, PaflConst,*/ PaflType, PaflGeneric, FnInstKey,
 };
 use std::fs;
@@ -38,7 +38,7 @@ use rustc_hir::def_id::{LOCAL_CRATE, DefId};
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 
 // use rustc_codegen_ssa::pafl::{FnInstKey, PaflGeneric, PaflType, , /*PaflConst, PaflType,*/};
-use rustc_codegen_ssa::pafl::{PaflDump, PaflCrate};
+use rustc_middle::ty::context::{PaflDump, PaflCrate};
 
 use colored::Colorize;
 
@@ -160,24 +160,47 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     }
 
     pub fn push_block(&mut self) {
-    // pub fn bb_trace(&mut self) {
+        let mut fin_trace = self.tcx._trace.borrow_mut();
+
         if let Some(last) = self.stack().last() {
             let loc = last.loc;
             if let Either::Left(l_loc) = loc {
                 let block = l_loc.block;
                 let step = Step::B(block);
                 print!("[{:?}]", block);
-                let mut cur_t = self.tcx._curr_t.borrow_mut();
-                if let Some(curr_trace) = cur_t.as_mut() {
-                    // println!("fin=[{:?}]", fin_trace.clone());
-                    let mut prev_t = curr_trace.borrow_mut();
-                    prev_t._steps.push(step.clone());
-                    println!("cur2=[{:?}]", curr_trace.clone());
+                // let mut cur_t = self.tcx._curr_t.borrow_mut();
+                // if let Some(curr_trace) = cur_t.as_mut() {
+                //     // println!("fin=[{:?}]", fin_trace.clone());
+                //     let mut prev_t = curr_trace.borrow_mut();
+                //     prev_t._steps.push(step.clone());
+                //     println!("cur2=[{:?}]", curr_trace.clone());
 
+                // } else {
+                //     println!("*/{:?}/", cur_t.clone());
+                //     bug!("yj:call: cannot find current trace");
+                // }
+
+                if let Some(Step::Call(addr)) = fin_trace._steps.last() {
+                    let raw_ptr = *addr.clone();
+                    if !raw_ptr.is_null() {
+                        unsafe { 
+                            // let mut a = raw_ptr; 
+                            (*raw_ptr)._steps.push(step);
+                            // let m = raw_ptr.as_mut();
+                        }
+                        // println!("fin2=[{:?}]", fin_trace.clone());
+                    } else {
+                        panic!("yjy error.")
+                    
+                    }
                 } else {
-                    println!("*/{:?}/", cur_t.clone());
-                    bug!("yj:call: cannot find current trace");
+                    fin_trace._steps.push(step.clone());
+                    // print!("[Step is bb]");
+
                 }
+
+
+
             } else {
                 bug!("yj: bb_trace: loc doesn't exist");
                     // Step::Err
@@ -187,8 +210,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             // Step::Err
         }
     }
-    
-    pub fn dump_return(&mut self, outdir: &Path, prev_steps: &mut Vec<Step>) -> Step {
+
+
+    pub fn dump_return(&mut self, outdir: &Path, prev_steps: &mut Vec<Step<'_>>)  {
         if let Some(_last) = self.stack().last() {
             // let loc = last.loc;
             // if let Either::Left(l_loc) = loc {
@@ -277,20 +301,24 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
             print!("[{:?}]", prev_steps);
                         // let prev_steps = vec![];
-            let trace = Trace {
-                _entry: fn_inst_key,
-                _steps: prev_steps.to_vec(),
-            };
-            // *steps = vec![];
-            // *prev_steps = vec![];
+            // let trace = Trace {
+            //     _entry: fn_inst_key,
+            //     _steps: prev_steps.to_vec(),
+            // };
+            // // *steps = vec![];
+            // // *prev_steps = vec![];
 
-            let step = Step::Call(trace.clone());
-            step
+            // let step = Step::Call(&trace);
+            // // let step = Step::Call(trace.clone());
+            // // let step= Step::B(())
+            // step
 
         } else {
-            Step::Err
+            // Step::Err
+            bug!("bug in dump return!");
         }
     }
+
 
     pub fn dump_in_term(&mut self, term: &Terminator<'tcx> ) { // step.rs => TERM
         match std::env::var_os("TERM") {
@@ -332,7 +360,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             _ => bug!("callee is not a function or closure"),
                         };
 
-                        let mut fin_trace = self.tcx._trace.borrow_mut();
+                        TyCtxt::create_call_step(self.tcx.tcx, def_id, term);
+/*
+                        let fin_trace = self.tcx._trace.borrow_mut();
                         // let mut idx_v = self.tcx._t_idx_stk.borrow_mut();
                         // let mut curr_t = self.tcx._curr_t.borrow_mut();
 
@@ -341,9 +371,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         // 2.1. create FnInst key (Entry)
                         // let fn_inst_key = pafl::resolve_fn_key(def_id, generic_args);
                         let entry_fn_key = self.create_fn_inst_key(def_id, term);
-                        let empty_steps: Vec<Step> = vec![];
-                        let new_trace : Trace = Trace { _entry: entry_fn_key, _steps: empty_steps };
-
+                        let empty_steps: Vec<Step<'_>> = vec![];
+                        let new_trace : Trace<'_> = Trace { _entry: entry_fn_key, _steps: empty_steps };
 
                         // push basic block first
                         let mut cur_t = self.tcx._curr_t.borrow_mut();
@@ -366,11 +395,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         } else {
                             bug!("yj:call: last doesn't exist");
                         }
-
                         // push Step::Trace
-                        fin_trace._steps.push(Step::Call(new_trace));
+                        
+                        // fin_trace._steps.push(Step::Call(Box::new(&new_trace)));
+
                         println!("fin1=[{:?}]", fin_trace.clone());
                         println!("cur1=[{:?}]", cur_t.clone());
+ */
+
                     },
                     // TerminatorKind::Assert { cond, expected, msg, target, unwind } => 
                     // {
@@ -396,6 +428,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         let s3 = format!(":[{:?}]", self.tcx.def_path(def_id).to_string_no_crate_verbose());
                         print!("{}", s3.green());
                         self.push_block();
+            
+
                         // self.bb_trace();
                     },
                 }
