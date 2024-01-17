@@ -1,22 +1,25 @@
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::{Path};
+// use std::path::{Path, PathBuf};
 
 use rustc_data_structures::fx::FxHashMap;
-use rustc_middle::mir::graphviz::write_mir_fn_graphviz;
+// use rustc_middle::mir::graphviz::write_mir_fn_graphviz;
 use rustc_middle::mir::mono::MonoItem;
-use rustc_middle::mir::{BasicBlock, BasicBlockData, Body, Operand, TerminatorKind, UnwindAction};
+// use rustc_middle::mir::{BasicBlock, BasicBlockData, Body, Operand, TerminatorKind, UnwindAction};
 use rustc_middle::ty::{
-    self, Const, ConstKind, EarlyBinder, ExistentialPredicate, FloatTy, GenericArgKind,
-    GenericArgsRef, Instance, InstanceDef, IntTy, ParamEnv, Ty, TyCtxt, UintTy, ValTree,
+    ParamEnv, TyCtxt,
+    // self, Const, ConstKind, EarlyBinder, ExistentialPredicate, FloatTy, GenericArgKind,
+    // GenericArgsRef, Instance, InstanceDef, IntTy, ParamEnv, Ty, TyCtxt, UintTy, ValTree,
 };
-use rustc_span::def_id::{DefId, LOCAL_CRATE};
-use rustc_span::Span;
-use rustc_target::spec::abi::Abi;
-use rustc_type_ir::Mutability;
+// use rustc_span::def_id::{DefId, LOCAL_CRATE};
+use rustc_span::def_id::{LOCAL_CRATE};
+// use rustc_span::Span;
+// use rustc_target::spec::abi::Abi;
+// use rustc_type_ir::Mutability;
 
-use serde::Serialize;
-
+// use serde::Serialize;
+/* 
 /// Native functions
 #[derive(Serialize)]
 enum Native {
@@ -55,9 +58,11 @@ impl Native {
         None
     }
 }
-
+*/
 use rustc_middle::ty::context::{
-    /*Ident2,*/ ValueTree, PaflConst,PaflType, PaflGeneric, TyInstKey, FnInstKey,
+    // /*Ident2,*/ ValueTree, PaflConst,PaflType, PaflGeneric, TyInstKey, FnInstKey,
+    PaflDump, PaflCrate, 
+    // Native,
 };
 
 // /// Identifier mimicking `DefId`
@@ -151,6 +156,8 @@ use rustc_middle::ty::context::{
 //     pub generics: Vec<PaflGeneric>,
 // }
 
+
+/* 
 /// Kind of a call instruction
 #[derive(Serialize)]
 enum CallKind {
@@ -862,7 +869,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
         inst
     }
 }
-
+*/
 /// A complete dump of both the control-flow graph and the call graph of the compilation context
 pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
     // prepare directory layout

@@ -75,11 +75,13 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 // use std::rc::Rc;
 use std::cmp::Ordering;
-use std::fmt;
+use std::{fmt, fs};
 use std::hash::{Hash, Hasher};
 use std::iter;
 use std::mem;
 use std::ops::{Bound, Deref};
+use std::path::PathBuf;
+// use rustc_codegen_ssa::pafl::{};
 
 #[allow(rustc::usage_of_ty_tykind)]
 impl<'tcx> Interner for TyCtxt<'tcx> {
@@ -554,7 +556,62 @@ impl<'tcx> TyCtxtFeed<'tcx, LocalDefId> {
 // ===============
 use serde::Serialize;
 use crate::mir::BasicBlock;
+use rustc_middle::mir::graphviz::write_mir_fn_graphviz;
+
+use super::layout::HasTyCtxt;
 // use std::cell::Cell;
+use rustc_middle::mir::{BasicBlockData, Operand, TerminatorKind, UnwindAction};
+use rustc_middle::ty::{
+    ConstKind, EarlyBinder, ExistentialPredicate, FloatTy, GenericArgKind,
+    Instance, InstanceDef, IntTy, ParamEnv, UintTy, ValTree,
+    // ParamEnv, Instance, ValTree
+};
+use rustc_target::spec::abi::Abi;
+use rustc_type_ir::Mutability;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::Path;
+
+#[derive(Serialize)]
+pub enum Native {
+    TLSWith,
+}
+
+impl Native {
+    const BUILTINS: [Native; 1] = [Self::TLSWith];
+
+    /// unlock the pattern triple
+    pub fn pattern(&self) -> (&str, &str, &str) {
+        match self {
+            Self::TLSWith => ("std", "::thread::local::", "with"),
+        }
+    }
+
+    /// probe whether a def_id is a native built-in
+    pub fn probe(tcx: TyCtxt<'_>, id: DefId) -> Option<Self> {
+        if id.is_local() {
+            return None;
+        }
+
+        let krate = tcx.crate_name(id.krate).to_string();
+        let path = tcx.def_path(id).to_string_no_crate_verbose();
+
+        for item in Self::BUILTINS {
+            let (k, prefix, suffix) = item.pattern();
+            if &krate != k {
+                continue;
+            }
+            match path.as_str().strip_prefix(prefix).and_then(|s| s.strip_suffix(suffix)) {
+                None => continue,
+                Some(_) => return Some(item),
+            }
+        }
+        None
+    }
+}
+
+
+
 
 /// Identifier mimicking `DefId`
 #[derive(Serialize, Clone, Debug)]
@@ -648,22 +705,798 @@ pub struct FnInstKey {
     pub generics: Vec<PaflGeneric>,
 }
 
+
+// ==================
+
+
+/// Kind of a call instruction
+#[derive(Serialize)]
+pub enum CallKind {
+    Direct,
+    Bridge,
+    Virtual(usize),
+    Builtin(Native),
+    Intrinsic,
+}
+
+/// Callee of a call instruction
+#[derive(Serialize)]
+pub struct CallSite {
+    inst: FnInstKey,
+    kind: CallKind,
+}
+
+/// Identifier mimicking `BasicBlock`
+#[derive(Serialize)]
+pub struct BlkId {
+    index: usize,
+}
+
+impl From<BasicBlock> for BlkId {
+    fn from(id: BasicBlock) -> Self {
+        Self { index: id.as_usize() }
+    }
+}
+
+/// How unwind might work
+#[derive(Serialize)]
+pub enum UnwindRoute {
+    Resume,
+    Terminate,
+    Unreachable,
+    Cleanup(BlkId),
+}
+
+impl From<&UnwindAction> for UnwindRoute {
+    fn from(action: &UnwindAction) -> Self {
+        match action {
+            UnwindAction::Continue => Self::Resume,
+            UnwindAction::Unreachable => Self::Unreachable,
+            UnwindAction::Terminate(..) => Self::Terminate,
+            UnwindAction::Cleanup(blk) => Self::Cleanup((*blk).into()),
+        }
+    }
+}
+
+/// Kinds of terminator instructions of a basic block
+#[derive(Serialize)]
+pub enum TermKind {
+    Unreachable,
+    Goto(BlkId),
+    Switch(Vec<BlkId>),
+    Return,
+    UnwindResume,
+    UnwindFinish,
+    Assert { target: BlkId, unwind: UnwindRoute },
+    Drop { target: BlkId, unwind: UnwindRoute },
+    Call { site: CallSite, target: Option<BlkId>, unwind: UnwindRoute },
+}
+
+/// Serializable information about a basic block
+#[derive(Serialize)]
+pub struct PaflBlock {
+    id: BlkId,
+    term: TermKind,
+}
+
+/// Serializable information about a user-defined function
+#[derive(Serialize)]
+pub struct PaflCFG {
+    blocks: Vec<PaflBlock>,
+}
+
+/// Serializable information about a user-defined function
+#[derive(Serialize)]
+pub enum FnBody {
+    Defined(PaflCFG),
+    Bridged(PaflCFG),
+    Skipped,
+    Intrinsic,
+}
+
+/// Serializable information about a user-defined function
+#[derive(Serialize)]
+pub struct PaflFunction {
+    inst: FnInstKey,
+    body: FnBody,
+}
+
+/// Serializable information about the entire crate
+#[derive(Serialize)]
+pub struct PaflCrate {
+    pub functions: Vec<PaflFunction>,
+}
+
+/// Helper for dumping path-AFL related information
+pub struct PaflDump<'sum, 'tcx> {
+    /// context provider
+    pub tcx: TyCtxt<'tcx>,
+    /// parameter environment
+    pub param_env: ParamEnv<'tcx>,
+    /// verbosity
+    pub verbose: bool,
+    /// path to meta directory
+    pub path_meta: PathBuf,
+    /// path to data directory
+    pub path_data: PathBuf,
+    /// path to the data file
+    pub path_prefix: PathBuf,
+    /// call stack
+    pub stack: &'sum mut Vec<Instance<'tcx>>,
+    /// information cache
+    pub cache: &'sum mut FxHashMap<Instance<'tcx>, FnInstKey>,
+    /// summary repository
+    pub summary: &'sum mut Vec<PaflFunction>,
+}
+
+impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
+    /// initialize the context for information dumping
+    pub fn initialize(&self, instance: Instance<'tcx>) {
+        // normalize and check consistency
+        let normalized_ty = instance.ty(self.tcx, self.param_env);
+        match normalized_ty.kind() {
+            ty::FnDef(ty_def_id, ty_def_args) | ty::Closure(ty_def_id, ty_def_args) => {
+                if *ty_def_id != instance.def_id() {
+                    bug!("normalized type def_id mismatch");
+                }
+                if ty_def_args.len() != instance.args.len() {
+                    bug!("normalized type generics length mismatch");
+                }
+                for (t1, t2) in ty_def_args.iter().zip(instance.args.iter()) {
+                    if t1 != t2 {
+                        bug!("normalized type generics content mismatch");
+                    }
+                }
+            }
+            _ => bug!("normalized type is neither function nor closure"),
+        }
+    }
+}
+
+impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
+    /// Resolve an instantiation to a ty key
+    pub fn resolve_ty_key(&self, id: DefId, args: GenericArgsRef<'tcx>) -> TyInstKey {
+        let krate =
+            if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        TyInstKey {
+            krate,
+            index: id.index.as_usize(),
+            path: self.tcx.def_path(id).to_string_no_crate_verbose(),
+            generics: self.process_generics(args),
+        }
+    }
+
+    /// Resolve an instantiation to a fn key
+    pub fn resolve_fn_key(&self, id: DefId, args: GenericArgsRef<'tcx>) -> FnInstKey {
+        let krate =
+            if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        FnInstKey {
+            krate,
+            index: id.index.as_usize(),
+            path: self.tcx.def_path(id).to_string_no_crate_verbose(),
+            generics: self.process_generics(args),
+        }
+    }
+}
+
+impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
+    /// Process a value tree
+    pub fn process_vtree(&self, tree: ValTree<'tcx>) -> ValueTree {
+        match tree {
+            ValTree::Leaf(scalar) => ValueTree::Scalar {
+                bit: scalar.size().bits_usize(),
+                val: scalar.to_bits(scalar.size()).expect("scalar value"),
+            },
+            ValTree::Branch(items) => {
+                let mut subs = vec![];
+                for item in items {
+                    subs.push(self.process_vtree(*item));
+                }
+                ValueTree::Struct(subs)
+            }
+        }
+    }
+
+    /// Process a constant
+    pub fn process_const(&self, item: Const<'tcx>) -> PaflConst {
+        match item.kind() {
+            ConstKind::Param(param) => {
+                PaflConst::Param { index: param.index, name: param.name.to_string() }
+            }
+            ConstKind::Value(value) => PaflConst::Value(self.process_vtree(value)),
+            _ => bug!("unrecognized constant: {:?}", item),
+        }
+    }
+
+    /// Process the type
+    pub fn process_type(&self, item: Ty<'tcx>) -> PaflType {
+        match item.kind() {
+            ty::Never => PaflType::Never,
+            ty::Bool => PaflType::Bool,
+            ty::Char => PaflType::Char,
+            ty::Int(IntTy::Isize) => PaflType::Isize,
+            ty::Int(IntTy::I8) => PaflType::I8,
+            ty::Int(IntTy::I16) => PaflType::I16,
+            ty::Int(IntTy::I32) => PaflType::I32,
+            ty::Int(IntTy::I64) => PaflType::I64,
+            ty::Int(IntTy::I128) => PaflType::I128,
+            ty::Uint(UintTy::Usize) => PaflType::Usize,
+            ty::Uint(UintTy::U8) => PaflType::U8,
+            ty::Uint(UintTy::U16) => PaflType::U16,
+            ty::Uint(UintTy::U32) => PaflType::U32,
+            ty::Uint(UintTy::U64) => PaflType::U64,
+            ty::Uint(UintTy::U128) => PaflType::U128,
+            ty::Float(FloatTy::F32) => PaflType::F32,
+            ty::Float(FloatTy::F64) => PaflType::F64,
+            ty::Str => PaflType::Str,
+            ty::Param(p) => PaflType::Param { index: p.index, name: p.name.to_string() },
+            ty::Adt(def, args) => PaflType::Adt(self.resolve_ty_key(def.did(), args)),
+            ty::Alias(_, alias) => PaflType::Alias(self.resolve_ty_key(alias.def_id, alias.args)),
+            ty::Foreign(def_id) => PaflType::Opaque((*def_id).into()),
+            ty::FnPtr(binder) => {
+                if !matches!(binder.abi(), Abi::Rust | Abi::RustCall) {
+                    bug!("fn ptr not following the RustCall ABI: {}", binder.abi());
+                }
+                if binder.c_variadic() {
+                    bug!("variadic not supported yet");
+                }
+
+                let mut inputs = vec![];
+                for item in binder.inputs().iter() {
+                    let ty = *item.skip_binder();
+                    inputs.push(self.process_type(ty));
+                }
+                let output = self.process_type(binder.output().skip_binder());
+                PaflType::FnPtr(inputs, output.into())
+            }
+            ty::FnDef(def_id, args) => PaflType::FnDef(self.resolve_fn_key(*def_id, *args)),
+            ty::Closure(def_id, args) => PaflType::Closure(self.resolve_fn_key(*def_id, *args)),
+            ty::Ref(_region, sub, mutability) => {
+                let converted = self.process_type(*sub);
+                match mutability {
+                    Mutability::Not => PaflType::ImmRef(converted.into()),
+                    Mutability::Mut => PaflType::MutRef(converted.into()),
+                }
+            }
+            ty::RawPtr(ty_and_mut) => {
+                let converted = self.process_type(ty_and_mut.ty);
+                match ty_and_mut.mutbl {
+                    Mutability::Not => PaflType::ImmPtr(converted.into()),
+                    Mutability::Mut => PaflType::MutPtr(converted.into()),
+                }
+            }
+            ty::Slice(sub) => PaflType::Slice(self.process_type(*sub).into()),
+            ty::Array(sub, len) => {
+                PaflType::Array(self.process_type(*sub).into(), self.process_const(*len))
+            }
+            ty::Tuple(elems) => {
+                PaflType::Tuple(elems.iter().map(|e| self.process_type(e)).collect())
+            }
+            ty::Dynamic(binders, _region, _) => {
+                let mut traits = vec![];
+                for binder in *binders {
+                    let predicate = binder.skip_binder();
+                    let def_id = match predicate {
+                        ExistentialPredicate::Trait(r) => r.def_id,
+                        ExistentialPredicate::Projection(r) => r.def_id,
+                        ExistentialPredicate::AutoTrait(r) => r,
+                    };
+                    traits.push(def_id.into());
+                }
+                PaflType::Dynamic(traits)
+            }
+            _ => bug!("unrecognized type: {:?}", item),
+        }
+    }
+
+    /// Process the generic arguments
+    pub fn process_generics(&self, args: GenericArgsRef<'tcx>) -> Vec<PaflGeneric> {
+        let mut generics = vec![];
+        for arg in args {
+            let sub = match arg.unpack() {
+                GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
+                GenericArgKind::Type(item) => PaflGeneric::Type(self.process_type(item)),
+                GenericArgKind::Const(item) => PaflGeneric::Const(self.process_const(item)),
+            };
+            generics.push(sub);
+        }
+        generics
+    }
+
+    /// Resolve the call target
+    pub fn process_callsite(&mut self, callee: &Operand<'tcx>, span: Span) -> CallSite {
+        // extract def_id and generic arguments for callee
+        let cty = match callee.constant() {
+            None => bug!("callee is not a constant: {:?}", span),
+            Some(c) => c.const_.ty(),
+        };
+        let (def_id, generic_args) = match cty.kind() {
+            ty::Closure(def_id, generic_args) | ty::FnDef(def_id, generic_args) => {
+                (*def_id, *generic_args)
+            }
+            _ => bug!("callee is not a function or closure: {:?}", span),
+        };
+
+        // test if we should skip this function
+        if let Some(native) = Native::probe(self.tcx, def_id) {
+            let inst = self.resolve_fn_key(def_id, generic_args);
+            return CallSite { inst, kind: CallKind::Builtin(native) };
+        }
+
+        if self.verbose {
+            print!(
+                "{} - resolving: {}{}",
+                "  ".repeat(self.stack.len()),
+                self.tcx.crate_name(def_id.krate).to_string(),
+                self.tcx.def_path(def_id).to_string_no_crate_verbose(),
+            );
+        }
+
+        // resolve trait targets, if possible
+        let resolved = Instance::expect_resolve(self.tcx, self.param_env, def_id, generic_args);
+        let call_site = match resolved.def {
+            InstanceDef::Item(_) => {
+                if self.verbose {
+                    println!(" ~> direct");
+                }
+                let inst = PaflDump::summarize_instance(
+                    self.tcx,
+                    self.param_env,
+                    resolved,
+                    self.verbose,
+                    &self.path_meta,
+                    &self.path_data,
+                    self.stack,
+                    self.cache,
+                    self.summary,
+                );
+                CallSite { inst, kind: CallKind::Direct }
+            }
+            InstanceDef::ClosureOnceShim { .. } => {
+                if self.verbose {
+                    println!(" ~> closure");
+                }
+
+                // extract the actual callee
+                assert_eq!(resolved.args.len(), 2);
+                let unwrapped = match resolved.args.get(0).unwrap().expect_ty().kind() {
+                    ty::Closure(closure_id, closure_args) => {
+                        Instance::new(*closure_id, *closure_args)
+                    }
+                    _ => bug!("expect closure"),
+                };
+
+                // handle the actual callee
+                let inst = PaflDump::summarize_instance(
+                    self.tcx,
+                    self.param_env,
+                    unwrapped,
+                    self.verbose,
+                    &self.path_meta,
+                    &self.path_data,
+                    self.stack,
+                    self.cache,
+                    self.summary,
+                );
+                CallSite { inst, kind: CallKind::Direct }
+            }
+            InstanceDef::FnPtrShim(shim_id, _) => {
+                if self.verbose {
+                    println!(" ~> indirect");
+                }
+
+                // extract the actual callee
+                let body = self.tcx.instance_mir(resolved.def).clone();
+                let instantiated = resolved.instantiate_mir_and_normalize_erasing_regions(
+                    self.tcx,
+                    self.param_env,
+                    EarlyBinder::bind(body),
+                );
+
+                let shim_crate = self.tcx.crate_name(shim_id.krate).to_string();
+                let shim_path = self.tcx.def_path(shim_id).to_string_no_crate_verbose();
+
+                let fn_ty = match shim_crate.as_str() {
+                    "core" => match shim_path.as_str() {
+                        "::ops::function::FnOnce::call_once" => {
+                            let args: Vec<_> = instantiated.args_iter().collect();
+                            assert_eq!(args.len(), 2);
+
+                            let arg0 = *args.get(0).unwrap();
+                            instantiated.local_decls.get(arg0).unwrap().ty
+                        }
+                        "::ops::function::Fn::call" => {
+                            let args: Vec<_> = instantiated.args_iter().collect();
+                            assert_eq!(args.len(), 2);
+
+                            let arg0 = *args.get(0).unwrap();
+                            match instantiated.local_decls.get(arg0).unwrap().ty.kind() {
+                                ty::Ref(_, t, Mutability::Not) => *t,
+                                _ => bug!("invalid argument type for call"),
+                            }
+                        }
+                        "::ops::function::FnMut::call_mut" => {
+                            let args: Vec<_> = instantiated.args_iter().collect();
+                            assert_eq!(args.len(), 2);
+
+                            let arg0 = *args.get(0).unwrap();
+                            match instantiated.local_decls.get(arg0).unwrap().ty.kind() {
+                                ty::Ref(_, t, Mutability::Mut) => *t,
+                                _ => bug!("invalid argument type for call_mut"),
+                            }
+                        }
+                        _ => bug!("unrecognized fn ptr shim: {}{}", shim_crate, shim_path),
+                    },
+                    _ => bug!("unrecognized fn ptr shim: {}{}", shim_crate, shim_path),
+                };
+
+                let unwrapped = match fn_ty.kind() {
+                    ty::Closure(fn_def_id, fn_generic_args)
+                    | ty::FnDef(fn_def_id, fn_generic_args) => {
+                        Instance::new(*fn_def_id, *fn_generic_args)
+                    }
+                    _ => bug!(
+                        "{}{} into neither a function nor closure: {:?}",
+                        shim_crate,
+                        shim_path,
+                        span
+                    ),
+                };
+
+                // handle the actual callee
+                let inst = PaflDump::summarize_instance(
+                    self.tcx,
+                    self.param_env,
+                    unwrapped,
+                    self.verbose,
+                    &self.path_meta,
+                    &self.path_data,
+                    self.stack,
+                    self.cache,
+                    self.summary,
+                );
+                CallSite { inst, kind: CallKind::Direct }
+            }
+            InstanceDef::DropGlue(_, _) | InstanceDef::CloneShim(_, _) => {
+                if self.verbose {
+                    println!(" ~> bridge");
+                }
+                let inst = PaflDump::summarize_instance(
+                    self.tcx,
+                    self.param_env,
+                    resolved,
+                    self.verbose,
+                    &self.path_meta,
+                    &self.path_data,
+                    self.stack,
+                    self.cache,
+                    self.summary,
+                );
+                CallSite { inst, kind: CallKind::Bridge }
+            }
+            InstanceDef::Virtual(virtual_id, offset) => {
+                if self.verbose {
+                    println!(" ~> virtual#{}", offset);
+                }
+                let inst = self.resolve_fn_key(virtual_id, resolved.args);
+                CallSite { inst, kind: CallKind::Virtual(offset) }
+            }
+            InstanceDef::Intrinsic(intrinsic_id) => {
+                if self.verbose {
+                    println!(" ~> intrinsic");
+                }
+                let inst: FnInstKey = self.resolve_fn_key(intrinsic_id, resolved.args);
+                CallSite { inst, kind: CallKind::Intrinsic }
+            }
+            InstanceDef::VTableShim(..)
+            | InstanceDef::ReifyShim(..)
+            | InstanceDef::FnPtrAddrShim(..)
+            | InstanceDef::ThreadLocalShim(..) => {
+                bug!("unusual calls are not supported yet: {}", resolved);
+            }
+        };
+
+        // done with the resolution
+        call_site
+    }
+
+    /// Process the mir for one basic block
+    pub fn process_block(&mut self, id: BasicBlock, data: &BasicBlockData<'tcx>) -> PaflBlock {
+        let term = data.terminator();
+
+        // match by the terminator
+        let kind = match &term.kind {
+            // basics
+            TerminatorKind::Goto { target } => TermKind::Goto((*target).into()),
+            TerminatorKind::SwitchInt { discr: _, targets } => {
+                TermKind::Switch(targets.all_targets().iter().map(|b| (*b).into()).collect())
+            }
+            TerminatorKind::Unreachable => TermKind::Unreachable,
+            TerminatorKind::Return => TermKind::Return,
+            // call (which may unwind)
+            TerminatorKind::Call {
+                func,
+                args: _,
+                destination: _,
+                target,
+                unwind,
+                call_source: _,
+                fn_span: _,
+            } => TermKind::Call {
+                site: self.process_callsite(func, term.source_info.span),
+                target: target.as_ref().map(|t| (*t).into()),
+                unwind: unwind.into(),
+            },
+            TerminatorKind::Drop { place: _, target, unwind, replace: _ } => {
+                TermKind::Drop { target: (*target).into(), unwind: unwind.into() }
+            }
+            TerminatorKind::Assert { cond: _, expected: _, msg: _, target, unwind } => {
+                TermKind::Assert { target: (*target).into(), unwind: unwind.into() }
+            }
+            // unwinding
+            TerminatorKind::UnwindResume => TermKind::UnwindResume,
+            TerminatorKind::UnwindTerminate(..) => TermKind::UnwindFinish,
+            // imaginary
+            TerminatorKind::FalseEdge { real_target, imaginary_target: _ }
+            | TerminatorKind::FalseUnwind { real_target, unwind: _ } => {
+                TermKind::Goto((*real_target).into())
+            }
+            // coroutine
+            TerminatorKind::Yield { .. } | TerminatorKind::CoroutineDrop => {
+                bug!("unexpected coroutine")
+            }
+            // assembly
+            TerminatorKind::InlineAsm { .. } => bug!("unexpected inline assembly"),
+        };
+
+        // done
+        PaflBlock { id: id.into(), term: kind }
+    }
+
+    /// Process the mir body for one function
+    pub fn process_cfg(&mut self, id: DefId, body: &Body<'tcx>) -> PaflCFG {
+        let path = self.tcx.def_path(id).to_string_no_crate_verbose();
+
+        // dump the control flow graph if requested
+        match std::env::var_os("PAFL_CFG") {
+            None => (),
+            Some(v) => {
+                println!("PAFL CFG v={:?}, path = {:?}", v, path.as_str());
+                if v.to_str().map_or(false, |s| s == path.as_str()) {
+                    let dot_path = self.path_prefix.with_extension("dot");
+                    println!("PAFL CFG dot_path={:?}", dot_path);
+                    let mut dot_file = OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(&dot_path)
+                        .expect("unable to create dot file");
+                    write_mir_fn_graphviz(self.tcx, body, false, &mut dot_file)
+                        .expect("failed to create dot file");
+                }
+            }
+        }
+
+        // iterate over each basic blocks
+        let mut blocks = vec![];
+        for blk_id in body.basic_blocks.reverse_postorder() {
+            let blk_data = body.basic_blocks.get(*blk_id).unwrap();
+            blocks.push(self.process_block(*blk_id, blk_data));
+        }
+
+        // done
+        PaflCFG { blocks }
+    }
+
+    /// Process a codegen instance
+    pub fn summarize_instance(
+        tcx: TyCtxt<'tcx>,
+        param_env: ParamEnv<'tcx>,
+        instance: Instance<'tcx>,
+        verbose: bool,
+        path_meta: &Path,
+        path_data: &Path,
+        stack: &'sum mut Vec<Instance<'tcx>>,
+        cache: &'sum mut FxHashMap<Instance<'tcx>, FnInstKey>,
+        summary: &'sum mut Vec<PaflFunction>,
+    ) -> FnInstKey {
+        // check if we have seen the instance
+        if let Some(cached) = cache.get(&instance) {
+            return cached.clone();
+        }
+
+        let id = instance.def_id();
+        let path = tcx.def_path(id);
+        let depth = stack.len();
+
+        // create a place holder
+        let index = loop {
+            let mut count: usize = 0;
+            for entry in fs::read_dir(path_meta).expect("list meta directory") {
+                let _ = entry.expect("iterate meta directory entry");
+                count += 1;
+            }
+            match OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(path_meta.join(count.to_string()))
+            {
+                Ok(mut file) => {
+                    let content = format!("{}", path.to_string_no_crate_verbose(),);
+                    file.write_all(content.as_bytes()).expect("save meta content");
+                    break count;
+                }
+                Err(_) => continue,
+            }
+        };
+        let path_prefix = path_data.join(index.to_string());
+
+        // construct the worker
+        let mut dumper = PaflDump {
+            tcx,
+            param_env,
+            verbose,
+            path_meta: path_meta.to_path_buf(),
+            path_data: path_data.to_path_buf(),
+            path_prefix,
+            stack,
+            cache,
+            summary,
+        };
+
+        // derive the inst key and mark it in the cache
+        let inst = dumper.resolve_fn_key(id, instance.args);
+
+        // mark beginning of processing
+        if verbose {
+            println!(
+                "{}[->] {}{}",
+                "  ".repeat(depth),
+                inst.krate.as_ref().map_or("@", |s| s.as_str()),
+                inst.path
+            );
+        }
+
+        // normalize, check consistency, and initialize
+        dumper.initialize(instance);
+        dumper.stack.push(instance);
+        dumper.cache.insert(instance, inst.clone());
+
+        // branch processing by instance type
+        let body = match &instance.def {
+            InstanceDef::Item(id) => {
+                if dumper.tcx.is_mir_available(*id) {
+                    let body = dumper.tcx.instance_mir(instance.def).clone();
+                    let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
+                        dumper.tcx,
+                        dumper.param_env,
+                        EarlyBinder::bind(body),
+                    );
+                    let cfg = dumper.process_cfg(*id, &instantiated);
+                    FnBody::Defined(cfg)
+                } else {
+                    FnBody::Skipped
+                }
+            }
+            InstanceDef::ClosureOnceShim { call_once: id, track_caller: _ }
+            | InstanceDef::DropGlue(id, _)
+            | InstanceDef::CloneShim(id, _)
+            | InstanceDef::FnPtrShim(id, _) => {
+                let body = dumper.tcx.instance_mir(instance.def).clone();
+                let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
+                    dumper.tcx,
+                    dumper.param_env,
+                    EarlyBinder::bind(body),
+                );
+                let cfg = dumper.process_cfg(*id, &instantiated);
+                FnBody::Bridged(cfg)
+            }
+            InstanceDef::Intrinsic(..) => FnBody::Intrinsic,
+            // not supported
+            InstanceDef::Virtual(..)
+            | InstanceDef::VTableShim(..)
+            | InstanceDef::ReifyShim(..)
+            | InstanceDef::FnPtrAddrShim(..)
+            | InstanceDef::ThreadLocalShim(..) => {
+                bug!("unexpected instance type: {}", instance);
+            }
+        };
+
+        if dumper.stack.pop().map_or(true, |v| v != instance) {
+            bug!("unbalanced stack");
+        }
+        dumper.summary.push(PaflFunction { inst: inst.clone(), body });
+
+        // mark end of processing
+        if verbose {
+            println!(
+                "{}[<-] {}{}",
+                "  ".repeat(depth),
+                inst.krate.as_ref().map_or("@", |s| s.as_str()),
+                inst.path
+            );
+        }
+
+        // return the instantiation key
+        inst
+    }
+}
+
+// ==============
+
 #[allow(dead_code)]
 
-#[derive(Serialize, Clone, Debug)]
-pub enum Step {
+#[derive(/*Serialize,*/ Clone, Debug)]
+// pub enum Step<'a> {
+// pub enum Step {
+//     B(BasicBlock),
+//     // Call(&'a Trace<'a>),
+//     // Call(Box<&'a Trace<'a>>),
+//     Call(Box<Trace>),
+//     // Call(Box<Ref)
+//     // Err,
+// }
+
+pub enum Step<'a> {
     B(BasicBlock),
-    Call(Trace),
-    Err,
+    // Call(&'a Trace<'a>),
+    // Call(Box<&'a Trace<'a>>),
+    Call(Box<*mut Trace<'a>>),
 }
+
+
 
 #[derive(Serialize, Clone, Debug)]
-pub struct Trace {
+pub struct Trace<'a> {
     pub _entry: FnInstKey,
-    pub _steps: Vec<Step>,
+    pub _steps: Vec<Step<'a>>,
 }
 
-// ======
+impl<'a> Serialize for Step<'a> {
+    // impl<'a> Serialize for *mut Trace<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Step::Call(inner) => {
+                // Serialize the "Call" variant by recursively serializing the inner Trace
+                let raw_ptr = *inner.clone();
+                if !raw_ptr.is_null() {
+                    // Dereference the raw pointer and clone the value
+                    unsafe { 
+                        let a = (*raw_ptr).clone(); 
+                        a.serialize(serializer) 
+                    }
+                } else {
+                    // Handle the case where the raw pointer is null (optional)
+                    // You might want to return a default value or panic depending on your use case
+                    panic!("yyyjj Attempted to dereference a null pointer.")
+                }
+                // inner.serialize(serializer)
+            }, 
+            Step::B(bb) => {
+                bb.serialize(serializer)
+            }
+        }
+        // Example: serializer.serialize_some_function(*self)
+    }
+}
+
+
+// pub struct Trace {
+//     pub _entry: FnInstKey,
+//     pub _steps: Vec<Step>,
+// }
+
+// impl<'a> Clone for Trace<'a> {
+//     fn clone(&self) -> Self {
+//         Trace {
+//             _entry: self._entry,
+//             _steps: self._steps.clone(),
+//         }
+//     }
+// }
+
 
 /// The central data structure of the compiler. It stores references
 /// to the various **arenas** and also houses the results of the
@@ -772,15 +1605,18 @@ pub struct GlobalCtxt<'tcx> {
     pub(crate) alloc_map: Lock<interpret::AllocMap<'tcx>>,
 
     // pub _trace: RefCell<&'tcx Trace>,
-    pub _trace: RefCell<Trace>,
+    // pub _trace: RefCell<Trace<'static>>,
+    pub _trace: RefCell<Trace<'tcx>>,
     // pub _curr_t: RefCell<Rc<Trace>>,
     // pub _t_idx_stk: RefCell<Vec<usize>>,
     // pub _curr_t: RefCell<Option<Vec<Step>>>,
     // pub _curr_t: RefCell<Option<&'tcx RefCell<Trace>>>,
-    pub _curr_t: RefCell<Option<Box<RefCell<Trace>>>>,
+    pub _curr_t: RefCell<Option<Box<RefCell<Trace<'tcx>>>>>,
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
+    // pub _ptr: RefCell<&
 }
+use rustc_middle::mir::Terminator;
 
 impl<'tcx> GlobalCtxt<'tcx> {
     /// Installs `self` in a `TyCtxt` and `ImplicitCtxt` for the duration of
@@ -891,6 +1727,124 @@ impl<'tcx> TyCtxt<'tcx> {
         value.lift_to_tcx(self)
     }
 
+    pub fn create_fn_inst_key2(self, def: DefId, term: &Terminator<'tcx>) -> FnInstKey {
+
+        let tcx = self.tcx();
+        let param_env = self.param_env(def);
+        // 1. krate
+        // let krate = if def.is_local() { None } else { Some(tcx.crate_name(def.krate).to_string()) };
+        let krate = Some(tcx.crate_name(def.krate).to_string());
+
+        // 2.1. dumper ===============================================
+        // let param_env: ParamEnv<'_> = self.param_env;
+        let verbose = false;
+
+        let outdir= PathBuf::from("./yjtmp/");
+        fs::create_dir_all(outdir.clone()).expect("unable to create output directory");
+        let path_meta = outdir.join("meta");
+        fs::create_dir_all(&path_meta).expect("unable to create meta directory");
+        let path_data = outdir.join("data");
+        fs::create_dir_all(&path_data).expect("unable to create meta directory");
+
+        let path_prefix: PathBuf = PathBuf::default();
+        let mut stack = vec![];
+        let mut cache = FxHashMap::default();
+        
+        let pafl_crate = PaflCrate { functions: Vec::new() };
+        let mut summary = pafl_crate.functions;
+
+        let dumper: PaflDump<'_, '_> = PaflDump {
+            tcx: tcx,
+            param_env: param_env,
+            verbose: verbose,
+            path_meta: path_meta.to_path_buf(),
+            path_data: path_data.to_path_buf(),
+            path_prefix: path_prefix,
+            stack: &mut stack,
+            cache: &mut cache,
+            summary: &mut summary,
+        };
+
+        // ================ ===============================================
+
+        let kind = &term.kind;
+        match kind {
+            TerminatorKind::Call { func, args: _, destination: _, target: _, unwind: _, call_source: _, fn_span: _ } => 
+            {
+                // 2.2. args
+                let const_ty = match func.constant() {
+                    None => {
+                        bug!("callee is not a constant:");
+                    },
+                    Some(const_op) => const_op.const_.ty(),
+                };
+                let (_def_id, generic_args) = match const_ty.kind() {
+                    ty::Closure(def_id, generic_args)
+                    | ty::FnDef(def_id, generic_args) => {
+                        (*def_id, *generic_args)
+                    },
+                    _ => bug!("callee is not a function or closure"),
+                };
+
+                // 2.3. generics
+                let mut my_generics: Vec<PaflGeneric> = vec![];
+                for arg in generic_args {
+                    let sub = match arg.unpack() {
+                        GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
+                        GenericArgKind::Type(_item) => PaflGeneric::Type(PaflType::Never),
+                        // GenericArgKind::Type(item) => PaflGeneric::Type(dumper.process_type(item)),
+                        GenericArgKind::Const(item) => PaflGeneric::Const(dumper.process_const(item)),
+                        // _ => {},
+                    };
+                    my_generics.push(sub);
+                }
+
+                // 3. FnInstKey ===============================================
+                let fn_inst_key = FnInstKey {
+                    krate,
+                    index: def.index.as_usize(),
+                    path: tcx.def_path(def).to_string_no_crate_verbose(),
+                    generics: my_generics,
+                };
+                // print!("[createFnKey({:?})];", fn_inst_key.generics.len()); 
+
+                fn_inst_key
+            },
+            _ => {
+                bug!("Terminator kind is not Call");
+            }
+        }
+    }
+
+
+    pub fn create_call_step(self,def: DefId, term: &Terminator<'tcx>) {
+        // get mut mother trace
+        // let mut fin_trace = self.tcx._trace.borrow_mut();
+        let mut fin_trace = self._trace.borrow_mut();
+
+        // cretae trace
+        let entry_fn_key = self.create_fn_inst_key2(def, term);
+        // let dummy_fn_inst_key = FnInstKey {
+        //     krate: None,
+        //     index: 100,
+        //     path: String::from("modified"),
+        //     generics: vec![],
+        // };
+        let empty_steps: Vec<Step<'_>> = vec![];
+        let new_trace : Trace<'_> = Trace { _entry: entry_fn_key, _steps: empty_steps };
+        let trace_ptr: *mut Trace<'_> = Box::into_raw(Box::new(new_trace));
+        // let new_trace : Trace<'_> = Trace { _entry: dummy_fn_inst_key, _steps: empty_steps };
+
+        // create step
+        let s = Step::Call(Box::new(trace_ptr));
+        // let s = Step::Call(Box::new(&new_trace));
+
+        // push it to tcx.
+        fin_trace._steps.push(s);
+        println!("fin1=[{:?}]", fin_trace.clone());
+
+    }
+
     /// Creates a type context. To use the context call `fn enter` which
     /// provides a `TyCtxt`.
     ///
@@ -918,14 +1872,14 @@ impl<'tcx> TyCtxt<'tcx> {
         let common_consts = CommonConsts::new(&interners, &common_types, s, &untracked);
         
         // let dummy_generics: Vec<PaflGeneric> = vec![];
-        let steps: Vec<Step> = vec![];
+        let steps: Vec<Step<'_>> = vec![];
         let dummy_fn_inst_key = FnInstKey {
             krate: None,
             index: 0,
             path: String::from(""),
             generics: vec![],
         };
-        let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
+        let fin_trace : Trace<'_> = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
         // let trace_idx_vec : Vec<usize> = vec![0];
         // let curr = Some(&)
         GlobalCtxt {
