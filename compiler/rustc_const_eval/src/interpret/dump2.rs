@@ -14,7 +14,7 @@ use rustc_hir::def_id::DefId;
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 
 use rustc_data_structures::fx::FxHashMap;
-use rustc_codegen_ssa::pafl::{PaflDump, PaflCrate};
+use rustc_middle::ty::context::{PaflDump, PaflCrate};
 
 use rustc_middle::mir::{Terminator, TerminatorKind};
 use rustc_middle::ty::{self, GenericArgKind};
@@ -22,6 +22,7 @@ use rustc_middle::ty::context::{
     PaflType, PaflGeneric, FnInstKey,
 };
 use rustc_middle::ty::ParamEnv;
+
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
