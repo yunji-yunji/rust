@@ -343,7 +343,8 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
 
             let mut file = OpenOptions::new()
                 .write(true)
-                .create_new(true)
+                .append(true)
+                .create(true)
                 .open(output)
                 .expect("Fail to create a file.");
 
