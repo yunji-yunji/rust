@@ -186,9 +186,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         unsafe { 
                             // let mut a = raw_ptr; 
                             (*raw_ptr)._steps.push(step);
+                            println!("pused=[{:?}]", (*raw_ptr)._steps);
+
                             // let m = raw_ptr.as_mut();
                         }
-                        // println!("fin2=[{:?}]", fin_trace.clone());
                     } else {
                         panic!("yjy error.")
                     
