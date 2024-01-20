@@ -1426,24 +1426,13 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 #[allow(dead_code)]
 
 #[derive(/*Serialize,*/ Clone, Debug)]
-// pub enum Step<'a> {
-// pub enum Step {
-//     B(BasicBlock),
-//     // Call(&'a Trace<'a>),
-//     // Call(Box<&'a Trace<'a>>),
-//     Call(Box<Trace>),
-//     // Call(Box<Ref)
-//     // Err,
-// }
-
 pub enum Step<'a> {
     B(BasicBlock),
+    // Call(Trace),
     // Call(&'a Trace<'a>),
     // Call(Box<&'a Trace<'a>>),
     Call(Box<*mut Trace<'a>>),
 }
-
-
 
 #[derive(Serialize, Clone, Debug)]
 pub struct Trace<'a> {
@@ -1615,6 +1604,8 @@ pub struct GlobalCtxt<'tcx> {
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
     // pub _ptr: RefCell<&
+    pub _t_s: RefCell<Vec<String>>,
+    pub _path: RefCell<Vec<usize>>,
 }
 use rustc_middle::mir::Terminator;
 
@@ -1912,6 +1903,8 @@ impl<'tcx> TyCtxt<'tcx> {
             // _curr_t: RefCell::new(None),
             _curr_t: RefCell::new(Some(Box::new(RefCell::new(fin_trace)))),
             // _trace: trace,
+            _t_s: RefCell::new(vec![]),
+            _path: RefCell::new(vec![]),
         }
     }
 

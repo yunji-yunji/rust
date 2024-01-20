@@ -28,16 +28,15 @@ use crate::interpret::{
     intern_const_alloc_recursive, CtfeValidationMode, GlobalId, Immediate, InternKind, InterpCx,
     InterpError, InterpResult, MPlaceTy, MemoryKind, OpTy, RefTracking, StackPopCleanup,
 };
-use crate::interpret::dump;
-use std::fs;
-use std::fs::OpenOptions;
-use std::io::Write;
+// use crate::interpret::dump;
+// use crate::interpret::track_stack;
 
 // Returns a pointer to where the result lives
 fn eval_body_using_ecx<'mir, 'tcx>(
     ecx: &mut CompileTimeEvalContext<'mir, 'tcx>,
     cid: GlobalId<'tcx>,
     body: &'mir mir::Body<'tcx>,
+    _v: &mut Vec<String>,
 ) -> InterpResult<'tcx, MPlaceTy<'tcx>> {
     debug!("eval_body_using_ecx: {:?}, {:?}", cid, ecx.param_env);
     let tcx = *ecx.tcx;
@@ -73,27 +72,23 @@ fn eval_body_using_ecx<'mir, 'tcx>(
     )?;
     ecx.storage_live_for_always_live_locals()?;
 
+    // ecx.test_stack(v, cid);
+
     // DUMP
-    match std::env::var_os("DUMP_ON") {
-        None => (),
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val);
-
-            let tcx = ecx.tcx.tcx;
-            let body1: &mir::Body<'_> = ecx.body();
-            let _body2 = body;
-            dump::dump_in_eval_query(tcx, body1, &outdir);
-
-            // let bbs = &body1.basic_blocks;
-            // println!("basic blocks={:?}", bbs);
-            // println!("def id if not={:?}", instance_def.def_id_if_not_guaranteed_local_codegen());
-            // println!("def id key={:?}", instance_def.key_as_def_id());
-        }
-    }
+    // match std::env::var_os("DUMP_ON") {
+    //     None => (),
+    //     Some(val) => {
+    //         let outdir = std::path::PathBuf::from(val);
+    //         let tcx = ecx.tcx.tcx;
+    //         let body1: &mir::Body<'_> = ecx.body();
+    //         dump::dump_in_eval_query(tcx, body1, &outdir);
+    //     }
+    // }
 
     // let mut steps : Vec<dump::Step> = vec![];
     // The main interpreter loop.
     while ecx.step()? {}
+    // println!("----------");
 
     // Intern the result
     let intern_kind = if cid.promoted.is_some() {
@@ -335,56 +330,45 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
         // they do not have to behave "as if" they were evaluated at runtime.
         CompileTimeInterpreter::new(CanAccessStatics::from(is_static), CheckAlignment::Error),
     );
+ 
     // yj code
-    // match std::env::var_os("PROV") {
-    //     None => (),
-    //     Some(_val) => {
-    //         println!("provider {:?}", tcx._trace);
-    //     }
+    let mut tr : Vec<String> = vec![];
+
+    // let tcx = ctec.tcx;
+    // let krate = Some(tcx.crate_name(cid.instance.def.def_id().krate).to_string());
+    // match krate {
+    //     Some(ref s) => {
+    //         if s.contains("move") {
+    //         println!("[yj trace string]{:?}", tcx._t_s);
+    //         }
+    //     }, 
+    //     None => {}
     // }
-
-    match std::env::var_os("DUMPPP") {
-        None => (),
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val);
-
-            let tcx = ecx.tcx.tcx;
-            // let body1: &mir::Body<'_> = ecx.body();
-
-            fs::create_dir_all(outdir.clone()).expect("Fail to open directory.");
-            // let symbol = tcx.crate_name(LOCAL_CRATE);
-            let krate = Some(tcx.crate_name(def.krate).to_string());
-
-            let file_name = krate.expect("yj file name");
-            // let stable_create_id: StableCrateId = tcx.stable_crate_id(LOCAL_CRATE);
-            // let file_name = stable_create_id.as_u64().to_string();
-            let output = outdir.join(file_name).with_extension("json");
-            println!("FILE: outdir{:?}",output.clone());
-
-            let mut file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create(true)
-                .open(output)
-                .expect("Fail to create a file.");
-
-            let serialized_data = serde_json::to_string(&tcx._trace).unwrap();
-            file.write_all(serialized_data.as_bytes()).expect("yjyFail to write file.");
-
-            }
-
-    }
-
-    eval_in_interpreter(ecx, cid, is_static)
+    // track_stack::hook_ecx2(ecx, cid, is_static)
+    
+    eval_in_interpreter(ecx, cid, is_static, &mut tr)
 }
 
 pub fn eval_in_interpreter<'mir, 'tcx>(
     mut ecx: InterpCx<'mir, 'tcx, CompileTimeInterpreter<'mir, 'tcx>>,
     cid: GlobalId<'tcx>,
     is_static: bool,
+    v: &mut Vec<String>,
 ) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
     let res = ecx.load_mir(cid.instance.def, cid.promoted);
-    match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body)) {
+    // let ctec = &mut ecx;
+    // match std::env::var_os("Hook") {
+    //     None => (),
+    //     Some(_val) => {
+    //         let tcx = ctec.tcx;
+    //         let krate = Some(tcx.crate_name(cid.instance.def.def_id().krate).to_string());
+    //         println!("hook ecx {:?}", krate);
+    //         track_stack::hook_ecx(ecx, cid, ctec);
+    //     }
+    // }
+
+    match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body, v)) {
+        // match res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body)) {
         Err(error) => {
             let (error, backtrace) = error.into_parts();
             backtrace.print_backtrace();
@@ -430,6 +414,7 @@ pub fn eval_in_interpreter<'mir, 'tcx>(
                 Err(const_report_error(&ecx, error, alloc_id))
             } else {
                 // Convert to raw constant
+                // println!("res{:?}", v);
                 Ok(ConstAlloc { alloc_id, ty: mplace.layout.ty })
             }
         }

@@ -42,7 +42,7 @@ use rustc_middle::ty::context::{PaflDump, PaflCrate};
 
 use colored::Colorize;
 
-pub fn dump_in_eval_query( // eval_queries.rs => DUMP_ON
+pub fn _dump_in_eval_query( // eval_queries.rs => DUMP_ON
     tcx: TyCtxt<'_>,
     body: &Body<'_>,
     outdir: &Path,

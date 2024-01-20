@@ -123,7 +123,8 @@ where
 /// This will use the `mk` function for creating the error which will get passed labels according to
 /// the `InterpError` and the span and a stacktrace of current execution according to
 /// `get_span_and_frames`.
-pub(super) fn report<'tcx, C, F, E>(
+pub fn report<'tcx, C, F, E>(
+// pub(super) fn report<'tcx, C, F, E>(
     tcx: TyCtxt<'tcx>,
     error: InterpError<'tcx>,
     span: Option<Span>,

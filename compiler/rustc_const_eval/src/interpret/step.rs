@@ -21,25 +21,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     ///
     /// This is marked `#inline(always)` to work around adversarial codegen when `opt-level = 3`
     #[inline(always)]
-    pub fn step(&mut self) -> InterpResult<'tcx, bool> {
-
-        // match std::env::var_os("STEP") {
-        //     None => (),
-        //     Some(_val) => {
-        //         let tcx: TyCtxt<'_> = self.tcx.tcx;
-        //         let body: &mir::Body<'_> = self.body();
-        //         dump::dump_in_step(tcx, body);
-        //     }
-        // }
-
-        // match std::env::var_os("STEP2") {
-        //     None => (),
-        //     Some(_val) => {
-        //         self.bb_dump_in_step();
-        //     }
-        // }
+    pub fn step(&mut self,
+        // vec_str: &mut std::cell::RefMut<'_, Vec<String>>,
+    ) -> InterpResult<'tcx, bool> {
 
         if self.stack().is_empty() {
+            // println!("stack empty");
             return Ok(false);
         }
 
@@ -369,7 +356,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
     /// Evaluate the given terminator. Will also adjust the stack frame and statement position accordingly.
     // fn terminator(&mut self, terminator: &mir::Terminator<'tcx>, steps: &mut Vec<Step> ) -> InterpResult<'tcx> {
-    fn terminator(&mut self, terminator: &mir::Terminator<'tcx> ) -> InterpResult<'tcx> {
+    fn terminator(&mut self, terminator: &mir::Terminator<'tcx> 
+    // , vec_str: &mut std::cell::RefMut<'_, Vec<String>>,
+) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
 
         match std::env::var_os("DUMP_DIR") {
@@ -385,9 +374,19 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
+                let mut v = self.tcx._path.borrow_mut();
+                v.push(loc.block.as_usize());
+
+                let s = format!("{:?}", loc.block.as_usize());
+                self.yj_push(s);
+
                 info!("// executing {:?}", loc.block);
             }
         }
         Ok(())
+    }
+    pub fn yj_push(&mut self, s: String) {
+        let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._t_s.borrow_mut();
+        vec_str.push(s);
     }
 }

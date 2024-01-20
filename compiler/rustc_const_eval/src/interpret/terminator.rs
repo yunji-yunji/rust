@@ -78,10 +78,20 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub(super) fn eval_terminator(
         &mut self,
         terminator: &mir::Terminator<'tcx>,
+        // vec_str: &mut std::cell::RefMut<'_, Vec<String>>,
     ) -> InterpResult<'tcx> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
+                let body = self.body();
+                let instance_def = body.source.instance;
+                let def_id = instance_def.def_id();
+                let _krate_name = self.tcx.crate_name(def_id.krate).to_string();
+                // let path = self.tcx.def_path(def_id).to_string_no_crate_verbose();
+                let path = self.tcx.def_path(def_id);
+                let s = format!("{:?}]]", path);
+                // vec_str.push(s);
+                self.yj_push(s);
                 self.pop_stack_frame(/* unwinding */ false)?
             }
 
@@ -120,6 +130,17 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 call_source: _,
                 fn_span: _,
             } => {
+                let body = self.body();
+                let instance_def = body.source.instance;
+                let def_id = instance_def.def_id();
+                let _krate_name = self.tcx.crate_name(def_id.krate).to_string();
+                // let path = self.tcx.def_path(def_id).to_string_no_crate_verbose();
+                let path = self.tcx.def_path(def_id);
+                let s = format!("[[{:?}", path);
+                // vec_str.push(s);
+
+                self.yj_push(s);
+
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
                 let func = self.eval_operand(func, None)?;

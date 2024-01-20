@@ -283,12 +283,15 @@ fn run_compiler(
         args.splice(1..1, miri::MIRI_DEFAULT_ARGS.iter().map(ToString::to_string));
     }
 
+    println!("before miri run compiler");
     // Invoke compiler, and handle return code.
     let exit_code = rustc_driver::catch_with_exit_code(move || {
         rustc_driver::RunCompiler::new(&args, callbacks)
             .set_using_internal_features(using_internal_features)
             .run()
     });
+    println!("after miri run compiler");
+
     std::process::exit(exit_code)
 }
 

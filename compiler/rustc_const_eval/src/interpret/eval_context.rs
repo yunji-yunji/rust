@@ -30,6 +30,8 @@ use crate::errors;
 use crate::util;
 use crate::{fluent_generated as fluent, ReportErrorExt};
 
+// use rustc_middle::ty::print::with_no_trimmed_paths;
+
 pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
     /// Stores the `Machine` instance.
     ///
@@ -763,6 +765,31 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         self.size_and_align_of(&mplace.meta(), &mplace.layout)
     }
 
+    // pub fn _test_stack(
+    //     &mut self,
+    //     _v: &mut Vec<String>,
+    //     cid: GlobalId<'tcx>,
+    // ) {
+    //     let tcx = self.tcx;
+    //     let krate = Some(tcx.crate_name(cid.instance.def.def_id().krate).to_string());
+    //     match krate {
+    //         Some(s) => {
+    //             if s.contains("move") {
+    //                 let st = self.stack();
+    //                 for f in st {
+    //                     let s = format!("f[{:?}]##[{:?}]", f.instance.def, f.loc,);
+    //                     let s2: String = with_no_trimmed_paths!(s.to_string());
+    //                     // println!("{:?}", s2.clone());
+    //                     // _v.push(s2);
+    //                     let mut vec_str = tcx._t_s.borrow_mut();
+    //                     vec_str.push(s2);
+    //                 }
+    //             }
+    //         }, 
+    //         None => {}
+    //     }
+    // }
+
     #[instrument(skip(self, body, return_place, return_to_block), level = "debug")]
     pub fn push_stack_frame(
         &mut self,
@@ -772,6 +799,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         return_to_block: StackPopCleanup,
     ) -> InterpResult<'tcx> {
         trace!("body: {:#?}", body);
+        // println!("body: {:#?}", body);
         let dead_local = LocalState { value: LocalValue::Dead, layout: Cell::new(None) };
         let locals = IndexVec::from_elem(dead_local, &body.local_decls);
         // First push a stack frame so we have access to the local args

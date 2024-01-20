@@ -117,7 +117,6 @@ impl<'tcx> Queries<'tcx> {
             let sess = &self.compiler.sess;
 
             let mut krate = self.parse()?.steal();
-
             rustc_builtin_macros::cmdline_attrs::inject(
                 &mut krate,
                 &sess.parse_sess,
@@ -129,6 +128,11 @@ impl<'tcx> Queries<'tcx> {
 
             // parse `#[crate_name]` even if `--crate-name` was passed, to make sure it matches.
             let crate_name = find_crate_name(sess, &pre_configured_attrs);
+            let s = crate_name.to_string();
+            if s.contains("move") {
+                println!("k in gctxt {:?}\n{:?}", crate_name.clone(), krate.items.clone());
+            }
+
             let crate_types = util::collect_crate_types(sess, &pre_configured_attrs);
             let stable_crate_id = StableCrateId::new(
                 crate_name,
