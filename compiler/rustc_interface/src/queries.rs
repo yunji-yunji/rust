@@ -170,6 +170,7 @@ impl<'tcx> Queries<'tcx> {
                 feed.crate_for_resolver(tcx.arena.alloc(Steal::new((krate, pre_configured_attrs))));
                 feed.output_filenames(Arc::new(outputs));
             });
+            // println!("real fin2={:?}", qcx._vec.borrow());
             Ok(qcx)
         })
     }

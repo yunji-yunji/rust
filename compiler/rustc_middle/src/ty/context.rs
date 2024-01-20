@@ -1685,6 +1685,7 @@ pub struct GlobalCtxt<'tcx> {
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
     // pub _ptr: RefCell<&
+    pub _vec: RefCell<Vec<String>>,
 }
 use rustc_middle::mir::Terminator;
 
@@ -1989,6 +1990,7 @@ impl<'tcx> TyCtxt<'tcx> {
             // _curr_t: RefCell::new(fin_trace.clone().into()),
             // _curr_t: RefCell::new(None),
             _curr_t: RefCell::new(Some(Box::new(RefCell::new(fin_trace)))),
+            _vec: RefCell::new(vec![]),
             // _trace: trace,
         }
     }
