@@ -29,9 +29,6 @@ use crate::interpret::{
     InterpError, InterpResult, MPlaceTy, MemoryKind, OpTy, RefTracking, StackPopCleanup,
 };
 use crate::interpret::dump;
-use std::fs;
-use std::fs::OpenOptions;
-use std::io::Write;
 
 // Returns a pointer to where the result lives
 fn eval_body_using_ecx<'mir, 'tcx>(
@@ -323,36 +320,10 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
     //     }
     // }
 
-    match std::env::var_os("DUMPPP") {
-        None => (),
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val);
-
-            let tcx = ecx.tcx.tcx;
-            // let body1: &mir::Body<'_> = ecx.body();
-
-            fs::create_dir_all(outdir.clone()).expect("Fail to open directory.");
-            // let symbol = tcx.crate_name(LOCAL_CRATE);
-            let krate = Some(tcx.crate_name(def.krate).to_string());
-
-            let file_name = krate.expect("yj file name");
-            // let stable_create_id: StableCrateId = tcx.stable_crate_id(LOCAL_CRATE);
-            // let file_name = stable_create_id.as_u64().to_string();
-            let output = outdir.join(file_name).with_extension("json");
-            println!("FILE: outdir{:?}",output.clone());
-
-            let mut file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create(true)
-                .open(output)
-                .expect("Fail to create a file.");
-
-            let serialized_data = serde_json::to_string(&tcx._trace).unwrap();
-            file.write_all(serialized_data.as_bytes()).expect("yjyFail to write file.");
-
-            }
-
+    let crate_name = tcx.crate_name(cid.instance.def.def_id().krate).to_string();
+    let s = crate_name.to_string();
+    if s.contains("move") {
+        println!("yj=={:?}", tcx._vec);
     }
 
     eval_in_interpreter(ecx, cid, is_static)

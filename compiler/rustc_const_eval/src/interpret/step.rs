@@ -23,22 +23,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     #[inline(always)]
     pub fn step(&mut self) -> InterpResult<'tcx, bool> {
 
-        // match std::env::var_os("STEP") {
-        //     None => (),
-        //     Some(_val) => {
-        //         let tcx: TyCtxt<'_> = self.tcx.tcx;
-        //         let body: &mir::Body<'_> = self.body();
-        //         dump::dump_in_step(tcx, body);
-        //     }
-        // }
-
-        // match std::env::var_os("STEP2") {
-        //     None => (),
-        //     Some(_val) => {
-        //         self.bb_dump_in_step();
-        //     }
-        // }
-
         if self.stack().is_empty() {
             return Ok(false);
         }
@@ -385,9 +369,16 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
+                let s = format!("{:?}", loc.block.as_usize());
+                self.yj_push(s);
                 info!("// executing {:?}", loc.block);
             }
         }
         Ok(())
+    }
+
+    pub fn yj_push(&mut self, s: String) {
+        let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._vec.borrow_mut();
+        vec_str.push(s);
     }
 }

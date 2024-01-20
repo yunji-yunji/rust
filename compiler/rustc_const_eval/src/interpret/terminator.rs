@@ -22,7 +22,7 @@ use super::{
     Projectable, Provenance, Scalar, StackPopCleanup,
 };
 use crate::fluent_generated as fluent;
-
+use rustc_middle::ty::print::with_no_trimmed_paths;
 /// An argment passed to a function.
 #[derive(Clone, Debug)]
 pub enum FnArg<'tcx, Prov: Provenance = CtfeProvenance> {
@@ -75,6 +75,46 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         })
     }
 
+    fn fmt_info(
+        &mut self,
+        terminator: &mir::Terminator<'tcx>,
+    ) -> Vec<String> {
+
+        let mut v :Vec<String> = vec![];
+
+        let body = self.body();
+        let instance_def = body.source.instance;
+        let def_id = instance_def.def_id();
+
+        // 0. terminator kind
+        let term_kind = &terminator.kind;
+        // 1. krate name
+        let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+        // 2. def kind
+        let _def_kind = self.tcx.def_kind(def_id);
+    
+        // let s1 = format!("[{:?}][{:?}][{:?}]", term_kind, krate_name, def_kind);
+        // let s2 = with_no_trimmed_paths!(s1.to_string());
+        let s = format!("{:?}", term_kind);
+
+        let name = with_no_trimmed_paths!(s);
+        v.push(name);
+        let tmp = with_no_trimmed_paths!(krate_name.to_string());
+        v.push(tmp);
+
+
+        // 3. def path
+        let def_path = self.tcx.def_path(def_id);
+        let def_paths = def_path.data;
+        for item in &def_paths {
+            // let tmp = format!("[{:?}][{:?}]", item.data, item.disambiguator);
+            // let tmp2 = with_no_trimmed_paths!(tmp.to_string());
+            let name = with_no_trimmed_paths!(item.data.to_string());
+            v.push(name);
+        }
+        v
+    }
+
     pub(super) fn eval_terminator(
         &mut self,
         terminator: &mir::Terminator<'tcx>,
@@ -82,6 +122,31 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
+                // let term_kind = &terminator.kind;
+                // let a = self.fmt_info(terminator);
+                // let s1: String = a.iter().flat_map(|s| s.chars()).collect();
+
+                // println!("{:?}", s1);
+                // // let a = format!("{}]]", res);
+                // // let a = with_no_trimmed_paths!(a);
+                // // let a = with_no_trimmed_paths!(a);
+
+                // let body = self.body();
+                // let instance_def = body.source.instance;
+                // let def_id = instance_def.def_id();
+                // // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+                // // // let path = self.tcx.def_path(def_id).to_string_no_crate_verbose();
+                // // // let path = self.tcx.def_path(def_id);
+                // // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+                // // let s1 = format!("[{:?}][{:?}]", term_kind, krate_name);
+                // // let s2 = with_no_trimmed_paths!(term_kind.to_string());
+                // let s1 = format!("[{:?}]", term_kind);
+                // let s2 = with_no_trimmed_paths!(s1);
+                let a = self.fmt_info(terminator);
+                let s1: String = a.iter().flat_map(|s| s.chars()).collect();
+                self.yj_push(s1);
+                self.yj_push("Return]".to_string());
+
                 self.pop_stack_frame(/* unwinding */ false)?
             }
 
@@ -120,6 +185,24 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 call_source: _,
                 fn_span: _,
             } => {
+
+                // self.yj_push(s1);
+                // let body = self.body();
+                // let instance_def = body.source.instance;
+                // let def_id = instance_def.def_id();
+                // let term_kind = &terminator.kind;
+                // // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+                // // let s1 = format!("[{:?}][{:?}]", term_kind, krate_name);
+                // // let s2 = with_no_trimmed_paths!(s1.to_string());
+                // let s1 = format!("[{:?}]", term_kind);
+                // let s2 = with_no_trimmed_paths!(s1);
+                // let term_kind = &terminator.kind;
+                // let s2: String = with_no_trimmed_paths!(s.to_string());
+                self.yj_push("[Call".to_string());
+                // let a = self.fmt_info(terminator);
+                // let s1: String = a.iter().flat_map(|s| s.chars()).collect();
+                // self.yj_push(s1);
+
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
                 let func = self.eval_operand(func, None)?;
