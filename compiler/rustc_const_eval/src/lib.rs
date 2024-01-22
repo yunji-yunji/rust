@@ -47,6 +47,7 @@ pub fn provide(providers: &mut Providers) {
     const_eval::provide(providers);
     providers.eval_to_const_value_raw = const_eval::eval_to_const_value_raw_provider;
     providers.eval_to_allocation_raw = const_eval::eval_to_allocation_raw_provider;
+    // let _ = const_eval::print_vec2(tcx);
     providers.hooks.const_caller_location = util::caller_location::const_caller_location_provider;
     providers.eval_to_valtree = |tcx, param_env_and_value| {
         let (param_env, raw) = param_env_and_value.into_parts();
@@ -60,4 +61,8 @@ pub fn provide(providers: &mut Providers) {
     providers.check_validity_requirement = |tcx, (init_kind, param_env_and_ty)| {
         util::check_validity_requirement(tcx, init_kind, param_env_and_ty)
     };
+    // pub fn print_vec<'tcx>(tcx: &'tcx GlobalCtxt<'tcx>) {
+        // println!("print_Vec={:?}", tcx._vec.borrow());
+    // }
+    
 }

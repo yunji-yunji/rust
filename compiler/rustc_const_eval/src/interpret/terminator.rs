@@ -142,12 +142,17 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 // // let s2 = with_no_trimmed_paths!(term_kind.to_string());
                 // let s1 = format!("[{:?}]", term_kind);
                 // let s2 = with_no_trimmed_paths!(s1);
+
+                /* 
                 let a = self.fmt_info(terminator);
-                let s1: String = a.iter().flat_map(|s| s.chars()).collect();
+                let s1 :String= a.join(":");
                 self.yj_push(s1);
                 self.yj_push("Return]".to_string());
-
-                self.pop_stack_frame(/* unwinding */ false)?
+*/
+                let a = self.fmt_info(terminator);
+                let s1 :String= a.join(":");
+                // self.yj_push(s1);
+                self.pop_stack_frame(/* unwinding */ false, s1)?
             }
 
             Goto { target } => self.go_to_block(target),
@@ -293,7 +298,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 trace!("unwinding: resuming from cleanup");
                 // By definition, a Resume terminator means
                 // that we're unwinding
-                self.pop_stack_frame(/* unwinding */ true)?;
+                let a = self.fmt_info(terminator);
+                let s1 :String= a.join(":");
+                self.pop_stack_frame(/* unwinding */ true, s1)?;
                 return Ok(());
             }
 

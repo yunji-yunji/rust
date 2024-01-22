@@ -159,8 +159,10 @@ impl<'tcx> Queries<'tcx> {
                 &self.arena,
                 &self.hir_arena,
             );
+            // passes::print_vec(qcx);
 
             qcx.enter(|tcx| {
+                // println!("in queies {:?}", tcx._vec);
                 let feed = tcx.feed_local_crate();
                 feed.crate_name(crate_name);
 

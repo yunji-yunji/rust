@@ -870,7 +870,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// The cleanup block ends with a special `Resume` terminator, which will
     /// cause us to continue unwinding.
     #[instrument(skip(self), level = "debug")]
-    pub(super) fn pop_stack_frame(&mut self, unwinding: bool) -> InterpResult<'tcx> {
+    pub(super) fn pop_stack_frame(&mut self, unwinding: bool, name: String) -> InterpResult<'tcx> {
         info!(
             "popping stack frame ({})",
             if unwinding { "during unwinding" } else { "returning from function" }
@@ -943,6 +943,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         // Normal return, figure out where to jump.
         if unwinding {
+
+            self.yj_push("unwind]".to_string());
+            // println!("unwiding: {:?}", name);
             // Follow the unwind edge.
             let unwind = match return_to_block {
                 StackPopCleanup::Goto { unwind, .. } => unwind,
@@ -953,6 +956,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             // This must be the very last thing that happens, since it can in fact push a new stack frame.
             self.unwind_to_block(unwind)
         } else {
+            self.yj_push(name);
+            self.yj_push("wind]".to_string());
             // Follow the normal return edge.
             match return_to_block {
                 StackPopCleanup::Goto { ret, .. } => self.return_to_block(ret),

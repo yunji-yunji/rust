@@ -636,6 +636,10 @@ pub static DEFAULT_QUERY_PROVIDERS: LazyLock<Providers> = LazyLock::new(|| {
     *providers
 });
 
+// pub fn print_vec<'tcx>(tcx: &'tcx GlobalCtxt<'tcx>) {
+//     println!("print_Vec={:?}", tcx._vec.borrow());
+// }
+
 pub fn create_global_ctxt<'tcx>(
     compiler: &'tcx Compiler,
     crate_types: Vec<CrateType>,
@@ -660,6 +664,7 @@ pub fn create_global_ctxt<'tcx>(
 
     if let Some(callback) = compiler.override_queries {
         callback(sess, &mut providers);
+        println!("yj override queis"); // before start
     }
 
     let incremental = dep_graph.is_fully_enabled();

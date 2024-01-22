@@ -279,6 +279,14 @@ pub fn eval_to_const_value_raw_provider<'tcx>(
     tcx.eval_to_allocation_raw(key).map(|val| turn_into_const_value(tcx, val, key))
 }
 
+
+#[instrument(skip(tcx), level = "debug")]
+pub fn print_vec2<'tcx>(
+    tcx: TyCtxt<'tcx>,) {
+    println!("print_Vec2={:?}", tcx._vec.borrow());
+
+}
+
 #[instrument(skip(tcx), level = "debug")]
 pub fn eval_to_allocation_raw_provider<'tcx>(
     tcx: TyCtxt<'tcx>,

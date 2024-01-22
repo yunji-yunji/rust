@@ -49,6 +49,7 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
             providers.extern_queries.used_crate_source = |tcx, cnum| {
                 let mut providers = Providers::default();
                 rustc_metadata::provide(&mut providers);
+                println!("after privider miri1 {:?}", tcx._vec.borrow());
                 let mut crate_source = (providers.extern_queries.used_crate_source)(tcx, cnum);
                 // HACK: rustc will emit "crate ... required to be available in rlib format, but
                 // was not found in this form" errors once we use `tcx.dependency_formats()` if
@@ -131,6 +132,8 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // `exported_symbols` and `reachable_non_generics` provided by rustc always returns
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
+                    println!("after privider miri2 {:?}", tcx._vec.borrow());
+
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {
                         tcx.reachable_set(()).to_sorted(&hcx, true)
                     });

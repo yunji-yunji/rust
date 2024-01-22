@@ -425,7 +425,7 @@ fn run_compiler(
             // Make sure name resolution and macro expansion is run.
             queries.global_ctxt()?.enter(|tcx| 
                 {
-                    safe_println!("real fin3={:?}", tcx._vec.borrow());
+                    // safe_println!("real fin3={:?}", tcx._vec.borrow());
                     tcx.resolver_for_lowering(())
                 }
             );
@@ -447,7 +447,7 @@ fn run_compiler(
             }
 
             queries.global_ctxt()?.enter(|tcx| {
-                safe_println!("real fin4={:?}", tcx._vec.borrow());
+                // safe_println!("real fin4={:?}", tcx._vec.borrow());
                 tcx.analysis(())
             }
             )?;
