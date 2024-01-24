@@ -164,9 +164,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 fn_span: _,
             } => {
                 self.yj_push("[Call".to_string());
-                // let a = self.fmt_info(terminator);
-                // let s1 :String= a.join(":");
-                // self.yj_push(s1);
+                let s = self.fn_info(self.body());
+                self.yj_push(s);
 
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;

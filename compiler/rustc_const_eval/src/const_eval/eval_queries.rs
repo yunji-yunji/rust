@@ -62,7 +62,12 @@ fn eval_body_using_ecx<'mir, 'tcx>(
         cid.promoted.map_or_else(String::new, |p| format!("::promoted[{p:?}]"))
     );
 
-    ecx.yj_push(String::from("[maybeCall"));
+    // correct call type
+    // 1. push_stack_frame in eval_body_using_ecx
+    // 2. push_stack_frame in eval_terminator, Call kind
+    ecx.yj_push(String::from("[evalbodyCall"));
+    let s = ecx.fn_info(body);
+    ecx.yj_push(s);
     ecx.push_stack_frame(
         cid.instance,
         body,

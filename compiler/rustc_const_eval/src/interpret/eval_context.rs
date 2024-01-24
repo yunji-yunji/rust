@@ -811,9 +811,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             extra: (),
         };
         let frame = M::init_frame_extra(self, pre_frame)?;
-        // self.yj_push(String::from("[ncall:"));
-        let s = self.fn_info(body);
-        self.yj_push(s);
+
         self.stack_mut().push(frame);
 
         // Make sure all the constants required by this frame evaluate successfully (post-monomorphization check).
