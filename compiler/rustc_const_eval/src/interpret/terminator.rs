@@ -77,9 +77,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
 
 
-    fn fmt_info(
+    fn ret_info(
         &mut self,
-        terminator: &mir::Terminator<'tcx>,
+        _terminator: &mir::Terminator<'tcx>,
     ) -> Vec<String> {
 
         let mut v :Vec<String> = vec![];
@@ -89,21 +89,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         let def_id = instance_def.def_id();
 
         // 0. terminator kind
-        let term_kind = &terminator.kind;
+        // let term_kind = &terminator.kind;
+        // let s = format!("{:?}", term_kind);
+        // let name = with_no_trimmed_paths!(s);
+        // v.push(name);
+
         // 1. krate name
         let krate_name = self.tcx.crate_name(def_id.krate).to_string();
-        // 2. def kind
-        let _def_kind = self.tcx.def_kind(def_id);
-    
-        // let s1 = format!("[{:?}][{:?}][{:?}]", term_kind, krate_name, def_kind);
-        // let s2 = with_no_trimmed_paths!(s1.to_string());
-        let s = format!("{:?}", term_kind);
-
-        let name = with_no_trimmed_paths!(s);
-        v.push(name);
         let tmp = with_no_trimmed_paths!(krate_name.to_string());
         v.push(tmp);
-
 
         // 3. def path
         let def_path = self.tcx.def_path(def_id);
@@ -113,6 +107,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             // let tmp2 = with_no_trimmed_paths!(tmp.to_string());
             let name = with_no_trimmed_paths!(item.data.to_string());
             v.push(name);
+            let num = with_no_trimmed_paths!(item.disambiguator.to_string());
+            v.push(num);
         }
         v
     }
@@ -124,9 +120,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
-                let a = self.fmt_info(terminator);
+                let a = self.ret_info(terminator);
                 let s1 :String= a.join(":");
                 self.yj_push(s1.clone());
+                self.yj_push(String::from("Ret]"));
                 // let s1: String = String::from("ret");
                 self.pop_stack_frame(/* unwinding */ false, s1)?
             }
@@ -261,8 +258,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 trace!("unwinding: resuming from cleanup");
                 // By definition, a Resume terminator means
                 // that we're unwinding
-                let a = self.fmt_info(terminator);
-                let s1 :String= a.join(":");
+                // let a = self.ret_info(terminator);
+                // let s1 :String= a.join(":");
+                let s1 = String::from("unwindResume");
+                self.yj_push(s1.clone());
                 self.pop_stack_frame(/* unwinding */ true, s1)?;
                 return Ok(());
             }

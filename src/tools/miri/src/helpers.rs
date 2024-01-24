@@ -381,6 +381,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             Some(dest) => dest.clone(),
             None => MPlaceTy::fake_alloc_zst(this.layout_of(mir.return_ty())?).into(),
         };
+        this.yj_push(String::from("[helperCall:")); // never called
         this.push_stack_frame(f, mir, &dest, stack_pop)?;
 
         // Initialize arguments.

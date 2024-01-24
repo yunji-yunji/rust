@@ -779,9 +779,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         for item in &def_paths {
             let name = with_no_trimmed_paths!(item.data.to_string());
             tmp.push(name);
+            let num = with_no_trimmed_paths!(item.disambiguator.to_string());
+            tmp.push(num);
         }
         let s1 :String= tmp.join(":");
-        let fin = krate_name.to_string() + &s1;
+        let s2 : String = String::from(":");
+        let fin = krate_name.to_string() + &s2 + &s1;
         fin
     }
 
@@ -808,6 +811,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             extra: (),
         };
         let frame = M::init_frame_extra(self, pre_frame)?;
+        // self.yj_push(String::from("[ncall:"));
         let s = self.fn_info(body);
         self.yj_push(s);
         self.stack_mut().push(frame);

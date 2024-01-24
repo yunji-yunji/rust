@@ -148,6 +148,7 @@ impl<'mir, 'tcx> ConstPropagator<'mir, 'tcx> {
             .expect("couldn't perform small allocation")
             .into();
 
+        ecx.yj_push(String::from("[lintCall:"));
         ecx.push_stack_frame(
             Instance::new(def_id, args),
             body,
