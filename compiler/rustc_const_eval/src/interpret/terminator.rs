@@ -75,6 +75,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         })
     }
 
+
+
     fn fmt_info(
         &mut self,
         terminator: &mir::Terminator<'tcx>,
@@ -125,6 +127,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let a = self.fmt_info(terminator);
                 let s1 :String= a.join(":");
                 self.yj_push(s1.clone());
+                // let s1: String = String::from("ret");
                 self.pop_stack_frame(/* unwinding */ false, s1)?
             }
 

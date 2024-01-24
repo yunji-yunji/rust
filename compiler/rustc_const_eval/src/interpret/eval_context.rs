@@ -29,6 +29,7 @@ use super::{
 use crate::errors;
 use crate::util;
 use crate::{fluent_generated as fluent, ReportErrorExt};
+use rustc_middle::ty::print::with_no_trimmed_paths;
 
 pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
     /// Stores the `Machine` instance.
@@ -763,6 +764,27 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         self.size_and_align_of(&mplace.meta(), &mplace.layout)
     }
 
+    pub fn fn_info(
+        &mut self,
+        // body: &Body<'_>,
+        // instance: ty::Instance<'tcx>,
+        body: &'mir mir::Body<'tcx>,
+    ) -> String {
+        let instance_def = body.source.instance;
+        let def_id = instance_def.def_id();
+        let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+        let def_path = self.tcx.def_path(def_id);
+        let def_paths = def_path.data;
+        let mut tmp : Vec<String> = vec!();
+        for item in &def_paths {
+            let name = with_no_trimmed_paths!(item.data.to_string());
+            tmp.push(name);
+        }
+        let s1 :String= tmp.join(":");
+        let fin = krate_name.to_string() + &s1;
+        fin
+    }
+
     #[instrument(skip(self, body, return_place, return_to_block), level = "debug")]
     pub fn push_stack_frame(
         &mut self,
@@ -786,6 +808,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             extra: (),
         };
         let frame = M::init_frame_extra(self, pre_frame)?;
+        let s = self.fn_info(body);
+        self.yj_push(s);
         self.stack_mut().push(frame);
 
         // Make sure all the constants required by this frame evaluate successfully (post-monomorphization check).
