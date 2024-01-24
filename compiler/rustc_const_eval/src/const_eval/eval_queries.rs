@@ -74,6 +74,7 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
         cid.promoted.map_or_else(String::new, |p| format!("::{p:?}"))
     );
 
+    ecx.yj_push(String::from("[maybeCall"));
     ecx.push_stack_frame(
         cid.instance,
         body,
