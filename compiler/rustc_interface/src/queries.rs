@@ -162,7 +162,6 @@ impl<'tcx> Queries<'tcx> {
             // passes::print_vec(qcx);
 
             qcx.enter(|tcx| {
-                // println!("in queies {:?}", tcx._vec);
                 let feed = tcx.feed_local_crate();
                 feed.crate_name(crate_name);
 
@@ -178,7 +177,6 @@ impl<'tcx> Queries<'tcx> {
                 let feed = tcx.feed_local_def_id(CRATE_DEF_ID);
                 feed.def_kind(DefKind::Mod);
             });
-            // println!("real fin2={:?}", qcx._vec.borrow());
             Ok(qcx)
         })
     }

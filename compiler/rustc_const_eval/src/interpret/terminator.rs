@@ -122,36 +122,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
-                // let term_kind = &terminator.kind;
-                // let a = self.fmt_info(terminator);
-                // let s1: String = a.iter().flat_map(|s| s.chars()).collect();
-
-                // println!("{:?}", s1);
-                // // let a = format!("{}]]", res);
-                // // let a = with_no_trimmed_paths!(a);
-                // // let a = with_no_trimmed_paths!(a);
-
-                // let body = self.body();
-                // let instance_def = body.source.instance;
-                // let def_id = instance_def.def_id();
-                // // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
-                // // // let path = self.tcx.def_path(def_id).to_string_no_crate_verbose();
-                // // // let path = self.tcx.def_path(def_id);
-                // // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
-                // // let s1 = format!("[{:?}][{:?}]", term_kind, krate_name);
-                // // let s2 = with_no_trimmed_paths!(term_kind.to_string());
-                // let s1 = format!("[{:?}]", term_kind);
-                // let s2 = with_no_trimmed_paths!(s1);
-
-                /* 
                 let a = self.fmt_info(terminator);
                 let s1 :String= a.join(":");
-                self.yj_push(s1);
-                self.yj_push("Return]".to_string());
-*/
-                let a = self.fmt_info(terminator);
-                let s1 :String= a.join(":");
-                // self.yj_push(s1);
+                self.yj_push(s1.clone());
                 self.pop_stack_frame(/* unwinding */ false, s1)?
             }
 
@@ -190,22 +163,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 call_source: _,
                 fn_span: _,
             } => {
-
-                // self.yj_push(s1);
-                // let body = self.body();
-                // let instance_def = body.source.instance;
-                // let def_id = instance_def.def_id();
-                // let term_kind = &terminator.kind;
-                // // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
-                // // let s1 = format!("[{:?}][{:?}]", term_kind, krate_name);
-                // // let s2 = with_no_trimmed_paths!(s1.to_string());
-                // let s1 = format!("[{:?}]", term_kind);
-                // let s2 = with_no_trimmed_paths!(s1);
-                // let term_kind = &terminator.kind;
-                // let s2: String = with_no_trimmed_paths!(s.to_string());
                 self.yj_push("[Call".to_string());
                 // let a = self.fmt_info(terminator);
-                // let s1: String = a.iter().flat_map(|s| s.chars()).collect();
+                // let s1 :String= a.join(":");
                 // self.yj_push(s1);
 
                 let old_stack = self.frame_idx();

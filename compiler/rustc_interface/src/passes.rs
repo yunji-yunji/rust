@@ -664,7 +664,7 @@ pub fn create_global_ctxt<'tcx>(
 
     if let Some(callback) = compiler.override_queries {
         callback(sess, &mut providers);
-        println!("yj override queis"); // before start
+        println!("yj in create_global_ctxt, after providers"); // before start
     }
 
     let incremental = dep_graph.is_fully_enabled();

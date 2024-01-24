@@ -320,19 +320,12 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
         // they do not have to behave "as if" they were evaluated at runtime.
         CompileTimeInterpreter::new(CanAccessStatics::from(is_static), CheckAlignment::Error),
     );
-    // yj code
-    // match std::env::var_os("PROV") {
-    //     None => (),
-    //     Some(_val) => {
-    //         println!("provider {:?}", tcx._trace);
-    //     }
-    // }
 
-    let crate_name = tcx.crate_name(cid.instance.def.def_id().krate).to_string();
-    let s = crate_name.to_string();
-    if s.contains("move") {
-        println!("yj=={:?}", tcx._vec);
-    }
+    // let crate_name = tcx.crate_name(cid.instance.def.def_id().krate).to_string();
+    // let s = crate_name.to_string();
+    // if s.contains("move") {
+    //     println!("yj=={:?}", tcx._vec);
+    // }
 
     eval_in_interpreter(ecx, cid, is_static)
 }
