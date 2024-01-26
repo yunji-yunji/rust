@@ -23,6 +23,7 @@ use super::{
 };
 use crate::fluent_generated as fluent;
 use rustc_middle::ty::print::with_no_trimmed_paths;
+use rustc_hir::def::DefKind;
 /// An argment passed to a function.
 #[derive(Clone, Debug)]
 pub enum FnArg<'tcx, Prov: Provenance = CtfeProvenance> {
@@ -93,11 +94,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         // let s = format!("{:?}", term_kind);
         // let name = with_no_trimmed_paths!(s);
         // v.push(name);
+        let def_kind = self.tcx.def_kind(def_id);
+        let def_kind_str = format!("{:?}", def_kind);
+        v.push(def_kind_str);
 
         // 1. krate name
         let krate_name = self.tcx.crate_name(def_id.krate).to_string();
         let tmp = with_no_trimmed_paths!(krate_name.to_string());
         v.push(tmp);
+
 
         // 3. def path
         let def_path = self.tcx.def_path(def_id);
@@ -120,11 +125,31 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
-                let a = self.ret_info(terminator);
-                let s1 :String= a.join(":");
-                self.yj_push(s1.clone());
-                self.yj_push(String::from("Ret]"));
-                // let s1: String = String::from("ret");
+                match std::env::var_os("FILTER") {
+                    None => {
+                        let a = self.ret_info(terminator);
+                        let s1 :String= a.join(":");
+                        self.yj_push(s1.clone());
+                        self.yj_push(String::from("Ret]"));
+                    },
+                    Some(_val) => {
+                        let body = self.body();
+                        let instance_def = body.source.instance;
+                        let def_id = instance_def.def_id();
+                        let def_kind = self.tcx.def_kind(def_id);
+
+                        match def_kind {
+                            DefKind::Fn | DefKind::AssocFn => {
+                                let a = self.ret_info(terminator);
+                                let s1 :String= a.join(":");
+                                self.yj_push(s1.clone());
+                                self.yj_push(String::from("Ret]"));
+                            }, 
+                            _ => (),
+                        }
+                    }
+                }
+                let s1: String = String::from("anyword");
                 self.pop_stack_frame(/* unwinding */ false, s1)?
             }
 
@@ -163,9 +188,30 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 call_source: _,
                 fn_span: _,
             } => {
-                self.yj_push("[Call".to_string());
-                let s = self.fn_info(self.body());
-                self.yj_push(s);
+
+
+                match std::env::var_os("FILTER") {
+                    None => {
+                        self.yj_push("[Call".to_string());
+                        let s = self.fn_info(self.body());
+                        self.yj_push(s);
+                    },
+                    Some(_val) => {
+                        let body = self.body();
+                        let instance_def = body.source.instance;
+                        let def_id = instance_def.def_id();
+                        let def_kind = self.tcx.def_kind(def_id);
+                        match def_kind {
+                            DefKind::Fn | DefKind::AssocFn => {
+                                self.yj_push("[Call".to_string());
+                                let s = self.fn_info(self.body());
+                                self.yj_push(s);
+                            }, 
+                            _ => (),
+                        }
+                    }
+                }
+
 
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;

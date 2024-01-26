@@ -65,9 +65,30 @@ fn eval_body_using_ecx<'mir, 'tcx>(
     // correct call type
     // 1. push_stack_frame in eval_body_using_ecx
     // 2. push_stack_frame in eval_terminator, Call kind
-    ecx.yj_push(String::from("[evalbodyCall"));
-    let s = ecx.fn_info(body);
-    ecx.yj_push(s);
+
+
+    match std::env::var_os("FILTER") {
+        None => {
+            ecx.yj_push(String::from("[evalCall"));
+            let s = ecx.fn_info(body);
+            ecx.yj_push(s);
+        },
+        Some(_val) => {
+            let instance_def = body.source.instance;
+            let def_id = instance_def.def_id();
+            let def_kind = ecx.tcx.def_kind(def_id);
+            match def_kind {
+                DefKind::Fn | DefKind::AssocFn => {
+                    ecx.yj_push(String::from("[evalCall"));
+                    let s = ecx.fn_info(body);
+                    ecx.yj_push(s);
+                }, 
+                _ => (),
+            }
+        }
+    }
+
+
     ecx.push_stack_frame(
         cid.instance,
         body,
@@ -327,11 +348,17 @@ pub fn eval_to_allocation_raw_provider<'tcx>(
         CompileTimeInterpreter::new(CanAccessStatics::from(is_static), CheckAlignment::Error),
     );
 
-    // let crate_name = tcx.crate_name(cid.instance.def.def_id().krate).to_string();
-    // let s = crate_name.to_string();
-    // if s.contains("move") {
-    //     println!("yj=={:?}", tcx._vec);
-    // }
+
+    match std::env::var_os("FILTER") {
+        None => {},
+        Some(_val) => {
+            let crate_name = tcx.crate_name(cid.instance.def.def_id().krate).to_string();
+            let s = crate_name.to_string();
+            if s.contains("move") {
+                println!("yj=={:?}", tcx._vec.borrow());
+            }
+        }
+    }
 
     eval_in_interpreter(ecx, cid, is_static)
 }

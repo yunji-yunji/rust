@@ -772,7 +772,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     ) -> String {
         let instance_def = body.source.instance;
         let def_id = instance_def.def_id();
+
+        let def_kind = self.tcx.def_kind(def_id);
+        let def_kind_str = format!("{:?}", def_kind);
+
         let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+
         let def_path = self.tcx.def_path(def_id);
         let def_paths = def_path.data;
         let mut tmp : Vec<String> = vec!();
@@ -783,8 +788,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             tmp.push(num);
         }
         let s1 :String= tmp.join(":");
-        let s2 : String = String::from(":");
-        let fin = krate_name.to_string() + &s2 + &s1;
+        let fin = def_kind_str + ":" + &krate_name + ":" + &s1;
+        // fin = fin + &s1;
         fin
     }
 
