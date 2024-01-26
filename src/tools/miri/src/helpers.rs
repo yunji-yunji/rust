@@ -381,7 +381,35 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             Some(dest) => dest.clone(),
             None => MPlaceTy::fake_alloc_zst(this.layout_of(mir.return_ty())?).into(),
         };
-        this.yj_push(String::from("[helperCall:")); // never called
+        // not called (after_analysis)
+        // this.yj_push(String::from("[MIRICall:")); // called after main
+        match std::env::var_os("FILTER") {
+            None => {
+                this.yj_push("[MIRICall".to_string());
+                let s = this.fn_info(this.body());
+                this.yj_push(s);
+            },
+            Some(_val) => {
+                let body = this.body();
+                let instance_def = body.source.instance;
+                let def_id = instance_def.def_id();
+                let def_kind = this.tcx.def_kind(def_id);
+                let crate_name = this.tcx.crate_name(def_id.krate).to_string();
+
+                match def_kind {
+                    DefKind::Fn | DefKind::AssocFn => {
+                        if crate_name.contains("core") | crate_name.contains("std") | crate_name.contains("alloc") {}
+                        else {
+                            this.yj_push("[MIRICall".to_string());
+                            let s = this.fn_info(this.body());
+                            this.yj_push(s);
+                        }
+                    }, 
+                    _ => (),
+                }
+            }
+        }
+
         this.push_stack_frame(f, mir, &dest, stack_pop)?;
 
         // Initialize arguments.

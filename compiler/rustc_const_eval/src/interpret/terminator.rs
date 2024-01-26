@@ -137,13 +137,17 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         let instance_def = body.source.instance;
                         let def_id = instance_def.def_id();
                         let def_kind = self.tcx.def_kind(def_id);
+                        let crate_name = self.tcx.crate_name(def_id.krate).to_string();
 
                         match def_kind {
                             DefKind::Fn | DefKind::AssocFn => {
-                                let a = self.ret_info(terminator);
-                                let s1 :String= a.join(":");
-                                self.yj_push(s1.clone());
-                                self.yj_push(String::from("Ret]"));
+                                if crate_name.contains("core") | crate_name.contains("std") | crate_name.contains("alloc") {}
+                                else {
+                                    let a = self.ret_info(terminator);
+                                    let s1 :String= a.join(":");
+                                    self.yj_push(s1.clone());
+                                    self.yj_push(String::from("Ret]"));
+                                }
                             }, 
                             _ => (),
                         }
@@ -201,11 +205,16 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         let instance_def = body.source.instance;
                         let def_id = instance_def.def_id();
                         let def_kind = self.tcx.def_kind(def_id);
+                        let crate_name = self.tcx.crate_name(def_id.krate).to_string();
+
                         match def_kind {
                             DefKind::Fn | DefKind::AssocFn => {
-                                self.yj_push("[Call".to_string());
-                                let s = self.fn_info(self.body());
-                                self.yj_push(s);
+                                if crate_name.contains("core") | crate_name.contains("std") | crate_name.contains("alloc") {}
+                                else {
+                                    self.yj_push("[Call".to_string());
+                                    let s = self.fn_info(self.body());
+                                    self.yj_push(s);
+                                }
                             }, 
                             _ => (),
                         }

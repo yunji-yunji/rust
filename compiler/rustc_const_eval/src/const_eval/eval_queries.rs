@@ -77,11 +77,16 @@ fn eval_body_using_ecx<'mir, 'tcx>(
             let instance_def = body.source.instance;
             let def_id = instance_def.def_id();
             let def_kind = ecx.tcx.def_kind(def_id);
+            let crate_name = ecx.tcx.crate_name(def_id.krate).to_string();
+
             match def_kind {
                 DefKind::Fn | DefKind::AssocFn => {
-                    ecx.yj_push(String::from("[evalCall"));
-                    let s = ecx.fn_info(body);
-                    ecx.yj_push(s);
+                    if crate_name.contains("core") | crate_name.contains("std") | crate_name.contains("alloc") {}
+                    else {
+                        ecx.yj_push(String::from("[evalCall"));
+                        let s = ecx.fn_info(body);
+                        ecx.yj_push(s);
+                    }
                 }, 
                 _ => (),
             }
