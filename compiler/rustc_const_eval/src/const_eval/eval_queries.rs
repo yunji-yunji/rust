@@ -77,9 +77,18 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
     // correct call type
     // 1. push_stack_frame in eval_body_using_ecx
     // 2. push_stack_frame in eval_terminator, Call kind
-    ecx.yj_push(String::from("[evalbodyCall"));
-    let s = ecx.fn_info(body);
-    ecx.yj_push(s);
+    ecx.yj_push(String::from("[evalbodyCall")); // 
+
+    let f: ty::Instance<'_> = cid.instance;
+    // let instance_def = body.source.instance;
+    // let def_id = instance_def.def_id();
+    let fn_inst_key = ecx.create_fn_inst_key3(f);
+    // println!("fn3 {:?}", fn_inst_key);
+    let info = format!("#{:?}", fn_inst_key);
+    ecx.yj_push(info);
+
+    // let s = ecx.fn_info(body);
+    // ecx.yj_push(s);
     ecx.push_stack_frame(
         cid.instance,
         body,

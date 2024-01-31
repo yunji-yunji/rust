@@ -38,6 +38,7 @@ done
 if [ ! -f config.toml ]; then
     ./configure \
         --tools="cargo,miri,src,analysis,cargo-miri" \
+        # --tools="cargo,miri,src,analysis,cargo-miri,cargo-nexttest" \
         --set install.prefix=${PREFIX} \
         --set install.sysconfdir=sysconf \
         --disable-docs \

@@ -162,8 +162,17 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 fn_span: _,
             } => {
                 self.yj_push("[Call".to_string());
-                let s = self.fn_info(self.body());
-                self.yj_push(s);
+
+                let instance_def = self.body().source.instance;
+                // let b = self.body();
+                let def_id = instance_def.def_id();
+                let fn_inst_key = self.create_fn_inst_key(def_id, func);
+                // println!("fn2 {:?}", fn_inst_key);
+                let info = format!("@{:?}", fn_inst_key);
+                self.yj_push(info);
+
+                // let s = self.fn_info(self.body());
+                // self.yj_push(s);
 
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
