@@ -379,7 +379,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
                 let s = format!("{:?}", loc.block.as_usize());
-                self.yj_push(s);
+                self.yj_push(s.clone());
+                // let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+                // self.call_stk_push(s);
                 info!("// executing {:?}", loc.block);
             }
         }
@@ -389,5 +391,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn yj_push(&mut self, s: String) {
         let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._vec.borrow_mut();
         vec_str.push(s);
+    }
+
+    pub fn call_stk_push(&mut self, s: String) {
+        let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._call_stack.borrow_mut();
+        vec_str.push(s);
+    }
+    pub fn call_stk_pop(&mut self,) {
+        let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._call_stack.borrow_mut();
+        vec_str.pop();
     }
 }

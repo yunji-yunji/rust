@@ -87,6 +87,10 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
     let info = format!("#{:?}", fn_inst_key);
     ecx.yj_push(info);
 
+    let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+    ecx.call_stk_push(call_name);
+    // println!("{:?}", ecx.tcx._call_stack.borrow());
+
     // let s = ecx.fn_info(body);
     // ecx.yj_push(s);
     ecx.push_stack_frame(

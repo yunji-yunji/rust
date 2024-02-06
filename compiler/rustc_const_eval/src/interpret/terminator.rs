@@ -122,6 +122,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let s1 :String= a.join(":");
                 self.yj_push(s1.clone());
                 self.yj_push(String::from("Ret]"));
+
+                self.call_stk_pop();
+                println!("{:?}", self.tcx._call_stack.borrow());
+
                 // let s1: String = String::from("ret");
                 self.pop_stack_frame(/* unwinding */ false, s1)?
             }
@@ -171,6 +175,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let info = format!("@{:?}", fn_inst_key);
                 self.yj_push(info);
 
+                let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+                self.call_stk_push(call_name);
+                // println!("{:?}", self.tcx._call_stack.borrow());
                 // let s = self.fn_info(self.body());
                 // self.yj_push(s);
 

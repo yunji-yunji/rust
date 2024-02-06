@@ -411,6 +411,10 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
         // println!("fn1 {:?}", fn_inst_key);
         let info = format!("#{:?}", fn_inst_key);
         this.yj_push(info);
+        let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+        this.call_stk_push(call_name);
+
+        println!("{:?}", this.tcx._call_stack.borrow());
 
         this.push_stack_frame(f, mir, &dest, stack_pop)?;
 
