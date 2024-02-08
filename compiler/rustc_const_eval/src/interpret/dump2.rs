@@ -66,13 +66,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         let const_ty = match func.constant() {
             None => {
-                println!("callee is not a constant, pass");
                 let fn_inst_key = FnInstKey {
                     krate,
                     index: def.index.as_usize(),
                     path: tcx.def_path(def).to_string_no_crate_verbose(),
                     generics: vec![],
                 };
+                println!("callee is not a constant, krate path={:?}{:?} op type={:?}",
+                fn_inst_key.krate, fn_inst_key.path, func);
+
                 return fn_inst_key;
             },
             Some(const_op) => const_op.const_.ty(),

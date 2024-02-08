@@ -74,25 +74,32 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
         cid.promoted.map_or_else(String::new, |p| format!("::{p:?}"))
     );
 
-    // correct call type
-    // 1. push_stack_frame in eval_body_using_ecx
-    // 2. push_stack_frame in eval_terminator, Call kind
-    ecx.yj_push(String::from("[evalbodyCall")); // 
 
     let f: ty::Instance<'_> = cid.instance;
-    // let instance_def = body.source.instance;
-    // let def_id = instance_def.def_id();
     let fn_inst_key = ecx.create_fn_inst_key3(f);
-    // println!("fn3 {:?}", fn_inst_key);
-    let info = format!("#{:?}", fn_inst_key);
-    ecx.yj_push(info);
+    let can_skip = fn_inst_key.can_skip();
+    if can_skip {
+        ecx.set_skip_true();
+    } else {
+        // correct call type
+        // 1. push_stack_frame in eval_body_using_ecx
+        // 2. push_stack_frame in eval_terminator, Call kind
+        ecx.yj_push(String::from("[evalbodyCall"));
+        let info = format!("#{:?}", fn_inst_key);
+        ecx.yj_push(info);
 
-    let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
-    ecx.call_stk_push(call_name);
-    // println!("{:?}", ecx.tcx._call_stack.borrow());
-
-    // let s = ecx.fn_info(body);
-    // ecx.yj_push(s);
+        let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+        ecx.call_stk_push(call_name);
+        ecx.set_skip_false();
+    }
+    match std::env::var_os("ON3") {
+        None => (),
+        Some(_val) => {
+            println!("e{:?}", ecx.tcx._call_stack.borrow());
+            // let s = ecx.fn_info(body);
+            // ecx.yj_push(s);
+        }
+    }
     ecx.push_stack_frame(
         cid.instance,
         body,

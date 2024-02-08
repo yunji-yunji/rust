@@ -56,7 +56,12 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
                 let mut providers = Providers::default();
                 rustc_metadata::provide(&mut providers);
                 // println!("after provider miri1 {:?}", tcx._vec.borrow());
-                println!("after provider miri1 {:?}", tcx._call_stack.borrow());
+                match std::env::var_os("ON5") {
+                    None => (),
+                    Some(_val) => {
+                        println!("after miri1 {:?}", tcx._call_stack.borrow());
+                    }
+                }
                 let mut crate_source = (providers.extern_queries.used_crate_source)(tcx, cnum);
                 // HACK: rustc will emit "crate ... required to be available in rlib format, but
                 // was not found in this form" errors once we use `tcx.dependency_formats()` if

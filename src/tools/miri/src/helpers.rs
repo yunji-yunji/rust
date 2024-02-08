@@ -404,18 +404,30 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             None => MPlaceTy::fake_alloc_zst(this.layout_of(mir.return_ty())?),
         };
 
-        // std..
-        this.yj_push(String::from("[helperCall:")); // is called (with miri)
         // create function info
         let fn_inst_key = this.create_fn_inst_key3(f);
-        // println!("fn1 {:?}", fn_inst_key);
-        let info = format!("#{:?}", fn_inst_key);
-        this.yj_push(info);
-        let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
-        this.call_stk_push(call_name);
+        let can_skip = fn_inst_key.can_skip();
 
-        println!("{:?}", this.tcx._call_stack.borrow());
+        if can_skip {
+            this.set_skip_true();
+        } else {
+            // if should skip: std, core, alloc, ..
+            this.yj_push(String::from("[helperCall:")); // is called (with miri)
+            let info = format!("#{:?}", fn_inst_key);
+            this.yj_push(info);
 
+            // call_stack
+            let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+            this.call_stk_push(call_name);
+            this.set_skip_false();
+
+        }
+        match std::env::var_os("ON4") {
+            None => (),
+            Some(_val) => {
+                println!("h{:?}", this.tcx._call_stack.borrow());
+            }
+        }
         this.push_stack_frame(f, mir, &dest, stack_pop)?;
 
         // Initialize arguments.

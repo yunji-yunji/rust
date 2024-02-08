@@ -31,8 +31,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             // We are unwinding and this fn has no cleanup code.
             // Just go on unwinding.
             trace!("unwinding: skipping frame");
-            let my_str = String::new();
-            self.pop_stack_frame(/* unwinding */ true, my_str)?;
+            self.pop_stack_frame(/* unwinding */ true)?;
             return Ok(true);
         };
         let basic_block = &self.body().basic_blocks[loc.block];
@@ -381,7 +380,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let s = format!("{:?}", loc.block.as_usize());
                 self.yj_push(s.clone());
                 // let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
-                // self.call_stk_push(s);
+                match std::env::var_os("NUMB") {
+                    None => (),
+                    Some(_val) => {
+                        self.call_stk_push(s); // bb number on?
+                    }
+                }
                 info!("// executing {:?}", loc.block);
             }
         }
@@ -400,5 +404,13 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn call_stk_pop(&mut self,) {
         let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._call_stack.borrow_mut();
         vec_str.pop();
+    }
+    pub fn set_skip_true(&mut self,) {
+        let mut skip: std::cell::RefMut<'_, bool> = self.tcx._ret_can_skip.borrow_mut();
+        *skip = true;
+    }
+    pub fn set_skip_false(&mut self,) {
+        let mut skip: std::cell::RefMut<'_, bool> = self.tcx._ret_can_skip.borrow_mut();
+        *skip = false;
     }
 }

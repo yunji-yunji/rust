@@ -749,12 +749,59 @@ pub enum PaflType {
     Tuple(Vec<PaflType>),
 }
 
+impl PaflType {
+    pub fn has_functor(&self) -> bool {
+        match self {
+            Self::Never
+            | Self::Bool
+            | Self::Char
+            | Self::Isize
+            | Self::I8
+            | Self::I16
+            | Self::I32
+            | Self::I64
+            | Self::I128
+            | Self::Usize
+            | Self::U8
+            | Self::U16
+            | Self::U32
+            | Self::U64
+            | Self::U128
+            | Self::F32
+            | Self::F64
+            | Self::Str
+            | Self::Param { .. }
+            | Self::Opaque(_)
+            | Self::Dynamic(_) => false,
+            Self::Adt(ty_inst) | Self::Alias(ty_inst) => ty_inst.generics.iter().any(|g| g.has_functor()),
+            Self::FnPtr(..) | Self::FnDef(_) | Self::Closure(_) => true, // TRUE
+            Self::ImmRef(t)
+            | Self::MutRef(t)
+            | Self::ImmPtr(t)
+            | Self::MutPtr(t)
+            | Self::Slice(t)
+            | Self::Array(t, _) => t.has_functor(),
+            Self::Tuple(ty_vec) => ty_vec.iter().any(|t| t.has_functor()),
+        }
+    }
+}
+
 /// Serializable information about a Rust generic argument
 #[derive(Serialize, Clone, Debug)]
+// #[derive(Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 pub enum PaflGeneric {
     Lifetime,
     Type(PaflType),
     Const(PaflConst),
+}
+
+impl PaflGeneric {
+    pub fn has_functor(&self) -> bool {
+        match self {
+            Self::Type(t) => t.has_functor(),
+            Self::Lifetime | Self::Const(_) => false,
+        }
+    }
 }
 
 /// Identifier for type instance
@@ -775,9 +822,41 @@ pub struct FnInstKey {
     pub generics: Vec<PaflGeneric>,
 }
 
+impl FnInstKey {
+    pub fn can_skip(&self) -> bool {
+
+        match std::env::var_os("SIMP") {
+            None => {
+                match self.krate.as_deref() {
+                    None => false, 
+                    Some(k_name) => match k_name {
+                        // if it is std library and
+                        "core" | "std" | "alloc" | "backtrace" | "hashbrown" | "petgraph" | "bcs" | "getopts" => { // getopts
+                            // if any generic has functor, can_skip = false
+                            !self.generics.iter().any(|g| g.has_functor())
+                        }
+                        _ => false,
+                    }
+                }
+            },
+            Some(_val) => {
+                match self.krate.as_deref() {
+                    None => false, 
+                    Some(k_name) => match k_name {
+                        // if it is std library and
+                        "core" | "std" | "alloc" | "backtrace" | "hashbrown" | "petgraph" | "bcs" | "getopts" | "rand" | "test" | "panic_unwind" => {
+                            // if any generic has functor, can_skip = false
+                            !self.generics.iter().any(|g| g.has_functor())
+                        }
+                        _ => false,
+                    }
+                }
+            }
+        }
+    }
+}
 
 // ==================
-
 
 /// Kind of a call instruction
 #[derive(Serialize)]
@@ -1687,6 +1766,7 @@ pub struct GlobalCtxt<'tcx> {
     // pub _ptr: RefCell<&
     pub _vec: RefCell<Vec<String>>,
     pub _call_stack: RefCell<Vec<String>>,
+    pub _ret_can_skip : RefCell<bool>,
 }
 use rustc_middle::mir::Terminator;
 
@@ -1993,6 +2073,7 @@ impl<'tcx> TyCtxt<'tcx> {
             _curr_t: RefCell::new(Some(Box::new(RefCell::new(fin_trace)))),
             _vec: RefCell::new(vec![]),
             _call_stack: RefCell::new(vec![]),
+            _ret_can_skip: RefCell::new(false),
         }
     }
 

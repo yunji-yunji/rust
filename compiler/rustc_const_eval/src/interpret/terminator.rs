@@ -118,16 +118,36 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
-                let a = self.ret_info(terminator);
-                let s1 :String= a.join(":");
-                self.yj_push(s1.clone());
-                self.yj_push(String::from("Ret]"));
+                let can_skip = self.tcx._ret_can_skip.borrow();
+                if *can_skip {
+                    // print!(".");
+                } else {
+                    let a = self.ret_info(terminator);
+                    let s1 :String= a.join(":");
+                    self.yj_push(s1.clone());
+                    self.yj_push(String::from("Ret]"));
 
-                self.call_stk_pop();
-                println!("{:?}", self.tcx._call_stack.borrow());
+                    self.call_stk_pop();
+                    // self.call_stk_push(s1.clone());
+                    match std::env::var_os("ON1") {
+                        None => (),
+                        Some(_val) => {
+                            println!("r{:?}", self.tcx._call_stack.borrow());
+                        }
+                    }
+                }
 
-                // let s1: String = String::from("ret");
-                self.pop_stack_frame(/* unwinding */ false, s1)?
+                match std::env::var_os("TF") {
+                    None => (),
+                    Some(_val) => {
+                        if *can_skip {
+                            print!("T ");
+                        } else {
+                            print!("F ");
+                        }
+                    }
+                }
+                self.pop_stack_frame(/* unwinding */ false)?
             }
 
             Goto { target } => self.go_to_block(target),
@@ -165,22 +185,38 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 call_source: _,
                 fn_span: _,
             } => {
-                self.yj_push("[Call".to_string());
 
                 let instance_def = self.body().source.instance;
-                // let b = self.body();
                 let def_id = instance_def.def_id();
+
                 let fn_inst_key = self.create_fn_inst_key(def_id, func);
-                // println!("fn2 {:?}", fn_inst_key);
-                let info = format!("@{:?}", fn_inst_key);
-                self.yj_push(info);
 
-                let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
-                self.call_stk_push(call_name);
-                // println!("{:?}", self.tcx._call_stack.borrow());
-                // let s = self.fn_info(self.body());
-                // self.yj_push(s);
+                let can_skip = fn_inst_key.can_skip();
+                if can_skip {
+                    self.set_skip_true();
+                } else {
+                    self.yj_push("[Call".to_string());
+                    let info = format!("@{:?}", fn_inst_key);
+                    self.yj_push(info);
 
+                    let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+                    self.call_stk_push(call_name);
+                    // let s = self.fn_info(self.body());
+                    // self.yj_push(s);
+                    self.set_skip_false();
+                    match std::env::var_os("ON2") {
+                        None => (),
+                        Some(_val) => {
+                            println!("c{:?}", self.tcx._call_stack.borrow());
+                        }
+                    }
+                }            
+                match std::env::var_os("ON7") {
+                    None => (),
+                    Some(_val) => {
+                        println!("c{:?}", self.tcx._call_stack.borrow());
+                    }
+                }
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
                 let func = self.eval_operand(func, None)?;
@@ -275,7 +311,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 // let s1 :String= a.join(":");
                 let s1 = String::from("unwindResume");
                 self.yj_push(s1.clone());
-                self.pop_stack_frame(/* unwinding */ true, s1)?;
+                self.pop_stack_frame(/* unwinding */ true)?;
                 return Ok(());
             }
 
