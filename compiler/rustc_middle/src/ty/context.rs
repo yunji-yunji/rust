@@ -1574,7 +1574,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
 #[allow(dead_code)]
 
-#[derive(/*Serialize,*/ Clone, Debug)]
+#[derive(Serialize, Clone, Debug)]
 // pub enum Step<'a> {
 // pub enum Step {
 //     B(BasicBlock),
@@ -1585,51 +1585,51 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 //     // Err,
 // }
 
-pub enum Step<'a> {
+pub enum Step {
     B(BasicBlock),
     // Call(&'a Trace<'a>),
     // Call(Box<&'a Trace<'a>>),
-    Call(Box<*mut Trace<'a>>),
+    // Call(Box<*mut Trace<'a>>),
+    Call(Trace),
 }
 
-
-
-#[derive(Serialize, Clone, Debug)]
-pub struct Trace<'a> {
+#[derive(Serialize, Clone, Debug/* , Copy*/)]
+pub struct Trace {
     pub _entry: FnInstKey,
-    pub _steps: Vec<Step<'a>>,
+    pub _steps: Vec<Step>,
 }
 
-impl<'a> Serialize for Step<'a> {
-    // impl<'a> Serialize for *mut Trace<'a> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            Step::Call(inner) => {
-                // Serialize the "Call" variant by recursively serializing the inner Trace
-                let raw_ptr = *inner.clone();
-                if !raw_ptr.is_null() {
-                    // Dereference the raw pointer and clone the value
-                    unsafe { 
-                        let a = (*raw_ptr).clone(); 
-                        a.serialize(serializer) 
-                    }
-                } else {
-                    // Handle the case where the raw pointer is null (optional)
-                    // You might want to return a default value or panic depending on your use case
-                    panic!("yyyjj Attempted to dereference a null pointer.")
-                }
-                // inner.serialize(serializer)
-            }, 
-            Step::B(bb) => {
-                bb.serialize(serializer)
-            }
-        }
-        // Example: serializer.serialize_some_function(*self)
-    }
-}
+// impl Serialize for Step {
+//     // impl<'a> Serialize for *mut Trace<'a> {
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         match self {
+//             Step::Call(inner) => {
+//                 // Serialize the "Call" variant by recursively serializing the inner Trace
+//                 // let raw_ptr = *inner.clone();
+//                 let raw_ptr = inner.clone();
+//                 if !raw_ptr.is_null() {
+//                     // Dereference the raw pointer and clone the value
+//                     unsafe { 
+//                         let a = (*raw_ptr).clone(); 
+//                         a.serialize(serializer) 
+//                     }
+//                 } else {
+//                     // Handle the case where the raw pointer is null (optional)
+//                     // You might want to return a default value or panic depending on your use case
+//                     panic!("yyyjj Attempted to dereference a null pointer.")
+//                 }
+//                 // inner.serialize(serializer)
+//             }, 
+//             Step::B(bb) => {
+//                 bb.serialize(serializer)
+//             }
+//         }
+//         // Example: serializer.serialize_some_function(*self)
+//     }
+// }
 
 
 // pub struct Trace {
@@ -1755,18 +1755,21 @@ pub struct GlobalCtxt<'tcx> {
 
     // pub _trace: RefCell<&'tcx Trace>,
     // pub _trace: RefCell<Trace<'static>>,
-    pub _trace: RefCell<Trace<'tcx>>,
+    pub _trace: RefCell<Trace>,
     // pub _curr_t: RefCell<Rc<Trace>>,
     // pub _t_idx_stk: RefCell<Vec<usize>>,
     // pub _curr_t: RefCell<Option<Vec<Step>>>,
     // pub _curr_t: RefCell<Option<&'tcx RefCell<Trace>>>,
-    pub _curr_t: RefCell<Option<Box<RefCell<Trace<'tcx>>>>>,
+    // pub _curr_t: RefCell<Option<Box<RefCell<Trace<'tcx>>>>>,
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
     // pub _ptr: RefCell<&
     pub _vec: RefCell<Vec<String>>,
     pub _call_stack: RefCell<Vec<String>>,
     pub _ret_can_skip : RefCell<bool>,
+    pub _tmp_trace: RefCell<Trace>, 
+    pub _tmp_steps: RefCell<Vec<Step>>,
+    pub _curr_trace: RefCell<Option<&'tcx mut Trace>>,
 }
 use rustc_middle::mir::Terminator;
 
@@ -1977,31 +1980,31 @@ impl<'tcx> TyCtxt<'tcx> {
     }
 
 
-    pub fn create_call_step(self,def: DefId, term: &Terminator<'tcx>) {
-        // get mut mother trace
-        // let mut fin_trace = self.tcx._trace.borrow_mut();
-        let mut fin_trace = self._trace.borrow_mut();
+    pub fn create_call_step(self, _def: DefId, _term: &Terminator<'tcx>) {
+        // // get mut mother trace
+        // // let mut fin_trace = self.tcx._trace.borrow_mut();
+        // let mut fin_trace = self._trace.borrow_mut();
 
-        // cretae trace
-        let entry_fn_key = self.create_fn_inst_key2(def, term);
-        // let dummy_fn_inst_key = FnInstKey {
-        //     krate: None,
-        //     index: 100,
-        //     path: String::from("modified"),
-        //     generics: vec![],
-        // };
-        let empty_steps: Vec<Step<'_>> = vec![];
-        let new_trace : Trace<'_> = Trace { _entry: entry_fn_key, _steps: empty_steps };
-        let trace_ptr: *mut Trace<'_> = Box::into_raw(Box::new(new_trace));
-        // let new_trace : Trace<'_> = Trace { _entry: dummy_fn_inst_key, _steps: empty_steps };
+        // // cretae trace
+        // let entry_fn_key = self.create_fn_inst_key2(def, term);
+        // // let dummy_fn_inst_key = FnInstKey {
+        // //     krate: None,
+        // //     index: 100,
+        // //     path: String::from("modified"),
+        // //     generics: vec![],
+        // // };
+        // let empty_steps: Vec<Step> = vec![];
+        // let new_trace : Trace = Trace { _entry: entry_fn_key, _steps: empty_steps };
+        // let trace_ptr: *mut Trace = Box::into_raw(Box::new(new_trace));
+        // // let new_trace : Trace<'_> = Trace { _entry: dummy_fn_inst_key, _steps: empty_steps };
 
-        // create step
-        let s = Step::Call(Box::new(trace_ptr));
-        // let s = Step::Call(Box::new(&new_trace));
+        // // create step
+        // let s = Step::Call(Box::new(trace_ptr));
+        // // let s = Step::Call(Box::new(&new_trace));
 
-        // push it to tcx.
-        fin_trace._steps.push(s);
-        println!("fin1=[{:?}]", fin_trace.clone());
+        // // push it to tcx.
+        // fin_trace._steps.push(s);
+        // println!("fin1=[{:?}]", fin_trace.clone());
 
     }
 
@@ -2032,14 +2035,14 @@ impl<'tcx> TyCtxt<'tcx> {
         let common_consts = CommonConsts::new(&interners, &common_types, s, &untracked);
         
         // let dummy_generics: Vec<PaflGeneric> = vec![];
-        let steps: Vec<Step<'_>> = vec![];
+        let steps: Vec<Step> = vec![];
         let dummy_fn_inst_key = FnInstKey {
             krate: None,
             index: 0,
             path: String::from(""),
             generics: vec![],
         };
-        let fin_trace : Trace<'_> = Trace { _entry: dummy_fn_inst_key, _steps: steps.to_vec() };
+        let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key.clone(), _steps: steps.to_vec() };
         // let trace_idx_vec : Vec<usize> = vec![0];
         // let curr = Some(&)
         GlobalCtxt {
@@ -2070,10 +2073,14 @@ impl<'tcx> TyCtxt<'tcx> {
             _trace: RefCell::new(fin_trace.clone()),
             // _curr_t: RefCell::new(fin_trace.clone().into()),
             // _curr_t: RefCell::new(None),
-            _curr_t: RefCell::new(Some(Box::new(RefCell::new(fin_trace)))),
+            // _curr_t: RefCell::new(Some(Box::new(RefCell::new(fin_trace)))),
             _vec: RefCell::new(vec![]),
             _call_stack: RefCell::new(vec![]),
             _ret_can_skip: RefCell::new(false),
+            _tmp_trace: RefCell::new(Trace { _entry: dummy_fn_inst_key.clone(), _steps: vec![] }),
+            _tmp_steps: RefCell::new(vec![]),
+            // _curr_trace: RefCell::new(&mut *self._trace)
+            _curr_trace: RefCell::new(None)
         }
     }
 

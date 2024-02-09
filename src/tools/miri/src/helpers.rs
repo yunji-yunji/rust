@@ -417,10 +417,17 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             this.yj_push(info);
 
             // call_stack
-            let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+            let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
             this.call_stk_push(call_name);
             this.set_skip_false();
-
+            this.update_fn_key(fn_inst_key);
+        }
+        match std::env::var_os("DP") {
+            None => (),
+            Some(_val) => {
+                println!("dump file");
+                this.dump_json("yj_help.json");
+            }
         }
         match std::env::var_os("ON4") {
             None => (),

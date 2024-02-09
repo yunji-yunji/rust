@@ -148,6 +148,7 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
                     // println!("after provider miri2 {:?}", tcx._vec.borrow());
+                    // tcx.dump_json();
 
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {
                         tcx.reachable_set(()).to_sorted(&hcx, true)

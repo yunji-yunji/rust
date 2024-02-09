@@ -5,7 +5,9 @@
 use either::Either;
 
 use rustc_index::IndexSlice;
-use rustc_middle::mir;
+use rustc_middle::mir::BasicBlock;
+use rustc_middle::ty::context::FnInstKey;
+use rustc_middle::{mir, ty::context::Step};
 use rustc_middle::ty::layout::LayoutOf;
 use rustc_target::abi::{FieldIdx, FIRST_VARIANT};
 
@@ -13,6 +15,8 @@ use super::{ImmTy, InterpCx, InterpResult, Machine, PlaceTy, Projectable, Scalar
 use crate::util;
 
 // use crate::interpret::dump;
+use std::fs::OpenOptions;
+use std::io::Write;
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Returns `true` as long as there are more things to do.
@@ -386,6 +390,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         self.call_stk_push(s); // bb number on?
                     }
                 }
+                match std::env::var_os("NUMB2") {
+                    None => (),
+                    Some(_val) => {
+                        self.push_step_bb(loc.block);
+                    }
+                }
                 info!("// executing {:?}", loc.block);
             }
         }
@@ -412,5 +422,54 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn set_skip_false(&mut self,) {
         let mut skip: std::cell::RefMut<'_, bool> = self.tcx._ret_can_skip.borrow_mut();
         *skip = false;
+    }
+
+    // called by Call
+    pub fn update_fn_key(&mut self, fn_key: FnInstKey) {
+        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
+        tmp_trace._entry = fn_key;
+    }
+
+    // called by BB
+    pub fn push_step_bb(&mut self, bb: BasicBlock) {
+        let mut steps= self.tcx._tmp_steps.borrow_mut();
+        steps.push(Step::B(bb));
+    }
+    
+    // called by Return
+    pub fn push_step_call(&mut self,) {
+        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
+        let mut tmp_steps= self.tcx._tmp_steps.borrow_mut();
+        tmp_trace._steps = tmp_steps.to_vec();
+        *tmp_steps = vec![];
+
+        let mut final_trace= self.tcx._trace.borrow_mut();
+        final_trace._steps.push(Step::Call(tmp_trace.clone()));
+    }
+
+    
+    pub fn dump_json(&mut self, name: &str) {
+        let final_trace = self.tcx._trace.borrow();
+        let content =
+            serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
+        
+        // let body = self.body();
+        // let instance_def = body.source.instance;
+        // let def_id = instance_def.def_id();
+        // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+        // let output = outdir.join(krate_name).with_extension("json");
+
+        // let file_name = "/home/y23kim/rust/last_rust/aptos-core/yj_dump.json";
+        let file_name = "/home/y23kim/rust/last_rust/aptos-core/".to_string() + name;
+  
+        let mut file = OpenOptions::new()
+            .write(true)
+            // .create_new(true)
+            .create(true)
+            .truncate(true)
+            .open(file_name)
+            .expect("unable to create output file");
+        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
+        println!("created");
     }
 }

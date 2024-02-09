@@ -441,6 +441,9 @@ pub fn eval_entry<'tcx>(
             panic!("Miri initialization error: {kind:?}")
         }
     };
+    
+    println!("eval entry");
+    ecx.dump_json("yj_evalentry.json");
 
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
@@ -492,6 +495,8 @@ pub fn eval_entry<'tcx>(
             return None;
         }
     }
+    println!("eval entry2");
+    ecx.dump_json("yj_evalentry2.json");
     Some(return_code)
 }
 

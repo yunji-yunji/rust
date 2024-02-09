@@ -73,8 +73,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         })
     }
 
-
-
     fn ret_info(
         &mut self,
         _terminator: &mir::Terminator<'tcx>,
@@ -135,6 +133,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             println!("r{:?}", self.tcx._call_stack.borrow());
                         }
                     }
+                    self.push_step_call();
                 }
 
                 match std::env::var_os("TF") {
@@ -188,7 +187,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
                 let instance_def = self.body().source.instance;
                 let def_id = instance_def.def_id();
-
                 let fn_inst_key = self.create_fn_inst_key(def_id, func);
 
                 let can_skip = fn_inst_key.can_skip();
@@ -199,7 +197,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     let info = format!("@{:?}", fn_inst_key);
                     self.yj_push(info);
 
-                    let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+                    let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
                     self.call_stk_push(call_name);
                     // let s = self.fn_info(self.body());
                     // self.yj_push(s);
@@ -210,6 +208,20 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             println!("c{:?}", self.tcx._call_stack.borrow());
                         }
                     }
+        
+                    self.update_fn_key(fn_inst_key);
+                    match std::env::var_os("DP2") {
+                        None => (),
+                        Some(_val) => {
+                            self.dump_json("yj_term_call.json");
+                        }
+                    }
+                    // println!("DUMP!");
+                    // self.dump_json();
+                    // let final_trace = self.tcx._trace.borrow();
+                    // let content =
+                    //     serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
+                    // println!("test{:?}", content);
                 }            
                 match std::env::var_os("ON7") {
                     None => (),

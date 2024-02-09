@@ -160,60 +160,57 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     }
 
     pub fn push_block(&mut self) {
-        let mut fin_trace = self.tcx._trace.borrow_mut();
+        // let mut fin_trace = self.tcx._trace.borrow_mut();
 
-        if let Some(last) = self.stack().last() {
-            let loc = last.loc;
-            if let Either::Left(l_loc) = loc {
-                let block = l_loc.block;
-                let step = Step::B(block);
-                print!("[{:?}]", block);
-                // let mut cur_t = self.tcx._curr_t.borrow_mut();
-                // if let Some(curr_trace) = cur_t.as_mut() {
-                //     // println!("fin=[{:?}]", fin_trace.clone());
-                //     let mut prev_t = curr_trace.borrow_mut();
-                //     prev_t._steps.push(step.clone());
-                //     println!("cur2=[{:?}]", curr_trace.clone());
+        // if let Some(last) = self.stack().last() {
+        //     let loc = last.loc;
+        //     if let Either::Left(l_loc) = loc {
+        //         let block = l_loc.block;
+        //         let step = Step::B(block);
+        //         print!("[{:?}]", block);
+        //         // let mut cur_t = self.tcx._curr_t.borrow_mut();
+        //         // if let Some(curr_trace) = cur_t.as_mut() {
+        //         //     // println!("fin=[{:?}]", fin_trace.clone());
+        //         //     let mut prev_t = curr_trace.borrow_mut();
+        //         //     prev_t._steps.push(step.clone());
+        //         //     println!("cur2=[{:?}]", curr_trace.clone());
 
-                // } else {
-                //     println!("*/{:?}/", cur_t.clone());
-                //     bug!("yj:call: cannot find current trace");
-                // }
+        //         // } else {
+        //         //     println!("*/{:?}/", cur_t.clone());
+        //         //     bug!("yj:call: cannot find current trace");
+        //         // }
 
-                if let Some(Step::Call(addr)) = fin_trace._steps.last() {
-                    let raw_ptr = *addr.clone();
-                    if !raw_ptr.is_null() {
-                        unsafe { 
-                            // let mut a = raw_ptr; 
-                            (*raw_ptr)._steps.push(step);
-                            println!("pused=[{:?}]", (*raw_ptr)._steps);
+        //         if let Some(Step::Call(addr)) = fin_trace._steps.last() {
+        //             let raw_ptr = *addr.clone();
+        //             if !raw_ptr.is_null() {
+        //                 unsafe { 
+        //                     // let mut a = raw_ptr; 
+        //                     (*raw_ptr)._steps.push(step);
+        //                     println!("pused=[{:?}]", (*raw_ptr)._steps);
 
-                            // let m = raw_ptr.as_mut();
-                        }
-                    } else {
-                        panic!("yjy error.")
+        //                     // let m = raw_ptr.as_mut();
+        //                 }
+        //             } else {
+        //                 panic!("yjy error.")
                     
-                    }
-                } else {
-                    fin_trace._steps.push(step.clone());
-                    // print!("[Step is bb]");
+        //             }
+        //         } else {
+        //             fin_trace._steps.push(step.clone());
+        //             // print!("[Step is bb]");
 
-                }
-
-
-
-            } else {
-                bug!("yj: bb_trace: loc doesn't exist");
-                    // Step::Err
-            }
-        } else {
-            bug!("yj: bb_trace: last doesn't exist");
-            // Step::Err
-        }
+        //         }
+        //     } else {
+        //         bug!("yj: bb_trace: loc doesn't exist");
+        //             // Step::Err
+        //     }
+        // } else {
+        //     bug!("yj: bb_trace: last doesn't exist");
+        //     // Step::Err
+        // }
     }
 
 
-    pub fn dump_return(&mut self, outdir: &Path, prev_steps: &mut Vec<Step<'_>>)  {
+    pub fn dump_return(&mut self, outdir: &Path, prev_steps: &mut Vec<Step>)  {
         if let Some(_last) = self.stack().last() {
             // let loc = last.loc;
             // if let Either::Left(l_loc) = loc {
