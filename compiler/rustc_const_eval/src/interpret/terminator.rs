@@ -146,6 +146,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 }
+                self.merge_trace_stack1();
                 self.pop_stack_frame(/* unwinding */ false)?
             }
 
@@ -209,13 +210,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
         
-                    self.update_fn_key(fn_inst_key);
+                    self.update_fn_key(fn_inst_key.clone());
                     match std::env::var_os("DP2") {
                         None => (),
                         Some(_val) => {
                             self.dump_json("yj_term_call.json");
                         }
                     }
+                    self.push_trace_stack1(fn_inst_key);
                     // println!("DUMP!");
                     // self.dump_json();
                     // let final_trace = self.tcx._trace.borrow();
@@ -223,12 +225,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     //     serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
                     // println!("test{:?}", content);
                 }            
-                match std::env::var_os("ON7") {
-                    None => (),
-                    Some(_val) => {
-                        println!("c{:?}", self.tcx._call_stack.borrow());
-                    }
-                }
+                // match std::env::var_os("ON7") {
+                //     None => (),
+                //     Some(_val) => {
+                //         println!("c{:?}", self.tcx._call_stack.borrow());
+                //     }
+                // }
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
                 let func = self.eval_operand(func, None)?;

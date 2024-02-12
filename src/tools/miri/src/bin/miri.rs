@@ -59,7 +59,8 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
                 match std::env::var_os("ON5") {
                     None => (),
                     Some(_val) => {
-                        println!("after miri1 {:?}", tcx._call_stack.borrow());
+                        println!("after miri1 {:?}", tcx._tmp_trace.borrow());
+                        // tcx.dump_t("miri1.json");
                     }
                 }
                 let mut crate_source = (providers.extern_queries.used_crate_source)(tcx, cnum);
@@ -148,6 +149,8 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
                     // println!("after provider miri2 {:?}", tcx._vec.borrow());
+                    // println!("after miri2 {:?}", tcx._tmp_trace.borrow());
+                    // tcx.dump_t("miri2.json");
                     // tcx.dump_json();
 
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {

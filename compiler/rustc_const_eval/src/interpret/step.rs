@@ -386,14 +386,28 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 // let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
                 match std::env::var_os("NUMB") {
                     None => (),
-                    Some(_val) => {
-                        self.call_stk_push(s); // bb number on?
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        // self.call_stk_push(s); // bb number on?
+                        let tcx = self.tcx.tcx;
+                        let body = self.body();
+                        let instance_def = body.source.instance;
+                        let def_id = instance_def.def_id();
+                        let krate = tcx.crate_name(def_id.krate).to_string();
+                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                        if krate.contains(&name) | path.contains(&name) {
+                            println!("krate={:?}:{:?} [{:?}]", krate, path, loc.block.as_usize());
+                        }
                     }
                 }
                 match std::env::var_os("NUMB2") {
                     None => (),
                     Some(_val) => {
                         self.push_step_bb(loc.block);
+                        self.push_bb_stack1(loc.block);
                     }
                 }
                 info!("// executing {:?}", loc.block);
@@ -447,6 +461,81 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         final_trace._steps.push(Step::Call(tmp_trace.clone()));
     }
 
+    // pub fn set_curr_trace(&mut self, ) {
+    //     let mut curr_trace= self.tcx._curr_trace.borrow_mut();
+        
+    //     let f_t = self.tcx._trace.borrow();
+    //     let f_t_last_call = f_t._steps.pop();
+    //     match f_t_last_call {
+    //         Some(Step::Call(trace)) => {
+    //             *curr_trace = Some(&mut trace);
+    //         },
+    //         Some(Step::B(_)) => {},
+    //     }
+    // }
+
+    // new) called by call
+    pub fn push_trace_stack1(&mut self, fn_key: FnInstKey) {
+        let mut prev_fn = self.tcx._prev.borrow_mut();
+        let mut steps_before = self.tcx._s1.borrow_mut();
+        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
+        tmp_trace._entry = prev_fn.clone();
+        tmp_trace._steps = steps_before.clone();
+
+        let mut tmp_vec = self.tcx._v1.borrow_mut();
+        tmp_vec.push(tmp_trace.clone());
+
+        *prev_fn = fn_key;
+        *steps_before = vec![];
+    }
+
+    // new) called by return
+    pub fn merge_trace_stack1(&mut self, ) {
+        let mut prev_fn = self.tcx._prev.borrow_mut();
+        let mut s1 = self.tcx._s1.borrow_mut();
+        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
+        tmp_trace._entry = prev_fn.clone();
+        tmp_trace._steps = s1.clone();
+
+        let mut v1 = self.tcx._v1.borrow_mut();
+        let last_trace = v1.pop();
+        match last_trace {
+            Some(mut trace) => {
+                trace._steps.push(Step::Call(tmp_trace.clone()));
+                *prev_fn = trace._entry;
+                *s1 = trace._steps;
+            },
+            None => {
+                match std::env::var_os("TET") {
+                    None => (),
+                    Some(_val) => {
+                        let content =
+                        serde_json::to_string_pretty(&*tmp_trace).expect("unexpected failure on JSON encoding");
+                        self.dump_content(content, "fin_t.json");
+                        // println!("Q{:?}", v1.clone());
+                    }
+                }
+                match std::env::var_os("TET2") {
+                    None => (),
+                    Some(_val) => {
+                        println!("Q1{:?}", s1);
+                    }
+                }
+                match std::env::var_os("TET3") {
+                    None => (),
+                    Some(_val) => {
+                        println!("Q2{:?}", tmp_trace);
+                    }
+                }
+            },
+        }
+    }
+
+    // new) called by BB(X)
+    pub fn push_bb_stack1(&mut self, bb: BasicBlock) {
+        let mut _s1= self.tcx._s1.borrow_mut();
+        _s1.push(Step::B(bb));
+    }
     
     pub fn dump_json(&mut self, name: &str) {
         let final_trace = self.tcx._trace.borrow();
@@ -471,5 +560,37 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             .expect("unable to create output file");
         file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
         println!("created");
+    }
+
+    pub fn dump_content(&mut self, content: String, name: &str) {
+        let file_name = "/home/y23kim/rust/last_rust/all_logs/".to_string() + name;
+  
+        let mut file = OpenOptions::new()
+            .write(true)
+            // .create_new(true)
+            .create(true)
+            .truncate(true)
+            .open(file_name)
+            .expect("unable to create output file");
+        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
+        print!(".");
+    }
+
+    pub fn dump_t(&mut self,name: &str) {
+        let final_trace = self.tcx._tmp_trace.borrow();
+        let content =
+        serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
+    
+        let file_name = "/home/y23kim/rust/last_rust/all_logs/".to_string() + name;
+  
+        let mut file = OpenOptions::new()
+            .write(true)
+            // .create_new(true)
+            .create(true)
+            .truncate(true)
+            .open(file_name)
+            .expect("unable to create output file");
+        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
+        print!("*");
     }
 }

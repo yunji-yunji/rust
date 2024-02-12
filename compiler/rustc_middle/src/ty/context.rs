@@ -1770,6 +1770,9 @@ pub struct GlobalCtxt<'tcx> {
     pub _tmp_trace: RefCell<Trace>, 
     pub _tmp_steps: RefCell<Vec<Step>>,
     pub _curr_trace: RefCell<Option<&'tcx mut Trace>>,
+    pub _prev: RefCell<FnInstKey>, 
+    pub _v1: RefCell<Vec<Trace>>,
+    pub _s1: RefCell<Vec<Step>>,
 }
 use rustc_middle::mir::Terminator;
 
@@ -2080,7 +2083,10 @@ impl<'tcx> TyCtxt<'tcx> {
             _tmp_trace: RefCell::new(Trace { _entry: dummy_fn_inst_key.clone(), _steps: vec![] }),
             _tmp_steps: RefCell::new(vec![]),
             // _curr_trace: RefCell::new(&mut *self._trace)
-            _curr_trace: RefCell::new(None)
+            _curr_trace: RefCell::new(None),
+            _prev: RefCell::new(dummy_fn_inst_key.clone()), 
+            _v1: RefCell::new(vec![]),
+            _s1: RefCell::new(vec![])
         }
     }
 

@@ -420,7 +420,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
             this.call_stk_push(call_name);
             this.set_skip_false();
-            this.update_fn_key(fn_inst_key);
+            this.update_fn_key(fn_inst_key.clone());
         }
         match std::env::var_os("DP") {
             None => (),
@@ -435,6 +435,15 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
                 println!("h{:?}", this.tcx._call_stack.borrow());
             }
         }
+        match std::env::var_os("TET4") {
+            None => (),
+            Some(_val) => {
+                this.dump_t("trace_in_helper.json");
+                println!("H dump!");
+            }
+        }
+        this.push_trace_stack1(fn_inst_key.clone());
+
         this.push_stack_frame(f, mir, &dest, stack_pop)?;
 
         // Initialize arguments.

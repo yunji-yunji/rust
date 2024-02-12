@@ -91,7 +91,8 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
         let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
         ecx.call_stk_push(call_name);
         ecx.set_skip_false();
-        ecx.update_fn_key(fn_inst_key);
+        ecx.update_fn_key(fn_inst_key.clone());
+        ecx.push_trace_stack1(fn_inst_key.clone());
 
     }
     match std::env::var_os("ON3") {

@@ -72,8 +72,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     path: tcx.def_path(def).to_string_no_crate_verbose(),
                     generics: vec![],
                 };
-                println!("callee is not a constant, krate path={:?}{:?} op type={:?}",
-                fn_inst_key.krate, fn_inst_key.path, func);
+                // println!("callee is not a constant, krate path={:?}{:?} op type={:?}", fn_inst_key.krate, fn_inst_key.path, func);
 
                 return fn_inst_key;
             },
