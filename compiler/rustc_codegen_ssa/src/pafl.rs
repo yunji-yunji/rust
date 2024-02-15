@@ -865,12 +865,15 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
 /// A complete dump of both the control-flow graph and the call graph of the compilation context
 pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
+    println!("out{:?}", outdir);
     // prepare directory layout
     fs::create_dir_all(outdir).expect("unable to create output directory");
     let path_meta = outdir.join("meta");
     fs::create_dir_all(&path_meta).expect("unable to create meta directory");
     let path_data = outdir.join("data");
-    fs::create_dir_all(&path_data).expect("unable to create meta directory");
+    fs::create_dir_all(&path_data).expect("unable to create data directory");
+    let path_build = outdir.join("build");
+    fs::create_dir_all(&path_build).expect("unable to create build directory");
 
     // verbosity
     let verbose = std::env::var_os("PAFL_VERBOSE")
@@ -918,7 +921,7 @@ pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
         serde_json::to_string_pretty(&summary).expect("unexpected failure on JSON encoding");
     let symbol = tcx.crate_name(LOCAL_CRATE);
     let crate_name = symbol.as_str();
-    let output = outdir.join(crate_name).with_extension("json");
+    let output = path_build.join(crate_name).with_extension("json");
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)

@@ -410,7 +410,112 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
-                info!("// executing {:?}", loc.block);
+                self.yj_push(s.clone());
+                // let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
+                match std::env::var_os("NUMB") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        // self.call_stk_push(s); // bb number on?
+                        let tcx = self.tcx.tcx;
+                        let body = self.body();
+                        let instance_def = body.source.instance;
+                        let def_id = instance_def.def_id();
+                        let krate = tcx.crate_name(def_id.krate).to_string();
+                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                        if krate.contains(&name) | path.contains(&name) {
+                            println!("krate={:?}{:?} [{:?}]", krate, path, loc.block.as_usize());
+                        }
+                    }
+                }
+                match std::env::var_os("NUMB_LONG") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        // self.call_stk_push(s); // bb number on?
+                        let tcx = self.tcx.tcx;
+                        let body = self.body();
+                        let instance_def = body.source.instance;
+                        let def_id = instance_def.def_id();
+                        let krate = tcx.crate_name(def_id.krate).to_string();
+                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                        if krate.contains(&name) | path.contains(&name) {
+                            let bb_data = &self.body().basic_blocks[loc.block];
+                            println!("krate={:?}{:?} [{:?}][{:?}][{:?}][{:?}]", 
+                            krate, path, loc.block.as_usize(), bb_data.statements.len(), bb_data.terminator.kind, bb_data.statements);
+                        }
+                    }
+                }
+                match std::env::var_os("FULL_CFG") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        // self.call_stk_push(s); // bb number on?
+                        let tcx = self.tcx.tcx;
+                        let body = self.body();
+                        let instance_def = body.source.instance;
+                        let def_id = instance_def.def_id();
+                        let krate = tcx.crate_name(def_id.krate).to_string();
+                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                        if krate.contains(&name) | path.contains(&name) {
+                            println!("-{:?}{:?}<{:?}> -------------------------", krate, path, loc.block);
+                            
+                            for (source, _) in self.body().basic_blocks.iter_enumerated() {
+                                let bb_data = &self.body().basic_blocks[source];
+                                println!("krate1=[{:?}][{:?}][{:?}][{:?}]", 
+                                source, bb_data.statements.len(), bb_data.terminator.kind
+                                , bb_data.statements);
+                            }
+                            println!("--------------------------");
+                        }
+                    }
+                }
+                match std::env::var_os("NUMB3") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        // self.call_stk_push(s); // bb number on?
+                        let tcx = self.tcx.tcx;
+                        let body = self.body();
+                        let instance_def = body.source.instance;
+                        let def_id = instance_def.def_id();
+                        let krate = tcx.crate_name(def_id.krate).to_string();
+                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                        if krate.contains(&name) | path.contains(&name) {
+                            let s1 = self.tcx._s1.borrow();
+                            print!("bbs=#{:?}#", s1.len());
+                            for bb in &*s1 {
+                                match bb {
+                                    Step::Call(_) => {
+                                        print!("[C]");
+                                    }, 
+                                    Step::B(b) => { print!("[{:?}]", b.as_usize()); }
+                                }
+                            }
+                            print!("\n");
+                        }
+                    }
+                }
+
+                match std::env::var_os("NUMB2") {
+                    None => (),
+                    Some(_val) => {
+                        self.push_step_bb(loc.block);
+                        self.push_bb_stack1(loc.block);
+                    }
+                }
             }
         }
         Ok(())

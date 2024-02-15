@@ -128,7 +128,7 @@ fn run_passes_inner<'tcx>(
             if !should_run_pass(tcx, *pass) {
                 continue;
             };
-
+            println!("executed pass name={:?}", name);
             let dump_enabled = pass.is_mir_dump_enabled();
 
             if dump_enabled {
