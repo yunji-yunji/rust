@@ -29,6 +29,12 @@ pub fn mir_fn_to_generic_graph<'tcx>(tcx: TyCtxt<'tcx>, body: &Body<'_>) -> Grap
         }
     }
 
+    for (source, _) in body.basic_blocks.iter_enumerated() {
+        let bb_data = &body.basic_blocks[source];
+        println!("krate2=[{:?}][{:?}][{:?}][{:?}]", 
+        source.as_usize(), bb_data.statements.len(), bb_data.terminator, bb_data.statements);
+    }
+
     Graph::new(graph_name, nodes, edges)
 }
 

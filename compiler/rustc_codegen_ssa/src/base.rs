@@ -614,12 +614,13 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
             // println!("NO PAFL");
         },
         Some(val) => {
-            let outdir = std::path::PathBuf::from(val);
+            let outdir = std::path::PathBuf::from(val.clone());
             // println!("outdir 1@@#$% {:?}", outdir);
             let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
                 None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
                 Some(v) => std::path::PathBuf::from(v),
             };
+            // println!("{:?}/{:?}", prefix, val.clone());
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
@@ -628,6 +629,31 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
                         println!("Before dump");
                         crate::pafl::dump(tcx, &outdir);
                         println!("yj paths={:?}", tcx._vec.borrow());
+                    }
+                }
+            }
+        }
+    };
+
+    match std::env::var_os("PAFL2") {
+        None => {
+            // println!("NO PAFL");
+        },
+        Some(val) => {
+            let outdir = std::path::PathBuf::from(val.clone());
+            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                Some(v) => std::path::PathBuf::from(v),
+            };
+            println!("#{:?}/{:?}", prefix, val.clone());
+            match tcx.sess.local_crate_source_file() {
+                None => bug!("unable to locate local crate source file"),
+                Some(src) => {
+                    if src.starts_with(&prefix) {
+                        // we are compiling a target crate
+                        println!("Before dump2");
+                        crate::pafl::dump(tcx, &outdir);
+                        println!("yj paths2={:?}", tcx._vec.borrow());
                     }
                 }
             }

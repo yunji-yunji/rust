@@ -1410,10 +1410,17 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
         match std::env::var_os("PAFL_CFG") {
             None => (),
             Some(v) => {
-                println!("PAFL CFG v={:?}, path = {:?}", v, path.as_str());
+                // println!("PAFL CFG path = {:?}", path.as_str());
                 if v.to_str().map_or(false, |s| s == path.as_str()) {
                     let dot_path = self.path_prefix.with_extension("dot");
+                    println!("PAFL CFG path = {:?}", path.as_str());
                     println!("PAFL CFG dot_path={:?}", dot_path);
+                    // for (source, _) in body.basic_blocks.iter_enumerated() {
+                    //     let bb_data = &body.basic_blocks[source];
+                    //     println!("krate2=[{:?}][{:?}][{:?}][{:?}]", 
+                    //     source.as_usize(), bb_data.statements.len(), bb_data.terminator, bb_data.statements);
+                    // }
+                
                     let mut dot_file = OpenOptions::new()
                         .write(true)
                         .create_new(true)
