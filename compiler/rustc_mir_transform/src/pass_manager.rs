@@ -128,7 +128,18 @@ fn run_passes_inner<'tcx>(
             if !should_run_pass(tcx, *pass) {
                 continue;
             };
-            println!("executed pass name={:?}", name);
+            match std::env::var_os("PASS_NAME") {
+                None => (),
+                Some(_val) => {
+                    let instance_def = body.source.instance;
+                    let def_id = instance_def.def_id();
+                    let krate = tcx.crate_name(def_id.krate).to_string();
+                    let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                    println!("pass name={:?} krate={:?}{:?}", name, krate, path); // yj
+                }
+
+            }
+
             let dump_enabled = pass.is_mir_dump_enabled();
 
             if dump_enabled {
@@ -142,6 +153,47 @@ fn run_passes_inner<'tcx>(
                     .run(|| pass.run_pass(tcx, body));
             } else {
                 pass.run_pass(tcx, body);
+            }
+
+            // print after run_pass, see diff
+            match std::env::var_os("PASS_SHORT") {
+                None => (),
+                Some(_val) => {
+                    let value = match val.into_string() {
+                        Ok(s) =>{ s },
+                        Err(_e) => { panic!("wrong env var") },
+                    };
+                    let instance_def = body.source.instance;
+                    let def_id = instance_def.def_id();
+                    let krate = tcx.crate_name(def_id.krate).to_string();
+                    let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                    if krate.contains(&value) | path.contains(&value) {
+                        println!("sh={:?}{:?}[{:?}][{:?}]", krate, path, name, body.basic_blocks.len());
+                    }
+                }
+            }
+
+            match std::env::var_os("PASS_LONG") {
+                None => (),
+                Some(_val) => {
+                    let value = match val.into_string() {
+                        Ok(s) =>{ s },
+                        Err(_e) => { panic!("wrong env var") },
+                    };
+                    let instance_def = body.source.instance;
+                    let def_id = instance_def.def_id();
+                    let krate = tcx.crate_name(def_id.krate).to_string();
+                    let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                    if krate.contains(&value) | path.contains(&value) {
+                        println!("LONG[{:?}][{:?}]", name, body.basic_blocks.len());
+                        for (source, _) in body.basic_blocks.iter_enumerated() {
+                            let bb_data = &body.basic_blocks[source];
+                            println!("krate4=[{:?}][{:?}][{:?}]", 
+                            source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
+                        }
+                        println!("--------------------------");
+                    }
+                }
             }
 
             if dump_enabled {

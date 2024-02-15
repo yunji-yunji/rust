@@ -626,9 +626,9 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
                 Some(src) => {
                     if src.starts_with(&prefix) {
                         // we are compiling a target crate
-                        println!("Before dump");
+                        // println!("Before dump");
                         crate::pafl::dump(tcx, &outdir);
-                        println!("yj paths={:?}", tcx._vec.borrow());
+                        // println!("yj paths={:?}", tcx._vec.borrow());
                     }
                 }
             }

@@ -82,7 +82,12 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
             if tcx.sess.dcx().has_errors_or_delayed_bugs().is_some() {
                 tcx.dcx().fatal("miri cannot be run on programs that fail compilation");
             }
-            println!("after analysis yj vec={:?}", tcx._vec.borrow());
+            match std::env::var_os("_VEC") {
+                None => (),
+                Some(_val) => {
+                    println!("after analysis yj vec={:?}", tcx._vec.borrow());
+                }
+            }
 
             let early_dcx = EarlyDiagCtxt::new(tcx.sess.opts.error_format);
             init_late_loggers(&early_dcx, tcx);

@@ -420,7 +420,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         if krate.contains(&name) | path.contains(&name) {
                             let bb_data = &self.body().basic_blocks[loc.block];
                             println!("krate={:?}{:?} [{:?}][{:?}][{:?}][{:?}]", 
-                            krate, path, loc.block.as_usize(), bb_data.statements.len(), bb_data.terminator.kind, bb_data.statements);
+                            krate, path, loc.block.as_usize(), bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind, bb_data.statements);
                         }
                     }
                 }
@@ -439,12 +439,13 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         let krate = tcx.crate_name(def_id.krate).to_string();
                         let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                         if krate.contains(&name) | path.contains(&name) {
-                            println!("-{:?}{:?}<{:?}> -------------------------", krate, path, loc.block);
+                            println!("-{:?}{:?}<{:?}>[{:?}] -------------------------", 
+                            krate, path, loc.block, self.body().basic_blocks.clone().len());
                             
                             for (source, _) in self.body().basic_blocks.iter_enumerated() {
                                 let bb_data = &self.body().basic_blocks[source];
                                 println!("krate1=[{:?}][{:?}][{:?}][{:?}]", 
-                                source, bb_data.statements.len(), bb_data.terminator.kind
+                                source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
                                 , bb_data.statements);
                             }
                             println!("--------------------------");
