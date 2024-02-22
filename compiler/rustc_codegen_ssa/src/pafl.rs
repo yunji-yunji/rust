@@ -872,7 +872,6 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 */
 /// A complete dump of both the control-flow graph and the call graph of the compilation context
 pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
-    println!("out{:?}", outdir);
     // prepare directory layout
     fs::create_dir_all(outdir).expect("unable to create output directory");
     let path_meta = outdir.join("meta");
@@ -929,10 +928,18 @@ pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
     let symbol = tcx.crate_name(LOCAL_CRATE);
     let crate_name = symbol.as_str();
     let output = path_build.join(crate_name).with_extension("json");
+    println!("out={:?}", output.to_str());
+
+    // let mut file = OpenOptions::new()
+    //     .write(true)
+    //     .create_new(true)
+    //     .open(output)
+    //     .expect("unable to create output file");
     let mut file = OpenOptions::new()
         .write(true)
-        .create_new(true)
+        .truncate(true)
+        .create(true)
         .open(output)
-        .expect("unable to create output file");
+        .expect("unable to create output file2");
     file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
 }

@@ -24,6 +24,8 @@ use rustc_span::symbol::sym;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
+use rustc_middle::bug;
+use rustc_codegen_ssa::pafl::dump;
 
 /// Represent the result of a query.
 ///
@@ -217,18 +219,37 @@ impl<'tcx> Queries<'tcx> {
 
     pub fn codegen_and_build_linker(&'tcx self) -> Result<Linker> {
         self.global_ctxt()?.enter(|tcx| {
-            // Don't do code generation if there were any errors. Likewise if
-            // there were any delayed bugs, because codegen will likely cause
-            // more ICEs, obscuring the original problem.
-            if let Some(guar) = self.compiler.sess.dcx().has_errors_or_delayed_bugs() {
-                return Err(guar);
-            }
+            // Don't do code generation if there were any errors
+            self.compiler.sess.compile_status()?;
+
+            // If we have any delayed bugs, for example because we created TyKind::Error earlier,
+            // it's likely that codegen will only cause more ICEs, obscuring the original problem
+            self.compiler.sess.dcx().flush_delayed();
 
             // Hook for UI tests.
             Self::check_for_rustc_errors_attr(tcx);
-
-            let ongoing_codegen = passes::start_codegen(&*self.compiler.codegen_backend, tcx);
-
+            println!("yj codegen");
+            let ongoing_codegen: Box<dyn Any> = passes::start_codegen(&*self.compiler.codegen_backend, tcx);
+            println!("after start codegen");
+            match std::env::var_os("BUILD_LINKER2") {
+                None => {},
+                Some(val) => {
+                    let outdir = std::path::PathBuf::from(val.clone());
+                    let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                        None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                        Some(v) => std::path::PathBuf::from(v),
+                    };
+                    match tcx.sess.local_crate_source_file() {
+                        None => bug!("unable to locate local crate source file"),
+                        Some(src) => {
+                            if src.starts_with(&prefix) {
+                                println!("Before collect dump2");
+                                dump(tcx, &outdir);
+                            }
+                        }
+                    }
+                }
+            };
             Ok(Linker {
                 dep_graph: tcx.dep_graph.clone(),
                 output_filenames: tcx.output_filenames(()).clone(),

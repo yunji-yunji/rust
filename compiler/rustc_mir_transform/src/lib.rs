@@ -665,6 +665,7 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
     {
         return body;
     }
+    // println!("inner_optimized_mir called: {:?}", did);
 
     run_optimization_passes(tcx, &mut body);
 

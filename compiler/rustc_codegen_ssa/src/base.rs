@@ -580,6 +580,25 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     metadata: EncodedMetadata,
     need_metadata_module: bool,
 ) -> OngoingCodegen<B> {
+    match std::env::var_os("BEFORE_COLLECT2") {
+        None => {},
+        Some(val) => {
+            let outdir = std::path::PathBuf::from(val.clone());
+            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                Some(v) => std::path::PathBuf::from(v),
+            };
+            match tcx.sess.local_crate_source_file() {
+                None => bug!("unable to locate local crate source file"),
+                Some(src) => {
+                    if src.starts_with(&prefix) {
+                        println!("Before collect dump2");
+                        crate::pafl::dump(tcx, &outdir);
+                    }
+                }
+            }
+        }
+    };
     // Skip crate items and just output metadata in -Z no-codegen mode.
     if tcx.sess.opts.unstable_opts.no_codegen || !tcx.sess.opts.output_types.should_codegen() {
         let ongoing_codegen = start_async_codegen(backend, tcx, target_cpu, metadata, None);
@@ -592,7 +611,25 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     }
 
     let cgu_name_builder = &mut CodegenUnitNameBuilder::new(tcx);
-
+    match std::env::var_os("BEFORE_COLLECT") {
+        None => {},
+        Some(val) => {
+            let outdir = std::path::PathBuf::from(val.clone());
+            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                Some(v) => std::path::PathBuf::from(v),
+            };
+            match tcx.sess.local_crate_source_file() {
+                None => bug!("unable to locate local crate source file"),
+                Some(src) => {
+                    if src.starts_with(&prefix) {
+                        println!("Before collect dump");
+                        crate::pafl::dump(tcx, &outdir);
+                    }
+                }
+            }
+        }
+    };
     // Run the monomorphization collector and partition the collected items into
     // codegen units.
     let codegen_units = tcx.collect_and_partition_mono_items(()).1;
@@ -626,34 +663,9 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
                 Some(src) => {
                     if src.starts_with(&prefix) {
                         // we are compiling a target crate
-                        // println!("Before dump");
+                        println!("Before dump1");
                         crate::pafl::dump(tcx, &outdir);
                         // println!("yj paths={:?}", tcx._vec.borrow());
-                    }
-                }
-            }
-        }
-    };
-
-    match std::env::var_os("PAFL2") {
-        None => {
-            // println!("NO PAFL");
-        },
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val.clone());
-            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                Some(v) => std::path::PathBuf::from(v),
-            };
-            println!("#{:?}/{:?}", prefix, val.clone());
-            match tcx.sess.local_crate_source_file() {
-                None => bug!("unable to locate local crate source file"),
-                Some(src) => {
-                    if src.starts_with(&prefix) {
-                        // we are compiling a target crate
-                        println!("Before dump2");
-                        crate::pafl::dump(tcx, &outdir);
-                        println!("yj paths2={:?}", tcx._vec.borrow());
                     }
                 }
             }
