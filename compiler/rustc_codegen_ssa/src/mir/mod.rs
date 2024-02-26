@@ -164,6 +164,29 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
     let llfn = cx.get_fn(instance);
 
     let mir = cx.tcx().instance_mir(instance.def);
+    // println!("is this executed?! please");
+
+    match std::env::var_os("MIR_DUMP1") { 
+        None => {},
+        Some(val) => {
+
+            let outdir = std::path::PathBuf::from(val.clone());
+            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                Some(v) => std::path::PathBuf::from(v),
+            };
+            println!("we got env var");
+            match cx.tcx().sess.local_crate_source_file() {
+                None => bug!("unable to locate local crate source file"),
+                Some(src) => {
+                    if src.starts_with(&prefix) {
+                        println!("in miri codege11n@#");
+                        crate::pafl::dump(cx.tcx(), &outdir);
+                    }
+                }
+            }
+        }
+    }
 
     let fn_abi = cx.fn_abi_of_instance(instance, ty::List::empty());
     debug!("fn_abi: {:?}", fn_abi);

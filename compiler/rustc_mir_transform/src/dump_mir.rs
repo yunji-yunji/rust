@@ -52,6 +52,11 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
     //         write_mir_pretty(tcx, None, &mut f)?;
     //     }
     // }
+
+    // this is not executed
+    // linker is also not executed
+    // why..?
+    println!("emit_mir is called");
     match std::env::var_os("PAFL_EMIT") {
         None => {},
         Some(val) => {

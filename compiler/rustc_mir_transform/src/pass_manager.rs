@@ -5,16 +5,13 @@ use rustc_middle::bug;
 use rustc_codegen_ssa::pafl::dump;
 use crate::{lint::lint_body, validate, MirPass};
 
-
-
-
-use std::fs::{self, OpenOptions};
-use std::io::Write;
-use rustc_data_structures::fx::FxHashMap;
-use rustc_middle::mir::mono::MonoItem;
-use rustc_middle::ty::{ParamEnv,};
-use rustc_span::def_id::{LOCAL_CRATE};
-use rustc_middle::ty::context::{PaflDump, PaflCrate,};
+// use std::fs::{self, OpenOptions};
+// use std::io::Write;
+// use rustc_data_structures::fx::FxHashMap;
+// use rustc_middle::mir::mono::MonoItem;
+// use rustc_middle::ty::{ParamEnv,};
+// use rustc_span::def_id::{LOCAL_CRATE};
+// use rustc_middle::ty::context::{PaflDump, PaflCrate,};
 
 /// Just like `MirPass`, except it cannot mutate `Body`.
 pub trait MirLint<'tcx> {
@@ -229,7 +226,7 @@ fn run_passes_inner<'tcx>(
             body.pass_count += 1;
         }
 
-        match std::env::var_os("FULL_CFG3") {
+        match std::env::var_os("DUMP_IN_PM") {
             None => {},
             Some(val) => {
                 let outdir = std::path::PathBuf::from(val.clone());
@@ -248,7 +245,7 @@ fn run_passes_inner<'tcx>(
                 }
             }
         }
-        match std::env::var_os("FULL_CFG4") {
+        match std::env::var_os("FULL_CFG_SHORT") {
             None => (),
             Some(val) => {
                 let name = match val.into_string() {
@@ -266,9 +263,34 @@ fn run_passes_inner<'tcx>(
                     
                     for (source, _) in body.basic_blocks.iter_enumerated() {
                         let bb_data = &body.basic_blocks[source];
-                        println!("krate31=[{:?}][{:?}][{:?}][{:?}]", 
+                        println!("short=[{:?}][{:?}][{:?}][{:?}]", 
                         source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
                         , bb_data.statements);
+                    }
+                    println!("--------------------------");
+                }
+            }
+        }
+
+        match std::env::var_os("FULL_CFG_LONG") {
+            None => (),
+            Some(val) => {
+                let name = match val.into_string() {
+                    Ok(s) =>{ s },
+                    Err(_e) => { panic!("wrong env var") },
+                };
+                // self.call_stk_push(s); // bb number on?
+                let instance_def = body.source.instance;
+                let def_id = instance_def.def_id();
+                let krate = tcx.crate_name(def_id.krate).to_string();
+                let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                if krate.contains(&name) | path.contains(&name) {
+                    println!("-- long {:?}{:?}[{:?}] -------------------------", 
+                    krate, path, body.basic_blocks.clone().len());
+                    for (source, _) in body.basic_blocks.iter_enumerated() {
+                        let bb_data = &body.basic_blocks[source];
+                        println!("krate4=[{:?}][{:?}][{:?}]", 
+                        source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
                     }
                     println!("--------------------------");
                 }

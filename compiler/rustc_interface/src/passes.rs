@@ -934,7 +934,9 @@ pub fn start_codegen<'tcx>(
     info!("Pre-codegen\n{:?}", tcx.debug_stats());
     // let _ = rustc_mir_transform::dump_mir::emit_mir(tcx);
     let (metadata, need_metadata_module) = rustc_metadata::fs::encode_and_write_metadata(tcx);
-    match std::env::var_os("FULL_CFG2") {
+    match std::env::var_os("FULL_CFG2") { 
+        // different from right after Precodegen -> something happened before this (O)
+        // same as Precodegen -> something will happen after this (X)
         None => {},
         Some(val) => {
             let outdir = std::path::PathBuf::from(val.clone());

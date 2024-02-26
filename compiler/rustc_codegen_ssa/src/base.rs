@@ -387,6 +387,7 @@ pub fn codegen_instance<'a, 'tcx: 'a, Bx: BuilderMethods<'a, 'tcx>>(
     // and to allow finding the last function before LLVM aborts from
     // release builds.
     info!("codegen_instance({})", instance);
+    // println!("codegen_instance({:?})", instance);
 
     mir::codegen_mir::<Bx>(cx, instance);
 }
@@ -580,25 +581,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     metadata: EncodedMetadata,
     need_metadata_module: bool,
 ) -> OngoingCodegen<B> {
-    match std::env::var_os("BEFORE_COLLECT2") {
-        None => {},
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val.clone());
-            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                Some(v) => std::path::PathBuf::from(v),
-            };
-            match tcx.sess.local_crate_source_file() {
-                None => bug!("unable to locate local crate source file"),
-                Some(src) => {
-                    if src.starts_with(&prefix) {
-                        println!("Before collect dump2");
-                        crate::pafl::dump(tcx, &outdir);
-                    }
-                }
-            }
-        }
-    };
+
     // Skip crate items and just output metadata in -Z no-codegen mode.
     if tcx.sess.opts.unstable_opts.no_codegen || !tcx.sess.opts.output_types.should_codegen() {
         let ongoing_codegen = start_async_codegen(backend, tcx, target_cpu, metadata, None);
@@ -611,25 +594,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     }
 
     let cgu_name_builder = &mut CodegenUnitNameBuilder::new(tcx);
-    match std::env::var_os("BEFORE_COLLECT") {
-        None => {},
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val.clone());
-            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                Some(v) => std::path::PathBuf::from(v),
-            };
-            match tcx.sess.local_crate_source_file() {
-                None => bug!("unable to locate local crate source file"),
-                Some(src) => {
-                    if src.starts_with(&prefix) {
-                        println!("Before collect dump");
-                        crate::pafl::dump(tcx, &outdir);
-                    }
-                }
-            }
-        }
-    };
+
     // Run the monomorphization collector and partition the collected items into
     // codegen units.
     let codegen_units = tcx.collect_and_partition_mono_items(()).1;
@@ -657,7 +622,8 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
                 None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
                 Some(v) => std::path::PathBuf::from(v),
             };
-            // println!("{:?}/{:?}", prefix, val.clone());
+
+            println!("dump in base.rs {:?}/{:?}", prefix, val.clone());
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
@@ -747,6 +713,8 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
         first_half.iter().interleave(second_half.iter().rev()).copied().collect()
     };
 
+    println!("in codegen crate");
+
     // Calculate the CGU reuse
     let cgu_reuse = tcx.sess.time("find_cgu_reuse", || {
         codegen_units.iter().map(|cgu| determine_cgu_reuse(tcx, cgu)).collect::<Vec<_>>()
@@ -784,6 +752,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
 
             // Compile the found CGUs in parallel.
             let start_time = Instant::now();
+            println!("compile_codegen_unit > miri::base > ");
 
             let pre_compiled_cgus = par_map(cgus, |(i, _)| {
                 let module = backend.compile_codegen_unit(tcx, codegen_units[i].name());
@@ -797,6 +766,9 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     } else {
         FxHashMap::default()
     };
+
+    // TEST pafl dump here
+    // -> same result
 
     for (i, cgu) in codegen_units.iter().enumerate() {
         ongoing_codegen.wait_for_signal_to_codegen_item();
@@ -851,6 +823,9 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
     }
 
     ongoing_codegen.codegen_finished(tcx);
+
+    // TEST pafl dump here
+    // -> same result
 
     // Since the main thread is sometimes blocked during codegen, we keep track
     // -Ztime-passes output manually.
