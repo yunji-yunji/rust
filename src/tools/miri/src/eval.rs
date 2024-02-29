@@ -150,6 +150,8 @@ pub struct MiriConfig {
     pub page_size: Option<u64>,
     /// Whether to collect a backtrace when each allocation is created, just in case it leaks.
     pub collect_leak_backtraces: bool,
+
+    pub outdir: String,
 }
 
 impl Default for MiriConfig {
@@ -186,6 +188,7 @@ impl Default for MiriConfig {
             num_cpus: 1,
             page_size: None,
             collect_leak_backtraces: true,
+            outdir: String::new(),
         }
     }
 }

@@ -1459,6 +1459,7 @@ fn create_coroutine_resume_function<'tcx>(
     // Make sure we remove dead blocks to remove
     // unrelated code from the drop part of the function
     simplify::remove_dead_blocks(body);
+    println!("========= run pass = create_coroutine_resume_function, (rustc_mir_transform/coroutines.rs), None ========= " );
 
     pm::run_passes_no_validate(tcx, body, &[&abort_unwinding_calls::AbortUnwindingCalls], None);
 

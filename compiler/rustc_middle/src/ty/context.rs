@@ -1522,33 +1522,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             InstanceDef::Item(id) => {
                 if dumper.tcx.is_mir_available(*id) {
                     let body = dumper.tcx.instance_mir(instance.def).clone();
-                    
-                    match std::env::var_os("FULL_CFG_IN_DUMP") {
-                        None => (),
-                        Some(val) => {
-                            let name = match val.into_string() {
-                                Ok(s) =>{ s },
-                                Err(_e) => { panic!("wrong env var") },
-                            };
-                            let krate = tcx.crate_name(id.krate).to_string();
-                            let path = tcx.def_path(*id).to_string_no_crate_verbose();
-                            if krate.contains(&name) | path.contains(&name) {
-                                println!("-{:?}{:?}[{:?}] -------------------------", 
-                                krate, path, body.basic_blocks.clone().len());
-                                
-                                for (source, _) in body.basic_blocks.iter_enumerated() {
-                                    let bb_data = &body.basic_blocks[source];
-                                    println!("short=[{:?}][{:?}][{:?}][{:?}]", 
-                                    source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
-                                    , bb_data.statements);
-                                }
-                                println!("--------------------------");
-                            }
-                        }
-                    }
-                    
-                    
-                    
+                                    
                     let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
                         dumper.tcx,
                         dumper.param_env,

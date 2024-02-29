@@ -1,17 +1,11 @@
 use rustc_middle::mir::{self, Body, MirPhase, RuntimePhase};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::Session;
-use rustc_middle::bug;
-use rustc_codegen_ssa::pafl::dump;
+
 use crate::{lint::lint_body, validate, MirPass};
 
-// use std::fs::{self, OpenOptions};
-// use std::io::Write;
-// use rustc_data_structures::fx::FxHashMap;
-// use rustc_middle::mir::mono::MonoItem;
-// use rustc_middle::ty::{ParamEnv,};
-// use rustc_span::def_id::{LOCAL_CRATE};
-// use rustc_middle::ty::context::{PaflDump, PaflCrate,};
+// use rustc_middle::bug;
+// use rustc_codegen_ssa::pafl::dump;
 
 /// Just like `MirPass`, except it cannot mutate `Body`.
 pub trait MirLint<'tcx> {
@@ -137,23 +131,6 @@ fn run_passes_inner<'tcx>(
             if !should_run_pass(tcx, *pass) {
                 continue;
             };
-            match std::env::var_os("PASS_NAME") {
-                None => (),
-                Some(val) => {
-                    let value = match val.into_string() {
-                        Ok(s) =>{ s },
-                        Err(_e) => { panic!("wrong env var") },
-                    };
-                    let instance_def = body.source.instance;
-                    let def_id = instance_def.def_id();
-                    let krate = tcx.crate_name(def_id.krate).to_string();
-                    let path = tcx.def_path(def_id).to_string_no_crate_verbose();
-                    if krate.contains(&value) | path.contains(&value) {
-                        println!("pass name={:?} krate={:?}{:?}", name, krate, path); // yj
-                    }
-                }
-
-            }
 
             let dump_enabled = pass.is_mir_dump_enabled();
 
@@ -170,8 +147,7 @@ fn run_passes_inner<'tcx>(
                 pass.run_pass(tcx, body);
             }
 
-            // print after run_pass, see diff
-            match std::env::var_os("PASS_SHORT") {
+            match std::env::var_os("PASSES_SHORT") {
                 None => (),
                 Some(val) => {
                     let value = match val.into_string() {
@@ -183,13 +159,12 @@ fn run_passes_inner<'tcx>(
                     let krate = tcx.crate_name(def_id.krate).to_string();
                     let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                     if krate.contains(&value) | path.contains(&value) {
-                        println!("pass={:?}{:?}[{:?}][{:?}]", krate, path, name, body.basic_blocks.len());
+                        println!("* {:?}{:?}[{:?}][{:?}]", krate, path, name, body.basic_blocks.len());
                     }
                 }
             }
 
-
-            match std::env::var_os("PASS_LONG") {
+            match std::env::var_os("PASSES_LONG") {
                 None => (),
                 Some(val) => {
                     let value = match val.into_string() {
@@ -201,17 +176,16 @@ fn run_passes_inner<'tcx>(
                     let krate = tcx.crate_name(def_id.krate).to_string();
                     let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                     if krate.contains(&value) | path.contains(&value) {
-                        println!("LONG[{:?}][{:?}]", name, body.basic_blocks.len());
+                        println!("------ [{:?}][{:?}] ------", name, body.basic_blocks.len());
                         for (source, _) in body.basic_blocks.iter_enumerated() {
                             let bb_data = &body.basic_blocks[source];
-                            println!("krate4=[{:?}][{:?}][{:?}]", 
+                            println!("+ [{:?}][{:?}][{:?}]", 
                             source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
                         }
                         println!("--------------------------");
                     }
                 }
             }
-
 
             if dump_enabled {
                 dump_mir_for_pass(tcx, body, name, true);
@@ -224,78 +198,12 @@ fn run_passes_inner<'tcx>(
             }
 
             body.pass_count += 1;
-        }
-
-        match std::env::var_os("DUMP_IN_PM") {
-            None => {},
-            Some(val) => {
-                let outdir = std::path::PathBuf::from(val.clone());
-                let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                    None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                    Some(v) => std::path::PathBuf::from(v),
-                };
-                match tcx.sess.local_crate_source_file() {
-                    None => bug!("unable to locate local crate source file"),
-                    Some(src) => {
-                        if src.starts_with(&prefix) {
-                            println!("after pass , pass amnager");
-                            dump(tcx, &outdir);
-                        }
-                    }
-                }
-            }
-        }
-        match std::env::var_os("FULL_CFG_SHORT") {
-            None => (),
-            Some(val) => {
-                let name = match val.into_string() {
-                    Ok(s) =>{ s },
-                    Err(_e) => { panic!("wrong env var") },
-                };
-                // self.call_stk_push(s); // bb number on?
-                let instance_def = body.source.instance;
-                let def_id = instance_def.def_id();
-                let krate = tcx.crate_name(def_id.krate).to_string();
-                let path = tcx.def_path(def_id).to_string_no_crate_verbose();
-                if krate.contains(&name) | path.contains(&name) {
-                    println!("-{:?}{:?}[{:?}] -------------------------", 
-                    krate, path, body.basic_blocks.clone().len());
-                    
-                    for (source, _) in body.basic_blocks.iter_enumerated() {
-                        let bb_data = &body.basic_blocks[source];
-                        println!("short=[{:?}][{:?}][{:?}][{:?}]", 
-                        source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
-                        , bb_data.statements);
-                    }
-                    println!("--------------------------");
-                }
-            }
-        }
-
-        match std::env::var_os("FULL_CFG_LONG") {
-            None => (),
-            Some(val) => {
-                let name = match val.into_string() {
-                    Ok(s) =>{ s },
-                    Err(_e) => { panic!("wrong env var") },
-                };
-                // self.call_stk_push(s); // bb number on?
-                let instance_def = body.source.instance;
-                let def_id = instance_def.def_id();
-                let krate = tcx.crate_name(def_id.krate).to_string();
-                let path = tcx.def_path(def_id).to_string_no_crate_verbose();
-                if krate.contains(&name) | path.contains(&name) {
-                    println!("-- long {:?}{:?}[{:?}] -------------------------", 
-                    krate, path, body.basic_blocks.clone().len());
-                    for (source, _) in body.basic_blocks.iter_enumerated() {
-                        let bb_data = &body.basic_blocks[source];
-                        println!("krate4=[{:?}][{:?}][{:?}]", 
-                        source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
-                    }
-                    println!("--------------------------");
-                }
-            }
-        }
+        } // end of passes loop
+        println!("============== a set of passes done {:?} ==============", passes.len());
+        
+        // TODO: delete all logs below..
+        // not good location to print full cfgs.. 
+        // so many run_passes..
     }
 
     if let Some(new_phase) = phase_change {

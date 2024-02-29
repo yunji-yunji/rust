@@ -12,32 +12,21 @@ use rustc_data_structures::fx::FxHashMap;
 use rustc_middle::mir::Body;
 use rustc_middle::mir::TerminatorKind;
 use rustc_middle::mir::Terminator;
+
 use rustc_middle::ty;
-// use rustc_middle::ty::GenericArgsRef;
 use rustc_middle::ty::TyCtxt;
 use rustc_middle::ty::ParamEnv;
 use rustc_middle::ty::GenericArgKind;
 use rustc_middle::ty::Instance;
-// use rustc_middle::query::TyCtxtAt;
+use rustc_middle::ty::context::{Step, PaflType, PaflGeneric, FnInstKey,};
 
-// use std::intrinsics::mir::BasicBlock;
-// use rustc_middle::mir::BasicBlock;
-use rustc_middle::ty::context::{
-   /*  Trace,*/ Step,
-    /*Ident2,ValueTree, TyInstKey, PaflConst,*/ PaflType, PaflGeneric, FnInstKey,
-};
 use std::fs;
 use std::fs::OpenOptions;
-// use serde::{Serialize, Deserialize};
-// use std::fs::File;
-// use std::io::Write;
-// use std::cell::RefCell;
 
 use rustc_hir::def::DefKind;
 use rustc_hir::def_id::{LOCAL_CRATE, DefId};
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 
-// use rustc_codegen_ssa::pafl::{FnInstKey, PaflGeneric, PaflType, , /*PaflConst, PaflType,*/};
 use rustc_middle::ty::context::{PaflDump, PaflCrate};
 
 use colored::Colorize;
@@ -160,79 +149,16 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     }
 
     pub fn push_block(&mut self) {
-        // let mut fin_trace = self.tcx._trace.borrow_mut();
 
-        // if let Some(last) = self.stack().last() {
-        //     let loc = last.loc;
-        //     if let Either::Left(l_loc) = loc {
-        //         let block = l_loc.block;
-        //         let step = Step::B(block);
-        //         print!("[{:?}]", block);
-        //         // let mut cur_t = self.tcx._curr_t.borrow_mut();
-        //         // if let Some(curr_trace) = cur_t.as_mut() {
-        //         //     // println!("fin=[{:?}]", fin_trace.clone());
-        //         //     let mut prev_t = curr_trace.borrow_mut();
-        //         //     prev_t._steps.push(step.clone());
-        //         //     println!("cur2=[{:?}]", curr_trace.clone());
-
-        //         // } else {
-        //         //     println!("*/{:?}/", cur_t.clone());
-        //         //     bug!("yj:call: cannot find current trace");
-        //         // }
-
-        //         if let Some(Step::Call(addr)) = fin_trace._steps.last() {
-        //             let raw_ptr = *addr.clone();
-        //             if !raw_ptr.is_null() {
-        //                 unsafe { 
-        //                     // let mut a = raw_ptr; 
-        //                     (*raw_ptr)._steps.push(step);
-        //                     println!("pused=[{:?}]", (*raw_ptr)._steps);
-
-        //                     // let m = raw_ptr.as_mut();
-        //                 }
-        //             } else {
-        //                 panic!("yjy error.")
-                    
-        //             }
-        //         } else {
-        //             fin_trace._steps.push(step.clone());
-        //             // print!("[Step is bb]");
-
-        //         }
-        //     } else {
-        //         bug!("yj: bb_trace: loc doesn't exist");
-        //             // Step::Err
-        //     }
-        // } else {
-        //     bug!("yj: bb_trace: last doesn't exist");
-        //     // Step::Err
-        // }
     }
-
 
     pub fn dump_return(&mut self, outdir: &Path, prev_steps: &mut Vec<Step>)  {
         if let Some(_last) = self.stack().last() {
-            // let loc = last.loc;
-            // if let Either::Left(l_loc) = loc {
-            //     let _block = l_loc.block;
-            //     // let statement_idx = l_loc.statement_index;
-            //     // print!(":[{:?}][{:?}]", block, trace._steps);
-            //     // let bb_id = 
-            //     // info!("// executing {:?}", loc.block);
-            // }
 
             let tcx = self.tcx; 
             let tcx = tcx.tcx;
 
             let body = self.body();
-            // let instance_def = body.source.instance;
-            // let def_id: DefId = instance_def.def_id();
-            
-            // self.inst_dump(my_instance.args, outdir, prev_steps)
-
-            // =======================
-
-
 
             let param_env: ParamEnv<'_> = self.param_env;
             // let inst = Instance::expect_resolve(self.tcx, self.param_env, def_id, generic_args);
@@ -298,18 +224,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             print!("[Ret][{:?}];", fn_inst_key.generics.len()); 
 
             print!("[{:?}]", prev_steps);
-                        // let prev_steps = vec![];
-            // let trace = Trace {
-            //     _entry: fn_inst_key,
-            //     _steps: prev_steps.to_vec(),
-            // };
-            // // *steps = vec![];
-            // // *prev_steps = vec![];
-
-            // let step = Step::Call(&trace);
-            // // let step = Step::Call(trace.clone());
-            // // let step= Step::B(())
-            // step
 
         } else {
             // Step::Err
@@ -359,62 +273,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         };
 
                         TyCtxt::create_call_step(self.tcx.tcx, def_id, term);
-/*
-                        let fin_trace = self.tcx._trace.borrow_mut();
-                        // let mut idx_v = self.tcx._t_idx_stk.borrow_mut();
-                        // let mut curr_t = self.tcx._curr_t.borrow_mut();
-
-                        // ===== 2. Create new trace for callee =====
-                        // 2.3. Trace
-                        // 2.1. create FnInst key (Entry)
-                        // let fn_inst_key = pafl::resolve_fn_key(def_id, generic_args);
-                        let entry_fn_key = self.create_fn_inst_key(def_id, term);
-                        let empty_steps: Vec<Step<'_>> = vec![];
-                        let new_trace : Trace<'_> = Trace { _entry: entry_fn_key, _steps: empty_steps };
-
-                        // push basic block first
-                        let mut cur_t = self.tcx._curr_t.borrow_mut();
-                        if let Some(last) = self.stack().last() {
-                            let loc = last.loc;
-                            if let Either::Left(l_loc) = loc {
-                                let block = l_loc.block;
-                                print!("[{:?}]", block.clone());
-                                if let Some(curr_trace) = cur_t.as_mut() {
-                                    let mut prev_t = curr_trace.borrow_mut();
-                                    prev_t._steps.push(Step::B(block));
-                                    *prev_t = new_trace.clone();
-                                } else {
-                                    // print!("None");
-                                    bug!("yj:call: cannot find current trace");
-                                }
-                            } else {
-                                bug!("yj:call: loc doesn't exist");
-                            }
-                        } else {
-                            bug!("yj:call: last doesn't exist");
-                        }
-                        // push Step::Trace
-                        
-                        // fin_trace._steps.push(Step::Call(Box::new(&new_trace)));
-
-                        println!("fin1=[{:?}]", fin_trace.clone());
-                        println!("cur1=[{:?}]", cur_t.clone());
- */
 
                     },
-                    // TerminatorKind::Assert { cond, expected, msg, target, unwind } => 
-                    // {
-                    //     todo!()
-                    // },
+
                     TerminatorKind::Return => {
-                        // let _step = self.dump_return(&outdir, steps);
-                        // if let Step::Call(t) = step {
-                        //     println!("/[{:?}][{:?}]", t._steps.len(), t._steps);
-                        // }
-                        // if curr_t's fnInstkey's crate name and path == this crate name and path 
-                        // curr_t = outer trace
-                        // else
-                        // same as below
+
                     },
                     _ => {
                         let s1 = format!("[{:?}]", kind.name());
@@ -427,8 +290,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         print!("{}", s3.green());
                         self.push_block();
             
-
-                        // self.bb_trace();
                     },
                 }
             }
@@ -436,7 +297,3 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     }
 
 }
-
-// #[feature(custom_mir)]
-
-

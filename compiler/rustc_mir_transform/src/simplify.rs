@@ -79,7 +79,10 @@ impl<'tcx> MirPass<'tcx> for SimplifyCfg {
 
     fn run_pass(&self, _: TyCtxt<'tcx>, body: &mut Body<'tcx>) {
         debug!("SimplifyCfg({:?}) - simplifying {:?}", self.name(), body.source);
+        // println!("Before SimplifyCfg({:?}) - simplifying [{:?}]", self.name(), body.basic_blocks.len());
         simplify_cfg(body);
+        // println!("after SimplifyCfg({:?}) - simplifying [{:?}]", self.name(),body.basic_blocks.len());
+
     }
 }
 

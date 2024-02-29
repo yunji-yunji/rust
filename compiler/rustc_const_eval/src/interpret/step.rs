@@ -368,13 +368,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     fn terminator(&mut self, terminator: &mir::Terminator<'tcx> ) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
 
+        // TODO: remove.. 
         match std::env::var_os("DUMP_DIR") {
             None => (),
             Some(_path_str) => {
-                // let mut steps: Vec<Step> = vec![];
                 self.dump_in_term(terminator);
-                // println!("dump_dir={:?}", path_str);
-                // self.dump2(terminator, path_str);
             }
         }
 
@@ -384,7 +382,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let s = format!("{:?}", loc.block.as_usize());
                 self.yj_push(s.clone());
                 // let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
-                match std::env::var_os("NUMB") {
+                match std::env::var_os("BB1") {
                     None => (),
                     Some(val) => {
                         let name = match val.into_string() {
@@ -424,14 +422,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 }
-                match std::env::var_os("FULL_CFG") {
+
+                match std::env::var_os("CFG_MIRI") {
                     None => (),
                     Some(val) => {
                         let name = match val.into_string() {
                             Ok(s) =>{ s },
                             Err(_e) => { panic!("wrong env var") },
                         };
-                        // self.call_stk_push(s); // bb number on?
                         let tcx = self.tcx.tcx;
                         let body = self.body();
                         let instance_def = body.source.instance;
@@ -441,10 +439,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         if krate.contains(&name) | path.contains(&name) {
                             println!("-{:?}{:?}<{:?}>[{:?}] -------------------------", 
                             krate, path, loc.block, self.body().basic_blocks.clone().len());
-                            
                             for (source, _) in self.body().basic_blocks.iter_enumerated() {
                                 let bb_data = &self.body().basic_blocks[source];
-                                println!("krate1=[{:?}][{:?}][{:?}][{:?}]", 
+                                println!("# =[{:?}][{:?}][{:?}][{:?}]", 
                                 source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
                                 , bb_data.statements);
                             }
@@ -452,7 +449,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 }
-                match std::env::var_os("NUMB3") {
+                match std::env::var_os("BB2") {
                     None => (),
                     Some(val) => {
                         let name = match val.into_string() {
@@ -482,7 +479,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     }
                 }
 
-                match std::env::var_os("NUMB2") {
+                match std::env::var_os("BB3") {
                     None => (),
                     Some(_val) => {
                         self.push_step_bb(loc.block);

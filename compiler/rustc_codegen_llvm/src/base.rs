@@ -19,17 +19,8 @@ use crate::context::CodegenCx;
 use crate::llvm;
 use crate::value::Value;
 
-use rustc_codegen_ssa::pafl::dump;
-use rustc_middle::ty::context::{PaflDump, PaflCrate,};
-use std::fs::{self, OpenOptions};
-use std::io::Write;
-// use std::path::Path;
-use rustc_data_structures::fx::FxHashMap;
 use rustc_middle::bug;
-use rustc_middle::mir::mono::MonoItem;
-use rustc_middle::ty::ParamEnv;
-use rustc_span::def_id::{LOCAL_CRATE};
-
+use rustc_codegen_ssa::pafl::dump;
 
 use rustc_codegen_ssa::base::maybe_create_entry_wrapper;
 use rustc_codegen_ssa::mono_item::MonoItemExt;
@@ -99,119 +90,25 @@ pub fn compile_codegen_unit(tcx: TyCtxt<'_>, cgu_name: Symbol) -> (ModuleCodegen
             for &(mono_item, data) in &mono_items {
                 mono_item.predefine::<Builder<'_, '_, '_>>(&cx, data.linkage, data.visibility);
             }
-            match std::env::var_os("MIR_DUMP5") { 
-                None => {},
-                Some(val) => {
-        
-                    let outdir = std::path::PathBuf::from(val.clone());
-                    let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                        None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                        Some(v) => std::path::PathBuf::from(v),
-                    };
-                    println!("dump custom func 5 is called");
-                    // prepare directory layout
-                    fs::create_dir_all(outdir.clone()).expect("unable to create output directory");
-                    let path_meta = outdir.join("meta");
-                    fs::create_dir_all(&path_meta).expect("unable to create meta directory");
-                    let path_data = outdir.join("data");
-                    fs::create_dir_all(&path_data).expect("unable to create data directory");
-                    let path_build = outdir.join("build");
-                    fs::create_dir_all(&path_build).expect("unable to create build directory");
-                
-                    // verbosity
-                    let verbose = std::env::var_os("PAFL_VERBOSE")
-                        .and_then(|v| v.into_string().ok())
-                        .map_or(false, |v| v.as_str() == "1");
-                
-                    // extract the mir for each codegen unit
-                    let mut cache = FxHashMap::default();
-                    let mut summary = PaflCrate { functions: Vec::new() };
-                
-                    match tcx.sess.local_crate_source_file() {
-                        None => bug!("unable to locate local crate source file"),
-                        Some(src) => {
-                            if src.starts_with(&prefix) {
-                                println!("in miri aacod33ege11n@#");
-                                let (_, units) = tcx.collect_and_partition_mono_items(());
-                                for unit in units {
-                                    for mono_item in unit.items().keys() {
-                                        let instance = match mono_item {
-                                            MonoItem::Fn(i) => *i,
-                                            MonoItem::Static(_) => continue,
-                                            MonoItem::GlobalAsm(_) => bug!("unexpected assembly"),
-                                        };
-                                        if !instance.def_id().is_local() {
-                                            continue;
-                                        }
-                            
-                                        // process it and save the result to summary
-                                        let mut stack = vec![];
-                                        PaflDump::summarize_instance(
-                                            tcx,
-                                            ParamEnv::reveal_all(),
-                                            instance,
-                                            verbose,
-                                            &path_meta,
-                                            &path_data,
-                                            &mut stack,
-                                            &mut cache,
-                                            &mut summary.functions,
-                                        );
-                                        if !stack.is_empty() {
-                                            bug!("unbalanced call stack");
-                                        }
-                                    }
-                                }
 
-                                let content =
-                                    serde_json::to_string_pretty(&summary).expect("unexpected failure on JSON encoding");
-                                let symbol = tcx.crate_name(LOCAL_CRATE);
-                                let crate_name = symbol.as_str();
-                                let output = path_build.join(crate_name).with_extension("json");
-                                println!("out124aa2={:?}", output.to_str());
-                            
-                                // let mut file = OpenOptions::new()
-                                //     .write(true)
-                                //     .create_new(true)
-                                //     .open(output)
-                                //     .expect("unable to create output file");
-                                let mut file = OpenOptions::new()
-                                    .write(true)
-                                    .truncate(true)
-                                    .create(true)
-                                    .open(output)
-                                    .expect("unable to create output file2");
-                                file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
-                            }
-                        }
-                    }
-                }
+            // ... and now that we have everything pre-defined, fill out those definitions.
+            for &(mono_item, _) in &mono_items {
+                mono_item.define::<Builder<'_, '_, '_>>(&cx);
             }
-            println!("is module_codegen executed?! please");
-            match std::env::var_os("MIR_DUMP2") { 
-                None => {},
-                Some(val) => {
-        
-                    let outdir = std::path::PathBuf::from(val.clone());
-                    let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                        None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                        Some(v) => std::path::PathBuf::from(v),
-                    };
-                    println!("we got env var2");
-                    match cx.tcx.sess.local_crate_source_file() {
-                        None => bug!("unable to locate local crate source file"),
-                        Some(src) => {
-                            if src.starts_with(&prefix) {
-                                println!("in 31231miri codege11n@#");
-                                dump(cx.tcx, &outdir);
-                            }
-                        }
-                    }
-                }
-            }
+                        
+            // do not use collect_mono_items -> use codegen units..?
+            // this is executed without miri but not with miri.
+            // original PAFL location (rustc_codgen_ssa) is not called when run with miri
+            // codegen is executed only when it's without miri?
+            // command: MIRIFLAGS="-Zmiri-disable-isolation" ON5="miriconfig" 
+            // MIR_DUMP2= PAFL_TARGET_PREFIX="third_party/move" cargo +fuzz miri test regression_tests::fuzz::miri_path_fuzz -- --exact -- MIR_DUMP2="/home" > $LOG/10.miri_build
 
-
-            match std::env::var_os("MIR_DUMP3") { 
+            // when i use "mono_items" instead of "collect_all_mono_items"
+            // many parts are missing..
+            // small size json is genrated..
+            // for &(mono_item, _) in &mono_items {
+            // for &(mono_item, _) in &mono_items {
+            match std::env::var_os("DUMP_LLVM") { 
                 None => {},
                 Some(val) => {
         
@@ -232,101 +129,7 @@ pub fn compile_codegen_unit(tcx: TyCtxt<'_>, cgu_name: Symbol) -> (ModuleCodegen
                     }
                 }
             }
-            // ... and now that we have everything pre-defined, fill out those definitions.
-            for &(mono_item, _) in &mono_items {
-                mono_item.define::<Builder<'_, '_, '_>>(&cx);
-            }
 
-            // when i use "mono_items" instead of "collect_all_mono_items"
-            // many parts are missing..
-            // small size json is genrated..
-            // for &(mono_item, _) in &mono_items {
-            match std::env::var_os("MIR_DUMP4") { 
-                None => {},
-                Some(val) => {
-        
-                    let outdir = std::path::PathBuf::from(val.clone());
-                    let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                        None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                        Some(v) => std::path::PathBuf::from(v),
-                    };
-                    println!("dump custom func is called");
-                    // prepare directory layout
-                    fs::create_dir_all(outdir.clone()).expect("unable to create output directory");
-                    let path_meta = outdir.join("meta");
-                    fs::create_dir_all(&path_meta).expect("unable to create meta directory");
-                    let path_data = outdir.join("data");
-                    fs::create_dir_all(&path_data).expect("unable to create data directory");
-                    let path_build = outdir.join("build");
-                    fs::create_dir_all(&path_build).expect("unable to create build directory");
-                
-                    // verbosity
-                    let verbose = std::env::var_os("PAFL_VERBOSE")
-                        .and_then(|v| v.into_string().ok())
-                        .map_or(false, |v| v.as_str() == "1");
-                
-                    // extract the mir for each codegen unit
-                    let mut cache = FxHashMap::default();
-                    let mut summary = PaflCrate { functions: Vec::new() };
-                
-
-                    match tcx.sess.local_crate_source_file() {
-                        None => bug!("unable to locate local crate source file"),
-                        Some(src) => {
-                            if src.starts_with(&prefix) {
-                                println!("in miri cod33ege11n@#");
-                                for &(mono_item, _) in &mono_items {
-                                    let instance = match mono_item {
-                                        MonoItem::Fn(i) => i,
-                                        MonoItem::Static(_) => continue,
-                                        MonoItem::GlobalAsm(_) => bug!("unexpected assembly"),
-                                    };
-                                    if !instance.def_id().is_local() {
-                                        continue;
-                                    }
-                        
-                                    // process it and save the result to summary
-                                    let mut stack = vec![];
-                                    PaflDump::summarize_instance(
-                                        tcx,
-                                        ParamEnv::reveal_all(),
-                                        instance,
-                                        verbose,
-                                        &path_meta,
-                                        &path_data,
-                                        &mut stack,
-                                        &mut cache,
-                                        &mut summary.functions,
-                                    );
-                                    if !stack.is_empty() {
-                                        bug!("unbalanced call stack");
-                                    }
-                                }
-
-                                let content =
-                                    serde_json::to_string_pretty(&summary).expect("unexpected failure on JSON encoding");
-                                let symbol = tcx.crate_name(LOCAL_CRATE);
-                                let crate_name = symbol.as_str();
-                                let output = path_build.join(crate_name).with_extension("json");
-                                println!("out1242={:?}", output.to_str());
-                            
-                                // let mut file = OpenOptions::new()
-                                //     .write(true)
-                                //     .create_new(true)
-                                //     .open(output)
-                                //     .expect("unable to create output file");
-                                let mut file = OpenOptions::new()
-                                    .write(true)
-                                    .truncate(true)
-                                    .create(true)
-                                    .open(output)
-                                    .expect("unable to create output file2");
-                                file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
-                            }
-                        }
-                    }
-                }
-            }
             // If this codegen unit contains the main function, also create the
             // wrapper here
             if let Some(entry) = maybe_create_entry_wrapper::<Builder<'_, '_, '_>>(&cx) {

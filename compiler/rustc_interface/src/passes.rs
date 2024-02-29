@@ -41,8 +41,10 @@ use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::{env, fs, iter};
+
 use rustc_middle::bug;
 use rustc_codegen_ssa::pafl::dump;
+
 pub fn parse<'a>(sess: &'a Session) -> PResult<'a, ast::Crate> {
     let krate = sess.time("parse_crate", || match &sess.io.input {
         Input::File(file) => parse_crate_from_file(file, &sess.psess),
@@ -663,7 +665,6 @@ pub fn create_global_ctxt<'tcx>(
 
     if let Some(callback) = compiler.override_queries {
         callback(sess, &mut providers);
-        // println!("yj in create_global_ctxt, after providers"); // before start
     }
 
     let incremental = dep_graph.is_fully_enabled();
@@ -932,30 +933,10 @@ pub fn start_codegen<'tcx>(
     tcx: TyCtxt<'tcx>,
 ) -> Box<dyn Any> {
     info!("Pre-codegen\n{:?}", tcx.debug_stats());
-    // let _ = rustc_mir_transform::dump_mir::emit_mir(tcx);
     let (metadata, need_metadata_module) = rustc_metadata::fs::encode_and_write_metadata(tcx);
-    match std::env::var_os("FULL_CFG2") { 
-        // different from right after Precodegen -> something happened before this (O)
-        // same as Precodegen -> something will happen after this (X)
-        None => {},
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val.clone());
-            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                Some(v) => std::path::PathBuf::from(v),
-            };
-            match tcx.sess.local_crate_source_file() {
-                None => bug!("unable to locate local crate source file"),
-                Some(src) => {
-                    if src.starts_with(&prefix) {
-                        println!("in start_codegen@#");
-                        dump(tcx, &outdir);
-                    }
-                }
-            }
-        }
-    }
-    // println!("before codgen_crate");
+
+    // incorrect location
+    // original dump location is in codegen_crate function.
     let codegen = tcx.sess.time("codegen_crate", move || {
         codegen_backend.codegen_crate(tcx, metadata, need_metadata_module)
     });
@@ -968,11 +949,8 @@ pub fn start_codegen<'tcx>(
 
     info!("Post-codegen\n{:?}", tcx.debug_stats());
 
-    println!("post-codegen {:?}", tcx.sess.opts.output_types.clone());
     if tcx.sess.opts.output_types.contains_key(&OutputType::Mir) {
-        println!("in start_codegen inner {:?}", tcx.sess.opts.output_types.clone());
-        // never come in this.
-        // OutputType::None, ...
+        // test: OutputType::None, ...
         if let Err(error) = rustc_mir_transform::dump_mir::emit_mir(tcx) {
             tcx.dcx().emit_fatal(errors::CantEmitMIR { error });
         }

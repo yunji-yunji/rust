@@ -27,6 +27,8 @@ use self::debuginfo::{FunctionDebugContext, PerLocalVarDebugInfo};
 use self::operand::{OperandRef, OperandValue};
 use self::place::PlaceRef;
 
+// use rustc_monomorphize::partitioning::{PlacedMonoItems, place_mono_items};
+
 // Used for tracking the state of generated basic blocks.
 enum CachedLlbb<T> {
     /// Nothing created yet.
@@ -164,23 +166,22 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
     let llfn = cx.get_fn(instance);
 
     let mir = cx.tcx().instance_mir(instance.def);
-    // println!("is this executed?! please");
 
-    match std::env::var_os("MIR_DUMP1") { 
+    // this function is called, either with miri or without miri
+
+    match std::env::var_os("DUMP_WITH_CX") { // yj cx
         None => {},
         Some(val) => {
-
             let outdir = std::path::PathBuf::from(val.clone());
             let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
                 None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
                 Some(v) => std::path::PathBuf::from(v),
             };
-            println!("we got env var");
+            println!("Env var = {:?}", val.clone()); // also recognize this
             match cx.tcx().sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
                     if src.starts_with(&prefix) {
-                        println!("in miri codege11n@#");
                         crate::pafl::dump(cx.tcx(), &outdir);
                     }
                 }

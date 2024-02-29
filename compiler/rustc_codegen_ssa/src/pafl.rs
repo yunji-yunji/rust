@@ -1,24 +1,12 @@
 use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path};
-// use std::path::{Path, PathBuf};
 
 use rustc_data_structures::fx::FxHashMap;
 use rustc_middle::mir::mono::MonoItem;
-use rustc_middle::ty::{
-    ParamEnv, TyCtxt,
-};
+use rustc_middle::ty::{ParamEnv, TyCtxt,};
+use rustc_middle::ty::context::{PaflDump, PaflCrate, };
 use rustc_span::def_id::{LOCAL_CRATE};
-// use rustc_span::Span;
-// use rustc_target::spec::abi::Abi;
-// use rustc_type_ir::Mutability;
-
-// use serde::Serialize;
-
-use rustc_middle::ty::context::{
-    PaflDump, PaflCrate, 
-};
-
 
 /// A complete dump of both the control-flow graph and the call graph of the compilation context
 pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
