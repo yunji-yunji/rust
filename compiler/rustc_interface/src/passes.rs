@@ -42,8 +42,8 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::{env, fs, iter};
 
-use rustc_middle::bug;
-use rustc_codegen_ssa::pafl::dump;
+// use rustc_middle::bug;
+// use rustc_codegen_ssa::pafl::dump;
 
 pub fn parse<'a>(sess: &'a Session) -> PResult<'a, ast::Crate> {
     let krate = sess.time("parse_crate", || match &sess.io.input {
@@ -754,6 +754,7 @@ fn analysis(tcx: TyCtxt<'_>, (): ()) -> Result<()> {
 
     sess.time("MIR_effect_checking", || {
         for def_id in tcx.hir().body_owners() {
+            println!("is this executed?");
             if !tcx.sess.opts.unstable_opts.thir_unsafeck {
                 rustc_mir_transform::check_unsafety::check_unsafety(tcx, def_id);
             }

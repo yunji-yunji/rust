@@ -31,7 +31,10 @@ pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
 
     let (_, units) = tcx.collect_and_partition_mono_items(());
     for unit in units {
+        println!("unit;{:?}---------------", unit);
         for item in unit.items().keys() {
+            println!("* {:?}---------------", item);
+
             // filter
             let instance = match item {
                 MonoItem::Fn(i) => *i,

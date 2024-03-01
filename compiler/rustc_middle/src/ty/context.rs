@@ -83,6 +83,7 @@ use std::mem;
 use std::ops::{Bound, Deref};
 use std::path::PathBuf;
 // use rustc_codegen_ssa::pafl::{};
+use rustc_middle::ty::print::with_no_trimmed_paths;
 
 #[allow(rustc::usage_of_ty_tykind)]
 impl<'tcx> Interner for TyCtxt<'tcx> {
@@ -626,7 +627,7 @@ impl<'tcx> TyCtxtFeed<'tcx, LocalDefId> {
 // ===============
 use serde::Serialize;
 use crate::mir::BasicBlock;
-use rustc_middle::mir::graphviz::write_mir_fn_graphviz;
+// use rustc_middle::mir::graphviz::write_mir_fn_graphviz;
 
 use super::layout::HasTyCtxt;
 // use std::cell::Cell;
@@ -1404,12 +1405,33 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
     /// Process the mir body for one function
     pub fn process_cfg(&mut self, id: DefId, body: &Body<'tcx>) -> PaflCFG {
-        let path = self.tcx.def_path(id).to_string_no_crate_verbose();
+        let _path = self.tcx.def_path(id).to_string_no_crate_verbose();
 
         // dump the control flow graph if requested
         match std::env::var_os("PAFL_CFG") {
             None => (),
             Some(v) => {
+                let name = match v.into_string() {
+                    Ok(s) =>{ s },
+                    Err(_e) => { panic!("wrong env var") },
+                };
+                with_no_trimmed_paths!({
+                    let krate = self.tcx.crate_name(id.krate).to_string();
+                    let path = self.tcx.def_path(id).to_string_no_crate_verbose();
+                    if krate.contains(&name) | path.contains(&name) {
+                        let str1 = format!("-{:?}{:?}[{:?}] -------------", krate, path, body.basic_blocks.clone().len());
+                        println!("{:?}", str1);
+                        for (source, _) in body.basic_blocks.iter_enumerated() {
+                            let bb_data = &body.basic_blocks[source];
+                            let str2 = format!("@ =[{:?}][{:?}][{:?}][{:?}]", 
+                            source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind, bb_data.statements);
+                            println!("{:?}", str2);
+                        }
+                        println!("--------------------------");
+                    }
+                });
+        /*
+
                 // println!("PAFL CFG path = {:?}", path.as_str());
                 if v.to_str().map_or(false, |s| s == path.as_str()) {
                     let dot_path = self.path_prefix.with_extension("dot");
@@ -1429,6 +1451,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                     write_mir_fn_graphviz(self.tcx, body, false, &mut dot_file)
                         .expect("failed to create dot file");
                 }
+                 */
             }
         }
 
@@ -1778,6 +1801,7 @@ pub struct GlobalCtxt<'tcx> {
     pub _tmp_trace: RefCell<Trace>, 
     pub _tmp_steps: RefCell<Vec<Step>>,
     pub _curr_trace: RefCell<Option<&'tcx mut Trace>>,
+
     pub _prev: RefCell<FnInstKey>, 
     pub _v1: RefCell<Vec<Trace>>,
     pub _s1: RefCell<Vec<Step>>,

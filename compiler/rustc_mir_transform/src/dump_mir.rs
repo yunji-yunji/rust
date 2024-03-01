@@ -58,16 +58,13 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
         }
     };
 
-    match std::env::var_os("MIR_DUMP100") { 
+    match std::env::var_os("PAFL_EMIT2") { 
         None => {},
-        Some(val) => {
+        Some(_val) => {
+            let outdir = std::path::PathBuf::from("/home/y23kim/rust/last_rust/aptos-core/third_party/move/move-bytecode-verifier/src/regression_tests/fuzz");
+            let prefix = std::path::PathBuf::from("third_party/move");
+            println!("My custom dump");
 
-            let outdir = std::path::PathBuf::from(val.clone());
-            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                Some(v) => std::path::PathBuf::from(v),
-            };
-            println!("dump custom func 100 is called");
             // prepare directory layout
             fs::create_dir_all(outdir.clone()).expect("unable to create output directory");
             let path_meta = outdir.join("meta");
@@ -161,7 +158,7 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
                         let symbol = tcx.crate_name(LOCAL_CRATE);
                         let crate_name = symbol.as_str();
                         let output = path_build.join(crate_name).with_extension("json");
-                        println!("out124aa2={:?}", output.to_str());
+                        println!("out_crate={:?}", output.to_str());
                     
                         // let mut file = OpenOptions::new()
                         //     .write(true)
