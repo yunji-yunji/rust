@@ -81,28 +81,21 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
     if can_skip {
         ecx.set_skip_true();
     } else {
-        // correct call type
-        // 1. push_stack_frame in eval_body_using_ecx
-        // 2. push_stack_frame in eval_terminator, Call kind
-        ecx.yj_push(String::from("[evalbodyCall"));
+        // 1. _bb_seq
+        ecx.push_bb(String::from("[Call<eval_body>"));
         let info = format!("#{:?}", fn_inst_key);
-        ecx.yj_push(info);
+        ecx.push_bb(info);
 
+        // 2. _call_stack
         let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
         ecx.call_stk_push(call_name);
+        
         ecx.set_skip_false();
         ecx.update_fn_key(fn_inst_key.clone());
         ecx.push_trace_stack1(fn_inst_key.clone());
 
     }
-    match std::env::var_os("ON3") {
-        None => (),
-        Some(_val) => {
-            println!("e{:?}", ecx.tcx._call_stack.borrow());
-            // let s = ecx.fn_info(body);
-            // ecx.yj_push(s);
-        }
-    }
+
     ecx.push_stack_frame(
         cid.instance,
         body,
@@ -317,14 +310,6 @@ pub fn eval_to_const_value_raw_provider<'tcx>(
     tcx.eval_to_allocation_raw(key).map(|val| turn_into_const_value(tcx, val, key))
 }
 
-
-#[instrument(skip(tcx), level = "debug")]
-pub fn print_vec2<'tcx>(
-    tcx: TyCtxt<'tcx>,) {
-    println!("print_Vec2={:?}", tcx._vec.borrow());
-
-}
-
 #[instrument(skip(tcx), level = "debug")]
 pub fn eval_static_initializer_provider<'tcx>(
     tcx: TyCtxt<'tcx>,
@@ -400,6 +385,27 @@ fn eval_in_interpreter<'tcx, R: InterpretationResult<'tcx>>(
         // so we have to reject reading mutable global memory.
         CompileTimeInterpreter::new(CanAccessMutGlobal::from(is_static), CheckAlignment::Error),
     );
+<<<<<<< HEAD
+=======
+
+    // let crate_name = tcx.crate_name(cid.instance.def.def_id().krate).to_string();
+    // let s = crate_name.to_string();
+    // if s.contains("move") {
+    //     println!("yj=={:?}", tcx._bb_seq);
+    // }
+
+    eval_in_interpreter(ecx, cid, is_static)
+}
+
+pub fn eval_in_interpreter<'mir, 'tcx>(
+    ecx: &mut InterpCx<'mir, 'tcx, CompileTimeInterpreter<'mir, 'tcx>>,
+    cid: GlobalId<'tcx>,
+    is_static: bool,
+) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
+    // `is_static` just means "in static", it could still be a promoted!
+    debug_assert_eq!(is_static, ecx.tcx.static_mutability(cid.instance.def_id()).is_some());
+
+>>>>>>> e7b04628f53 (code clean up)
     let res = ecx.load_mir(cid.instance.def, cid.promoted);
     res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body)).map_err(|error| {
         let (error, backtrace) = error.into_parts();

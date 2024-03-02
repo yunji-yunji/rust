@@ -422,8 +422,7 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
-    // Dump
-    match std::env::var_os("OUTDIR") {
+    match std::env::var_os("DUMP_IN_EVAL") {
         None => (),
         Some(val) => {
             println!("Start Dump!");
@@ -445,9 +444,6 @@ pub fn eval_entry<'tcx>(
         }
     };
     
-    println!("eval entry");
-    // ecx.dump_json("yj_evalentry.json");
-
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
@@ -498,8 +494,6 @@ pub fn eval_entry<'tcx>(
             return None;
         }
     }
-    println!("eval entry2");
-    // ecx.dump_json("yj_evalentry2.json");
     Some(return_code)
 }
 

@@ -439,7 +439,6 @@ fn run_compiler(
             }
 
             queries.global_ctxt()?.enter(|tcx| {
-                safe_println!("real fin4={:?}", tcx._vec.borrow());
                 tcx.analysis(())
             }
             )?;

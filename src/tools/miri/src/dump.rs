@@ -8,8 +8,6 @@ use rustc_session::StableCrateId;
 use rustc_session::config::EntryFnType;
 
 use rustc_span::Symbol;
-// use rustc_span::sym::crate_name;
-// use rustc_span::def_id::{LocalDefId, DefIndex, CrateNum};
 
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 use rustc_hir::def_id::{LOCAL_CRATE, DefId};
@@ -23,7 +21,8 @@ struct ItemShort<'a> {
     _def_kind: DefKind,
 }
 
-pub fn dump_in_eval_entry( // src/tools/miri/src/eval.rs => OUTDIR
+// test : DUMP_IN_EVAL
+pub fn dump_in_eval_entry(
     tcx: TyCtxt<'_>,
     _entry_id: DefId,
     _entry_type: EntryFnType,

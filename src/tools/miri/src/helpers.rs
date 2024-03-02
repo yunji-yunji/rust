@@ -412,9 +412,9 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             this.set_skip_true();
         } else {
             // if should skip: std, core, alloc, ..
-            this.yj_push(String::from("[helperCall:")); // is called (with miri)
-            let info = format!("#{:?}", fn_inst_key);
-            this.yj_push(info);
+            this.push_bb(String::from("[helperCall:")); // is called (with miri)
+            let info = format!("*{:?}", fn_inst_key);
+            this.push_bb(info);
 
             // call_stack
             let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
@@ -422,24 +422,20 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             this.set_skip_false();
             this.update_fn_key(fn_inst_key.clone());
         }
-        match std::env::var_os("DP") {
+
+        match std::env::var_os("DUMP_FIN_TRACE") {
             None => (),
             Some(_val) => {
-                println!("dump file");
-                this.dump_json("yj_help.json");
+                println!("dump file in helpers.json");
+                this.dump_fin_trace("/home/y23kim/rust/last_rust/aptos-core/helpers.json");
             }
         }
-        match std::env::var_os("ON4") {
+
+        match std::env::var_os("DUMP_TMP_TRACE") {
             None => (),
             Some(_val) => {
-                println!("h{:?}", this.tcx._call_stack.borrow());
-            }
-        }
-        match std::env::var_os("TET4") {
-            None => (),
-            Some(_val) => {
-                this.dump_t("trace_in_helper.json");
-                println!("H dump!");
+                this.dump_tmp_trace("./trace_in_helper.json");
+                println!("dump final trace in helpers.rs");
             }
         }
         this.push_trace_stack1(fn_inst_key.clone());

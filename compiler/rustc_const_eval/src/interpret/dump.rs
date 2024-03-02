@@ -1,8 +1,5 @@
-use crate::const_eval::CompileTimeEvalContext;
 use super::InterpCx;
-// use super::InterpResult;
 use super::Machine;
-// use super::terminator;
 use either::Either;
 use std::path::Path;
 use std::path::PathBuf;
@@ -10,10 +7,6 @@ use std::path::PathBuf;
 use rustc_data_structures::fx::FxHashMap;
 
 use rustc_middle::mir::Body;
-use rustc_middle::mir::TerminatorKind;
-use rustc_middle::mir::Terminator;
-
-use rustc_middle::ty;
 use rustc_middle::ty::TyCtxt;
 use rustc_middle::ty::ParamEnv;
 use rustc_middle::ty::GenericArgKind;
@@ -21,91 +14,48 @@ use rustc_middle::ty::Instance;
 use rustc_middle::ty::context::{Step, PaflType, PaflGeneric, FnInstKey,};
 
 use std::fs;
-use std::fs::OpenOptions;
 
 use rustc_hir::def::DefKind;
-use rustc_hir::def_id::{LOCAL_CRATE, DefId};
+use rustc_hir::def_id::{DefId};
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 
 use rustc_middle::ty::context::{PaflDump, PaflCrate};
 
 use colored::Colorize;
 
-pub fn dump_in_eval_query( // eval_queries.rs => DUMP_ON
+// Test: env var LOG_EVAL
+pub fn log_in_eval_query( // eval_queries.rs => DUMP_ON
     tcx: TyCtxt<'_>,
     body: &Body<'_>,
-    outdir: &Path,
 ) {
-    match std::env::var_os("FILE") {
-        None => (),
-        Some(_val) => {
-            // === File setup === //
-            fs::create_dir_all(outdir).expect("Fail to open directory.");
-            let symbol = tcx.crate_name(LOCAL_CRATE);
-            let file_name = symbol.as_str();
-            // let stable_create_id: StableCrateId = tcx.stable_crate_id(LOCAL_CRATE);
-            // let file_name = stable_create_id.as_u64().to_string();
-            println!("FILE: outdir{:?} file_name {:?}", outdir, file_name);
-            let output = outdir.join(file_name).with_extension("json");
-            let mut _file = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(output)
-                .expect("Fail to create a file.");
-        }
-    }
-    let mut content = String::new();
 
     let instance_def = body.source.instance;
     let def_id: DefId = instance_def.def_id();
     
     let crate_name2 = tcx.crate_name(def_id.krate);
-    content.push_str(&format!("[{:?}]", crate_name2));
+    // content.push_str(&format!("[{:?}]", crate_name2));
     let s1 = format!("[{:?}]", crate_name2);
     print!("{}", s1.red());
 
     let def_kind: DefKind = tcx.def_kind(def_id);
-    content.push_str(&format!("[{:?}]", def_kind));
+    // content.push_str(&format!("[{:?}]", def_kind));
     let s2 = format!("[{:?}]", def_kind);
     print!("{}", s2.blue());
 
     let def_path: DefPath = tcx.def_path(def_id);
     let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
     for item in &def_paths {
-        content.push_str(&format!("[{:?}][{:?}]", item.data, item.disambiguator));
+        // content.push_str(&format!("[{:?}][{:?}]", item.data, item.disambiguator));
         let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
         print!("{}", s3.green());
     }
     println!("");
     // println!("{:?}", content);
-    let _tmp = content;
-    
-    // file.write_all(content.as_bytes()).expect("Fail to write file.");
-}
-
-pub fn bb_dump<'mir, 'tcx>(
-    ecx: &CompileTimeEvalContext<'mir, 'tcx>
-) {
-    
-    // let bbs = body.basic_blocks.as_mut();
-    let loc= ecx.frame().loc;
-    // let bb_id = ecx.frame().loc.left();
-    if let Either::Left(l_loc) = loc {
-        let block = l_loc.block;
-        let statement_idx = l_loc.statement_index;
-        println!("[s][{:?}][{:?}]\n", block, statement_idx);
-        // let bb_id = 
-        // info!("// executing {:?}", loc.block);
-    }
-    // self.frame_mut().loc.as_mut().left().unwrap().statement_index += 1;
-
-    // let bbs = &body.basic_blocks;
-    // println!("{:?}", bbs);
 }
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     #[inline(always)]
-    pub fn bb_dump_in_step(&mut self) { // step.rs => STEPP
+    pub fn bb_dump_in_step(&mut self) { // step.rs
 
         // Implementation of the function to dump basic blocks
         // Access fields and methods of InterpCx using `self`
@@ -146,10 +96,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 // info!("// executing {:?}", loc.block);
             }
         }
-    }
-
-    pub fn push_block(&mut self) {
-
     }
 
     pub fn dump_return(&mut self, outdir: &Path, prev_steps: &mut Vec<Step>)  {
@@ -226,73 +172,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             print!("[{:?}]", prev_steps);
 
         } else {
-            // Step::Err
             bug!("bug in dump return!");
-        }
-    }
-
-
-    pub fn dump_in_term(&mut self, term: &Terminator<'tcx> ) { // step.rs => TERM
-        match std::env::var_os("TERM") {
-            None => (),
-            Some(_val) => {
-                // let outdir = std::path::PathBuf::from(val);
-
-                let body = self.body();
-                let instance_def = body.source.instance;
-                let def_id: DefId = instance_def.def_id();
-                let my_crate_name = self.tcx.crate_name(def_id.krate);
-
-                
-                let kind = &term.kind;
-                match kind {
-
-                    TerminatorKind::Call { func, args: _, destination: _, target: _, unwind: _, call_source: _, fn_span: _ } => 
-                    {
-                        let s1 = format!("\n[{:?}]", kind.name());
-                        print!("{}", s1.red());
-
-                        let s2 = format!(":[{:?}]", my_crate_name);
-                        print!("{}", s2.green());
-
-                        // let filename = format!("yj_{}.json", crate_name2);
-                        let const_ty = match func.constant() {
-                            None => {
-                                println!("callee is not a constant:");
-                                return;
-                            },
-                            Some(const_op) => const_op.const_.ty(),
-                        };
-
-                        let (_def_id, _generic_args) = match const_ty.kind() {
-                            ty::Closure(def_id, generic_args)
-                            | ty::FnDef(def_id, generic_args) => {
-                                (*def_id, *generic_args)
-                            },
-                            _ => bug!("callee is not a function or closure"),
-                        };
-
-                        TyCtxt::create_call_step(self.tcx.tcx, def_id, term);
-
-                    },
-
-                    TerminatorKind::Return => {
-
-                    },
-                    _ => {
-                        let s1 = format!("[{:?}]", kind.name());
-                        print!("{}", s1.red()); 
-
-                        let s2 = format!(":[{:?}]", my_crate_name);
-                        print!("{}", s2.green());
-
-                        let s3 = format!(":[{:?}]", self.tcx.def_path(def_id).to_string_no_crate_verbose());
-                        print!("{}", s3.green());
-                        self.push_block();
-            
-                    },
-                }
-            }
         }
     }
 

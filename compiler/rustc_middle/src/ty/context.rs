@@ -1784,7 +1784,7 @@ pub struct GlobalCtxt<'tcx> {
     /// Stores memory for globals (statics/consts).
     pub(crate) alloc_map: Lock<interpret::AllocMap<'tcx>>,
 
-    // pub _trace: RefCell<&'tcx Trace>,
+    // pub _trace: RefCell<&'tcx Trsace>,
     // pub _trace: RefCell<Trace<'static>>,
     pub _trace: RefCell<Trace>,
     // pub _curr_t: RefCell<Rc<Trace>>,
@@ -1794,13 +1794,19 @@ pub struct GlobalCtxt<'tcx> {
     // pub _curr_t: RefCell<Option<Box<RefCell<Trace<'tcx>>>>>,
     // pub _trace: &'tcx mut Trace,
     // pub _trace: Trace,
-    // pub _ptr: RefCell<&
-    pub _vec: RefCell<Vec<String>>,
+
+    // variable to check the pair of Call and Return (use push)
+    // output: miri.rs
+    pub _bb_seq: RefCell<Vec<String>>,
+
+    // variable to check the pair of Call and Return (use push, pop)
+    // No output
     pub _call_stack: RefCell<Vec<String>>,
+
     pub _ret_can_skip : RefCell<bool>,
     pub _tmp_trace: RefCell<Trace>, 
     pub _tmp_steps: RefCell<Vec<Step>>,
-    pub _curr_trace: RefCell<Option<&'tcx mut Trace>>,
+    // pub _curr_trace: RefCell<Option<&'tcx mut Trace>>,
 
     pub _prev: RefCell<FnInstKey>, 
     pub _v1: RefCell<Vec<Trace>>,
@@ -2109,13 +2115,15 @@ impl<'tcx> TyCtxt<'tcx> {
             // _curr_t: RefCell::new(fin_trace.clone().into()),
             // _curr_t: RefCell::new(None),
             // _curr_t: RefCell::new(Some(Box::new(RefCell::new(fin_trace)))),
-            _vec: RefCell::new(vec![]),
+            
+            _bb_seq: RefCell::new(vec![]),
             _call_stack: RefCell::new(vec![]),
             _ret_can_skip: RefCell::new(false),
+
             _tmp_trace: RefCell::new(Trace { _entry: dummy_fn_inst_key.clone(), _steps: vec![] }),
             _tmp_steps: RefCell::new(vec![]),
             // _curr_trace: RefCell::new(&mut *self._trace)
-            _curr_trace: RefCell::new(None),
+            // _curr_trace: RefCell::new(None),
             _prev: RefCell::new(dummy_fn_inst_key.clone()), 
             _v1: RefCell::new(vec![]),
             _s1: RefCell::new(vec![])

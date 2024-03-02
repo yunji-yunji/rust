@@ -637,10 +637,6 @@ pub static DEFAULT_QUERY_PROVIDERS: LazyLock<Providers> = LazyLock::new(|| {
     *providers
 });
 
-// pub fn print_vec<'tcx>(tcx: &'tcx GlobalCtxt<'tcx>) {
-//     println!("print_Vec={:?}", tcx._vec.borrow());
-// }
-
 pub fn create_global_ctxt<'tcx>(
     compiler: &'tcx Compiler,
     crate_types: Vec<CrateType>,
@@ -754,7 +750,6 @@ fn analysis(tcx: TyCtxt<'_>, (): ()) -> Result<()> {
 
     sess.time("MIR_effect_checking", || {
         for def_id in tcx.hir().body_owners() {
-            println!("is this executed?");
             if !tcx.sess.opts.unstable_opts.thir_unsafeck {
                 rustc_mir_transform::check_unsafety::check_unsafety(tcx, def_id);
             }

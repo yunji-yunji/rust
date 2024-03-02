@@ -141,7 +141,7 @@ fn make_shim<'tcx>(tcx: TyCtxt<'tcx>, instance: ty::InstanceDef<'tcx>) -> Body<'
     // only valid in a reveal-all param-env. However, since we do initial
     // validation with the MirBuilt phase, which uses a user-facing param-env.
     // This causes validation errors when TAITs are involved.
-    println!("========= run_passes_no_validate = make_shim, (rustc_mir_transform/shim.rs), Some(MirPhase::Runtime(RuntimePhase::Optimized) ========= " );
+    // println!("========= run_passes_no_validate = make_shim, (rustc_mir_transform/shim.rs), Some(MirPhase::Runtime(RuntimePhase::Optimized) ========= " );
     pm::run_passes_no_validate(
         tcx,
         &mut result,

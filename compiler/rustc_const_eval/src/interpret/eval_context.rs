@@ -1015,7 +1015,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         // Normal return, figure out where to jump.
         if unwinding {
 
-            // self.yj_push("unwind]".to_string());
+            // self.push_bb("unwind]".to_string());
             // println!("unwiding: {:?}", name);
             // Follow the unwind edge.
             let unwind = match return_to_block {
@@ -1027,8 +1027,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             // This must be the very last thing that happens, since it can in fact push a new stack frame.
             self.unwind_to_block(unwind)
         } else {
-            // self.yj_push(name);
-            // self.yj_push("wind]".to_string());
+            // self.push_bb(name);
+            // self.push_bb("wind]".to_string());
             // Follow the normal return edge.
             match return_to_block {
                 StackPopCleanup::Goto { ret, .. } => self.return_to_block(ret),

@@ -24,8 +24,6 @@ use rustc_span::symbol::sym;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
-use rustc_middle::bug;
-use rustc_codegen_ssa::pafl::dump;
 
 /// Represent the result of a query.
 ///
@@ -158,12 +156,11 @@ impl<'tcx> Queries<'tcx> {
                 &self.arena,
                 &self.hir_arena,
             );
-            // passes::print_vec(qcx);
 
             qcx.enter(|tcx| {
                 let feed = tcx.feed_local_crate();
                 feed.crate_name(crate_name);
-
+            
                 let feed = tcx.feed_unit_query();
                 feed.features_query(tcx.arena.alloc(rustc_expand::config::features(
                     sess,

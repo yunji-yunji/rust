@@ -59,8 +59,8 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
                 match std::env::var_os("ON5") {
                     None => (),
                     Some(_val) => {
-                        println!("after miri1 {:?}", tcx._tmp_trace.borrow());
-                        // tcx.dump_t("miri1.json");
+                        println!("miri config {:?}", tcx._bb_seq);
+                        // println!("after miri1 {:?}", tcx._tmp_trace.borrow());
                     }
                 }
                 let mut crate_source = (providers.extern_queries.used_crate_source)(tcx, cnum);
@@ -81,12 +81,6 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
         queries.global_ctxt().unwrap().enter(|tcx| {
             if tcx.sess.dcx().has_errors_or_delayed_bugs().is_some() {
                 tcx.dcx().fatal("miri cannot be run on programs that fail compilation");
-            }
-            match std::env::var_os("_VEC") {
-                None => (),
-                Some(_val) => {
-                    println!("after analysis yj vec={:?}", tcx._vec.borrow());
-                }
             }
 
             let early_dcx = EarlyDiagCtxt::new(tcx.sess.opts.error_format);
@@ -153,11 +147,13 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // `exported_symbols` and `reachable_non_generics` provided by rustc always returns
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
-                    // println!("after provider miri2 {:?}", tcx._vec.borrow());
-                    // println!("after miri2 {:?}", tcx._tmp_trace.borrow());
-                    // tcx.dump_t("miri2.json");
-                    // tcx.dump_json();
-
+                    match std::env::var_os("MIRI_CB2_CONFIG") {
+                        None => (),
+                        Some(_val) => {
+                            println!("miri config CB2 {:?}", tcx._bb_seq);
+                            // println!("after miri2 {:?}", tcx._tmp_trace.borrow());
+                        }
+                    }
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {
                         tcx.reachable_set(()).to_sorted(&hcx, true)
                     });

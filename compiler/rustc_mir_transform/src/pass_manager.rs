@@ -147,34 +147,32 @@ fn run_passes_inner<'tcx>(
                 pass.run_pass(tcx, body);
             }
 
-            match std::env::var_os("PASSES_SHORT") {
+            // information to output
+            let instance_def = body.source.instance;
+            let def_id = instance_def.def_id();
+            let krate = tcx.crate_name(def_id.krate).to_string();
+            let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+            match std::env::var_os("PASS_SHORT") {
                 None => (),
                 Some(val) => {
                     let value = match val.into_string() {
                         Ok(s) =>{ s },
                         Err(_e) => { panic!("wrong env var") },
                     };
-                    let instance_def = body.source.instance;
-                    let def_id = instance_def.def_id();
-                    let krate = tcx.crate_name(def_id.krate).to_string();
-                    let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+
                     if krate.contains(&value) | path.contains(&value) {
                         println!("* {:?}{:?}[{:?}][{:?}]", krate, path, name, body.basic_blocks.len());
                     }
                 }
             }
 
-            match std::env::var_os("PASSES_LONG") {
+            match std::env::var_os("PASS_LONG") {
                 None => (),
                 Some(val) => {
                     let value = match val.into_string() {
                         Ok(s) =>{ s },
                         Err(_e) => { panic!("wrong env var") },
                     };
-                    let instance_def = body.source.instance;
-                    let def_id = instance_def.def_id();
-                    let krate = tcx.crate_name(def_id.krate).to_string();
-                    let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                     if krate.contains(&value) | path.contains(&value) {
                         println!("------ [{:?}][{:?}] ------", name, body.basic_blocks.len());
                         for (source, _) in body.basic_blocks.iter_enumerated() {
@@ -199,11 +197,7 @@ fn run_passes_inner<'tcx>(
 
             body.pass_count += 1;
         } // end of passes loop
-        println!("============== a set of passes done {:?} ==============", passes.len());
-        
-        // TODO: delete all logs below..
-        // not good location to print full cfgs.. 
-        // so many run_passes..
+        // println!("============== a set of passes done {:?} ==============", passes.len());
     }
 
     if let Some(new_phase) = phase_change {

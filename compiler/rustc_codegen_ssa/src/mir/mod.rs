@@ -169,7 +169,7 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
 
     // this function is called, either with miri or without miri
 
-    match std::env::var_os("DUMP_WITH_CX") { // yj cx
+    match std::env::var_os("DUMP_WITH_CX") { // check cyclic
         None => {},
         Some(val) => {
             let outdir = std::path::PathBuf::from(val.clone());

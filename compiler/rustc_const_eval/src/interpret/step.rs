@@ -5,8 +5,7 @@
 use either::Either;
 
 use rustc_index::IndexSlice;
-use rustc_middle::mir::BasicBlock;
-use rustc_middle::ty::context::FnInstKey;
+
 use rustc_middle::{mir, ty::context::Step};
 use rustc_middle::ty::layout::LayoutOf;
 use rustc_target::abi::{FieldIdx, FIRST_VARIANT};
@@ -14,9 +13,6 @@ use rustc_target::abi::{FieldIdx, FIRST_VARIANT};
 use super::{ImmTy, InterpCx, InterpResult, Machine, PlaceTy, Projectable, Scalar};
 use crate::util;
 
-// use crate::interpret::dump;
-use std::fs::OpenOptions;
-use std::io::Write;
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     /// Returns `true` as long as there are more things to do.
@@ -368,53 +364,40 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     fn terminator(&mut self, terminator: &mir::Terminator<'tcx> ) -> InterpResult<'tcx> {
         info!("{:?}", terminator.kind);
 
-        // TODO: remove.. 
-        match std::env::var_os("DUMP_DIR") {
-            None => (),
-            Some(_path_str) => {
-                self.dump_in_term(terminator);
-            }
-        }
-
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
                 let s = format!("{:?}", loc.block.as_usize());
-                self.yj_push(s.clone());
-                // let call_name = fn_inst_key.krate.unwrap() + &fn_inst_key.path;
-                match std::env::var_os("BB1") {
+                self.push_bb(s.clone());
+
+                // information to print
+                let tcx = self.tcx.tcx;
+                let body = self.body();
+                let instance_def = body.source.instance;
+                let def_id = instance_def.def_id();
+                let krate = tcx.crate_name(def_id.krate).to_string();
+                let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+                // 1. krate info + bb id
+                match std::env::var_os("BB_SHORT") {
                     None => (),
                     Some(val) => {
                         let name = match val.into_string() {
                             Ok(s) =>{ s },
                             Err(_e) => { panic!("wrong env var") },
                         };
-                        // self.call_stk_push(s); // bb number on?
-                        let tcx = self.tcx.tcx;
-                        let body = self.body();
-                        let instance_def = body.source.instance;
-                        let def_id = instance_def.def_id();
-                        let krate = tcx.crate_name(def_id.krate).to_string();
-                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                         if krate.contains(&name) | path.contains(&name) {
                             println!("krate={:?}{:?} [{:?}]", krate, path, loc.block.as_usize());
                         }
                     }
                 }
-                match std::env::var_os("NUMB_LONG") {
+                // 2. krate info + bb id + statements + terminator
+                match std::env::var_os("BB_LONG") {
                     None => (),
                     Some(val) => {
                         let name = match val.into_string() {
                             Ok(s) =>{ s },
                             Err(_e) => { panic!("wrong env var") },
                         };
-                        // self.call_stk_push(s); // bb number on?
-                        let tcx = self.tcx.tcx;
-                        let body = self.body();
-                        let instance_def = body.source.instance;
-                        let def_id = instance_def.def_id();
-                        let krate = tcx.crate_name(def_id.krate).to_string();
-                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                         if krate.contains(&name) | path.contains(&name) {
                             let bb_data = &self.body().basic_blocks[loc.block];
                             println!("krate={:?}{:?} [{:?}][{:?}][{:?}][{:?}]", 
@@ -423,6 +406,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     }
                 }
 
+                // 3. full CFG
                 match std::env::var_os("CFG_MIRI") {
                     None => (),
                     Some(val) => {
@@ -430,25 +414,19 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             Ok(s) =>{ s },
                             Err(_e) => { panic!("wrong env var") },
                         };
-                        let tcx = self.tcx.tcx;
-                        let body = self.body();
-                        let instance_def = body.source.instance;
-                        let def_id = instance_def.def_id();
-                        let krate = tcx.crate_name(def_id.krate).to_string();
-                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                         if krate.contains(&name) | path.contains(&name) {
                             println!("-{:?}{:?}<{:?}>[{:?}] -------------------------", 
-                            krate, path, loc.block, self.body().basic_blocks.clone().len());
+                                krate, path, loc.block, self.body().basic_blocks.clone().len());
                             for (source, _) in self.body().basic_blocks.iter_enumerated() {
                                 let bb_data = &self.body().basic_blocks[source];
-                                println!("# =[{:?}][{:?}][{:?}][{:?}]", 
-                                source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
-                                , bb_data.statements);
+                                println!("* [{:?}][{:?}][{:?}][{:?}]", 
+                                    source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind, bb_data.statements);
                             }
                             println!("--------------------------");
                         }
                     }
                 }
+                // TODO: remove
                 match std::env::var_os("BB2") {
                     None => (),
                     Some(val) => {
@@ -456,13 +434,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             Ok(s) =>{ s },
                             Err(_e) => { panic!("wrong env var") },
                         };
-                        // self.call_stk_push(s); // bb number on?
-                        let tcx = self.tcx.tcx;
-                        let body = self.body();
-                        let instance_def = body.source.instance;
-                        let def_id = instance_def.def_id();
-                        let krate = tcx.crate_name(def_id.krate).to_string();
-                        let path = tcx.def_path(def_id).to_string_no_crate_verbose();
                         if krate.contains(&name) | path.contains(&name) {
                             let s1 = self.tcx._s1.borrow();
                             print!("bbs=#{:?}#", s1.len());
@@ -478,7 +449,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 }
-
+                // TODO: remove
                 match std::env::var_os("BB3") {
                     None => (),
                     Some(_val) => {
@@ -492,181 +463,4 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         Ok(())
     }
 
-    pub fn yj_push(&mut self, s: String) {
-        let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._vec.borrow_mut();
-        vec_str.push(s);
-    }
-
-    pub fn call_stk_push(&mut self, s: String) {
-        let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._call_stack.borrow_mut();
-        vec_str.push(s);
-    }
-    pub fn call_stk_pop(&mut self,) {
-        let mut vec_str: std::cell::RefMut<'_, Vec<String>> = self.tcx._call_stack.borrow_mut();
-        vec_str.pop();
-    }
-    pub fn set_skip_true(&mut self,) {
-        let mut skip: std::cell::RefMut<'_, bool> = self.tcx._ret_can_skip.borrow_mut();
-        *skip = true;
-    }
-    pub fn set_skip_false(&mut self,) {
-        let mut skip: std::cell::RefMut<'_, bool> = self.tcx._ret_can_skip.borrow_mut();
-        *skip = false;
-    }
-
-    // called by Call
-    pub fn update_fn_key(&mut self, fn_key: FnInstKey) {
-        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
-        tmp_trace._entry = fn_key;
-    }
-
-    // called by BB
-    pub fn push_step_bb(&mut self, bb: BasicBlock) {
-        let mut steps= self.tcx._tmp_steps.borrow_mut();
-        steps.push(Step::B(bb));
-    }
-    
-    // called by Return
-    pub fn push_step_call(&mut self,) {
-        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
-        let mut tmp_steps= self.tcx._tmp_steps.borrow_mut();
-        tmp_trace._steps = tmp_steps.to_vec();
-        *tmp_steps = vec![];
-
-        let mut final_trace= self.tcx._trace.borrow_mut();
-        final_trace._steps.push(Step::Call(tmp_trace.clone()));
-    }
-
-    // pub fn set_curr_trace(&mut self, ) {
-    //     let mut curr_trace= self.tcx._curr_trace.borrow_mut();
-        
-    //     let f_t = self.tcx._trace.borrow();
-    //     let f_t_last_call = f_t._steps.pop();
-    //     match f_t_last_call {
-    //         Some(Step::Call(trace)) => {
-    //             *curr_trace = Some(&mut trace);
-    //         },
-    //         Some(Step::B(_)) => {},
-    //     }
-    // }
-
-    // new) called by call
-    pub fn push_trace_stack1(&mut self, fn_key: FnInstKey) {
-        let mut prev_fn = self.tcx._prev.borrow_mut();
-        let mut steps_before = self.tcx._s1.borrow_mut();
-        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
-        tmp_trace._entry = prev_fn.clone();
-        tmp_trace._steps = steps_before.clone();
-
-        let mut tmp_vec = self.tcx._v1.borrow_mut();
-        tmp_vec.push(tmp_trace.clone());
-
-        *prev_fn = fn_key;
-        *steps_before = vec![];
-    }
-
-    // new) called by return
-    pub fn merge_trace_stack1(&mut self, ) {
-        let mut prev_fn = self.tcx._prev.borrow_mut();
-        let mut s1 = self.tcx._s1.borrow_mut();
-        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
-        tmp_trace._entry = prev_fn.clone();
-        tmp_trace._steps = s1.clone();
-
-        let mut v1 = self.tcx._v1.borrow_mut();
-        let last_trace = v1.pop();
-        match last_trace {
-            Some(mut trace) => {
-                trace._steps.push(Step::Call(tmp_trace.clone()));
-                *prev_fn = trace._entry;
-                *s1 = trace._steps;
-            },
-            None => {
-                match std::env::var_os("TET") {
-                    None => (),
-                    Some(_val) => {
-                        let content =
-                        serde_json::to_string_pretty(&*tmp_trace).expect("unexpected failure on JSON encoding");
-                        self.dump_content(content, "fin_t.json");
-                        // println!("Q{:?}", v1.clone());
-                    }
-                }
-                match std::env::var_os("TET2") {
-                    None => (),
-                    Some(_val) => {
-                        println!("Q1{:?}", s1);
-                    }
-                }
-                match std::env::var_os("TET3") {
-                    None => (),
-                    Some(_val) => {
-                        println!("Q2{:?}", tmp_trace);
-                    }
-                }
-            },
-        }
-    }
-
-    // new) called by BB(X)
-    pub fn push_bb_stack1(&mut self, bb: BasicBlock) {
-        let mut _s1= self.tcx._s1.borrow_mut();
-        _s1.push(Step::B(bb));
-    }
-    
-    pub fn dump_json(&mut self, name: &str) {
-        let final_trace = self.tcx._trace.borrow();
-        let content =
-            serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
-        
-        // let body = self.body();
-        // let instance_def = body.source.instance;
-        // let def_id = instance_def.def_id();
-        // let krate_name = self.tcx.crate_name(def_id.krate).to_string();
-        // let output = outdir.join(krate_name).with_extension("json");
-
-        // let file_name = "/home/y23kim/rust/last_rust/aptos-core/yj_dump.json";
-        let file_name = "/home/y23kim/rust/last_rust/aptos-core/".to_string() + name;
-  
-        let mut file = OpenOptions::new()
-            .write(true)
-            // .create_new(true)
-            .create(true)
-            .truncate(true)
-            .open(file_name)
-            .expect("unable to create output file");
-        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
-        println!("created");
-    }
-
-    pub fn dump_content(&mut self, content: String, name: &str) {
-        let file_name = "/home/y23kim/rust/last_rust/all_logs/".to_string() + name;
-  
-        let mut file = OpenOptions::new()
-            .write(true)
-            // .create_new(true)
-            .create(true)
-            .truncate(true)
-            .open(file_name)
-            .expect("unable to create output file");
-        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
-        print!(".");
-    }
-
-    pub fn dump_t(&mut self,name: &str) {
-        let final_trace = self.tcx._tmp_trace.borrow();
-        let content =
-        serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
-    
-        let file_name = "/home/y23kim/rust/last_rust/all_logs/".to_string() + name;
-  
-        let mut file = OpenOptions::new()
-            .write(true)
-            // .create_new(true)
-            .create(true)
-            .truncate(true)
-            .open(file_name)
-            .expect("unable to create output file");
-        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
-        print!("*");
-    }
 }
