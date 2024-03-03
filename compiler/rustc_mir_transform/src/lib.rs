@@ -687,7 +687,7 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
                 
             for (source, _) in body.basic_blocks.iter_enumerated() {
                 let bb_data = &body.basic_blocks[source];
-                println!("opt s=[{:?}][{:?}][{:?}][{:?}]", 
+                println!("* [{:?}][{:?}][{:?}][{:?}]", 
                 source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
                 , bb_data.statements);
             }
@@ -712,30 +712,13 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
                 krate, path, body.basic_blocks.clone().len());
                 for (source, _) in body.basic_blocks.iter_enumerated() {
                     let bb_data = &body.basic_blocks[source];
-                    println!("opt l=[{:?}][{:?}][{:?}]", 
+                    println!("+ [{:?}][{:?}][{:?}]", 
                     source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
                 }
                 println!("--------------------------");
             }
         }
     }
-
-
-    let mut body = remap_mir_for_const_eval_select(tcx, body, hir::Constness::NotConst);
-
-    if body.tainted_by_errors.is_some() {
-        return body;
-    }
-
-    // If `mir_drops_elaborated_and_const_checked` found that the current body has unsatisfiable
-    // predicates, it will shrink the MIR to a single `unreachable` terminator.
-    // More generally, if MIR is a lone `unreachable`, there is nothing to optimize.
-    if let TerminatorKind::Unreachable = body.basic_blocks[START_BLOCK].terminator().kind
-        && body.basic_blocks[START_BLOCK].statements.is_empty()
-    {
-        return body;
-    }
-    // println!("inner_optimized_mir called: {:?}", did);
 
     // the passes
     // .. -> -- > Precodegen

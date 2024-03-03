@@ -143,11 +143,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             | InstanceDef::ThreadLocalShim(def) 
             | InstanceDef::DropGlue(def, _)
             | InstanceDef::CloneShim(def, _)
-            | InstanceDef::FnPtrAddrShim(def, _) => {
-                def
-            },
-            InstanceDef::ClosureOnceShim { .. } => {
-                panic!("closure once shim")
+            | InstanceDef::FnPtrAddrShim(def, _) => { def },
+            InstanceDef::ClosureOnceShim { .. } 
+            | InstanceDef::ConstructCoroutineInClosureShim {..}
+            | InstanceDef::CoroutineKindShim{..} => {
+                panic!("closure once shim, constructCoroutineINclosureshim, coroutineKindShim")
             },
         };
 

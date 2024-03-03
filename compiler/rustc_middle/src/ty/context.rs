@@ -638,7 +638,8 @@ use rustc_middle::ty::{
     // ParamEnv, Instance, ValTree
 };
 use rustc_target::spec::abi::Abi;
-use rustc_type_ir::Mutability;
+// use rustc_type_ir::Mutability;
+use crate::ty::Mutability;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
@@ -1341,7 +1342,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             InstanceDef::VTableShim(..)
             | InstanceDef::ReifyShim(..)
             | InstanceDef::FnPtrAddrShim(..)
-            | InstanceDef::ThreadLocalShim(..) => {
+            | InstanceDef::ThreadLocalShim(..)
+            | InstanceDef::ConstructCoroutineInClosureShim {..}
+            | InstanceDef::CoroutineKindShim{..} => {
                 bug!("unusual calls are not supported yet: {}", resolved);
             }
         };
@@ -1576,7 +1579,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             | InstanceDef::VTableShim(..)
             | InstanceDef::ReifyShim(..)
             | InstanceDef::FnPtrAddrShim(..)
-            | InstanceDef::ThreadLocalShim(..) => {
+            | InstanceDef::ThreadLocalShim(..) 
+            | InstanceDef::ConstructCoroutineInClosureShim {..}
+            | InstanceDef::CoroutineKindShim{..} => {
                 bug!("unexpected instance type: {}", instance);
             }
         };

@@ -217,15 +217,16 @@ impl<'tcx> Queries<'tcx> {
     pub fn codegen_and_build_linker(&'tcx self) -> Result<Linker> {
         self.global_ctxt()?.enter(|tcx| {
             // Don't do code generation if there were any errors
-            self.compiler.sess.compile_status()?;
-
-            // If we have any delayed bugs, for example because we created TyKind::Error earlier,
-            // it's likely that codegen will only cause more ICEs, obscuring the original problem
-            self.compiler.sess.dcx().flush_delayed();
+            // there were any delayed bugs, because codegen will likely cause
+            // more ICEs, obscuring the original problem.
+            if let Some(guar) = self.compiler.sess.dcx().has_errors_or_delayed_bugs() {
+                return Err(guar);
+            }
 
             // Hook for UI tests.
             Self::check_for_rustc_errors_attr(tcx);
-            println!("yj codegen");
+
+            // original dump location. codegen_crate is called in start_codegen.
             let ongoing_codegen: Box<dyn Any> = passes::start_codegen(&*self.compiler.codegen_backend, tcx);
             println!("after start codegen");
             match std::env::var_os("BUILD_LINKER2") {

@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 use std::sync::atomic::Ordering::Relaxed;
 
+=======
+>>>>>>> f88fe390187 (build after rebase)
 use either::{Left, Right};
 
 use rustc_hir::def::DefKind;
@@ -111,7 +114,6 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
         }
     }
 
-    // let mut steps : Vec<dump::Step> = vec![];
     // The main interpreter loop.
     while ecx.step()? {}
 
@@ -385,27 +387,6 @@ fn eval_in_interpreter<'tcx, R: InterpretationResult<'tcx>>(
         // so we have to reject reading mutable global memory.
         CompileTimeInterpreter::new(CanAccessMutGlobal::from(is_static), CheckAlignment::Error),
     );
-<<<<<<< HEAD
-=======
-
-    // let crate_name = tcx.crate_name(cid.instance.def.def_id().krate).to_string();
-    // let s = crate_name.to_string();
-    // if s.contains("move") {
-    //     println!("yj=={:?}", tcx._bb_seq);
-    // }
-
-    eval_in_interpreter(ecx, cid, is_static)
-}
-
-pub fn eval_in_interpreter<'mir, 'tcx>(
-    ecx: &mut InterpCx<'mir, 'tcx, CompileTimeInterpreter<'mir, 'tcx>>,
-    cid: GlobalId<'tcx>,
-    is_static: bool,
-) -> ::rustc_middle::mir::interpret::EvalToAllocationRawResult<'tcx> {
-    // `is_static` just means "in static", it could still be a promoted!
-    debug_assert_eq!(is_static, ecx.tcx.static_mutability(cid.instance.def_id()).is_some());
-
->>>>>>> e7b04628f53 (code clean up)
     let res = ecx.load_mir(cid.instance.def, cid.promoted);
     res.and_then(|body| eval_body_using_ecx(&mut ecx, cid, body)).map_err(|error| {
         let (error, backtrace) = error.into_parts();

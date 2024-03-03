@@ -108,7 +108,7 @@ fn make_shim<'tcx>(tcx: TyCtxt<'tcx>, instance: ty::InstanceDef<'tcx>) -> Body<'
                 let mut body = EarlyBinder::bind(body.clone()).instantiate(tcx, args);
                 debug!("make_shim({:?}) = {:?}", instance, body);
 
-                println!("========= run pass = make_shim, (rustc_mir_transform/shim.rs), Some(MirPhase::Runtime(RuntimePhase::Optimized) ========= " );
+                // println!("========= run pass = make_shim, (rustc_mir_transform/shim.rs), Some(MirPhase::Runtime(RuntimePhase::Optimized) ========= " );
                 pm::run_passes(
                     tcx,
                     &mut body,
