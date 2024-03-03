@@ -177,7 +177,7 @@ fn run_passes_inner<'tcx>(
                         println!("------ [{:?}][{:?}] ------", name, body.basic_blocks.len());
                         for (source, _) in body.basic_blocks.iter_enumerated() {
                             let bb_data = &body.basic_blocks[source];
-                            println!("+ [{:?}][{:?}][{:?}]", 
+                            println!("+ [{:?}][{:?}][{:?}]",
                             source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
                         }
                         println!("--------------------------");

@@ -147,6 +147,7 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // `exported_symbols` and `reachable_non_generics` provided by rustc always returns
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
+                    /*
                     match std::env::var_os("MIRI_CB2_CONFIG") {
                         None => (),
                         Some(_val) => {
@@ -154,6 +155,8 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                             // println!("after miri2 {:?}", tcx._tmp_trace.borrow());
                         }
                     }
+                    */
+                    println!("after miri2 {:?}", tcx._trace_stack.borrow().last().unwrap()._steps.last().unwrap());
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {
                         tcx.reachable_set(()).to_sorted(&hcx, true)
                     });
