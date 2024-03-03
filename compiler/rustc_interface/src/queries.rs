@@ -233,7 +233,26 @@ impl<'tcx> Queries<'tcx> {
             Self::check_for_rustc_errors_attr(tcx);
 
             let ongoing_codegen = passes::start_codegen(&*self.compiler.codegen_backend, tcx);
-
+            println!("after start codegen");
+            match std::env::var_os("BUILD_LINKER2") {
+                None => {},
+                Some(val) => {
+                    let outdir = std::path::PathBuf::from(val.clone());
+                    let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                        None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                        Some(v) => std::path::PathBuf::from(v),
+                    };
+                    match tcx.sess.local_crate_source_file() {
+                        None => bug!("unable to locate local crate source file"),
+                        Some(src) => {
+                            if src.starts_with(&prefix) {
+                                println!("Before collect dump2");
+                                dump(tcx, &outdir);
+                            }
+                        }
+                    }
+                }
+            };
             Ok(Linker {
                 dep_graph: tcx.dep_graph.clone(),
                 output_filenames: tcx.output_filenames(()).clone(),
