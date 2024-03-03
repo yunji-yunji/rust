@@ -1,7 +1,7 @@
 use super::{InterpCx, Machine};
 use rustc_middle::mir::BasicBlock;
 use rustc_middle::ty::context::FnInstKey;
-use rustc_middle::ty::context::Step;
+use rustc_middle::ty::context::{Step, Trace};
 
 // use crate::interpret::dump;
 use std::fs::OpenOptions;
@@ -57,56 +57,43 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
     // new) called by call
     pub fn push_trace_stack1(&mut self, fn_key: FnInstKey) {
-        let mut prev_fn = self.tcx._prev.borrow_mut();
-        let mut steps_before = self.tcx._s1.borrow_mut();
-        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
-        tmp_trace._entry = prev_fn.clone();
-        tmp_trace._steps = steps_before.clone();
-
-        let mut tmp_vec = self.tcx._v1.borrow_mut();
-        tmp_vec.push(tmp_trace.clone());
-
-        *prev_fn = fn_key;
-        *steps_before = vec![];
+        // println!("call {:?}", fn_key);
+        let skip = *self.tcx._skip_counter.borrow();
+        let can_skip = fn_key.can_skip();
+        if skip == 0 {
+            self.tcx._trace_stack.borrow_mut().push(Trace {_entry: fn_key, _steps: Vec::new()});
+        };
+        if can_skip {
+            self.tcx._skip_counter.replace(skip + 1);
+        };
     }
 
     // new) called by return
     pub fn merge_trace_stack1(&mut self, ) {
-        let mut prev_fn = self.tcx._prev.borrow_mut();
-        let mut s1 = self.tcx._s1.borrow_mut();
-        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
-        tmp_trace._entry = prev_fn.clone();
-        tmp_trace._steps = s1.clone();
-
-        let mut v1 = self.tcx._v1.borrow_mut();
-        let last_trace = v1.pop();
-        match last_trace {
-            Some(mut trace) => {
-                trace._steps.push(Step::Call(tmp_trace.clone()));
-                *prev_fn = trace._entry;
-                *s1 = trace._steps;
-            },
-            None => {
-                match std::env::var_os("TET2") {
-                    None => (),
-                    Some(_val) => {
-                        println!("Q1{:?}", s1);
-                    }
-                }
-                match std::env::var_os("TET3") {
-                    None => (),
-                    Some(_val) => {
-                        println!("Q2{:?}", tmp_trace);
-                    }
-                }
-            },
-        }
+        // can't be empty, unless return unmatched with call
+        let mut skip = *self.tcx._skip_counter.borrow();
+        if self.tcx._trace_stack.borrow().last().unwrap()._entry.can_skip() {
+            skip -= 1;
+            self.tcx._skip_counter.replace(skip);
+        };
+        if skip == 0 {
+            let trace = self.tcx._trace_stack.borrow_mut().pop().unwrap();
+            // println!("return {:?}", trace._entry);
+            let l = self.tcx._trace_stack.borrow().len();
+            if l == 0 {
+                println!("WARNING: call stack exceeded!");
+                self.tcx._trace_stack.borrow_mut().push(trace);
+            } else {
+                self.tcx._trace_stack.borrow_mut().last_mut().unwrap()._steps.push(Step::Call(trace));
+            };
+        };
     }
 
     // new) called by BB(X)
     pub fn push_bb_stack1(&mut self, bb: BasicBlock) {
-        let mut _s1= self.tcx._s1.borrow_mut();
-        _s1.push(Step::B(bb));
+        if *self.tcx._skip_counter.borrow() == 0 {
+            self.tcx._trace_stack.borrow_mut().last_mut().unwrap()._steps.push(Step::B(bb));
+        };
     }
     
     // test: env var DUMP_FIN_TRACE

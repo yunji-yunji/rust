@@ -204,12 +204,12 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             self.dump_fin_trace("/home/y23kim/rust/last_rust/aptos-core/terminator_call.json");
                         }
                     }
-                    self.push_trace_stack1(fn_inst_key);
                     // let final_trace = self.tcx._trace.borrow();
                     // let content =
                     //     serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
                     // println!("test{:?}", content);
-                }            
+                }
+                self.push_trace_stack1(fn_inst_key);            
 
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
