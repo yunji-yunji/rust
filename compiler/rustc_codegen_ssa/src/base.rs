@@ -620,7 +620,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
                 Some(v) => std::path::PathBuf::from(v),
             };
 
-            println!("dump original location");
+            // println!("dump original location");
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {

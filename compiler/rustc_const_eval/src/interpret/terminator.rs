@@ -23,7 +23,6 @@ use super::{
     Projectable, Provenance, Scalar, StackPopCleanup,
 };
 use crate::fluent_generated as fluent;
-use rustc_middle::ty::print::with_no_trimmed_paths;
 /// An argment passed to a function.
 #[derive(Clone, Debug)]
 pub enum FnArg<'tcx, Prov: Provenance = CtfeProvenance> {
@@ -73,42 +72,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         })
     }
 
-    fn ret_info(
-        &mut self,
-        _terminator: &mir::Terminator<'tcx>,
-    ) -> Vec<String> {
-
-        let mut v :Vec<String> = vec![];
-
-        let body = self.body();
-        let instance_def = body.source.instance;
-        let def_id = instance_def.def_id();
-
-        // 0. terminator kind
-        // let term_kind = &terminator.kind;
-        // let s = format!("{:?}", term_kind);
-        // let name = with_no_trimmed_paths!(s);
-        // v.push(name);
-
-        // 1. krate name
-        let krate_name = self.tcx.crate_name(def_id.krate).to_string();
-        let tmp = with_no_trimmed_paths!(krate_name.to_string());
-        v.push(tmp);
-
-        // 3. def path
-        let def_path = self.tcx.def_path(def_id);
-        let def_paths = def_path.data;
-        for item in &def_paths {
-            // let tmp = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-            // let tmp2 = with_no_trimmed_paths!(tmp.to_string());
-            let name = with_no_trimmed_paths!(item.data.to_string());
-            v.push(name);
-            let num = with_no_trimmed_paths!(item.disambiguator.to_string());
-            v.push(num);
-        }
-        v
-    }
-
     pub(super) fn eval_terminator(
         &mut self,
         terminator: &mir::Terminator<'tcx>,
@@ -120,9 +83,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 if *can_skip {
                     // print!(".");
                 } else {
-                    let a = self.ret_info(terminator);
-                    let s1 :String= a.join(":");
-                    self.push_bb(s1.clone());
+                    let crate_info = self.crate_info();
+                    self.push_bb(crate_info);
                     self.push_bb(String::from("Ret]"));
 
                     self.call_stk_pop();
@@ -187,8 +149,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 if can_skip {
                     self.set_skip_true();
                 } else {
-                    self.push_bb("[Call".to_string());
-                    let info = format!("@{:?}", fn_inst_key);
+                    self.push_bb("[Call<term>".to_string());
+                    // let info = self.crate_info();
+                    let info = self.inst_to_info(fn_inst_key.clone());
+                    // let info = format!("@{:?}", fn_inst_key);
                     self.push_bb(info);
 
                     let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
@@ -301,8 +265,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 trace!("unwinding: resuming from cleanup");
                 // By definition, a Resume terminator means
                 // that we're unwinding
-                // let a = self.ret_info(terminator);
-                // let s1 :String= a.join(":");
+
+                // let crate_info = self.crate_info(terminator);
+                // self.push_bb(crate_info);
                 let s1 = String::from("unwindResume");
                 self.push_bb(s1.clone());
                 self.pop_stack_frame(/* unwinding */ true)?;

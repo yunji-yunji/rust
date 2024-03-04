@@ -2,12 +2,65 @@ use super::{InterpCx, Machine};
 use rustc_middle::mir::BasicBlock;
 use rustc_middle::ty::context::FnInstKey;
 use rustc_middle::ty::context::{Step, Trace};
+use rustc_middle::ty::print::with_no_trimmed_paths;
 
 // use crate::interpret::dump;
 use std::fs::OpenOptions;
 use std::io::Write;
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
+    pub fn crate_info(
+        &mut self,
+        // _terminator: &mir::Terminator<'tcx>,
+    ) -> String {
+
+        let mut v: Vec<String> = vec![];
+        let res: String;
+        with_no_trimmed_paths!({
+            let body = self.body();
+            let instance_def = body.source.instance;
+            let def_id = instance_def.def_id();
+    
+            // 0. terminator kind
+            // let term_kind = &terminator.kind;
+            // let s = format!("{:?}", term_kind);
+            // let name = with_no_trimmed_paths!(s);
+            // v.push(name);
+    
+            // 1. krate name
+            let krate_name = self.tcx.crate_name(def_id.krate).to_string();
+            let tmp = with_no_trimmed_paths!(krate_name.to_string());
+            v.push(tmp);
+    
+            // 3. def path
+            let def_path = self.tcx.def_path(def_id);
+            let def_paths = def_path.data;
+            for item in &def_paths {
+                // let tmp = format!("[{:?}][{:?}]", item.data, item.disambiguator);
+                // let tmp2 = with_no_trimmed_paths!(tmp.to_string());
+                let name = with_no_trimmed_paths!(item.data.to_string());
+                v.push(name);
+                let num = with_no_trimmed_paths!(item.disambiguator.to_string());
+                v.push(num);
+            }
+
+            res = v.join(":");
+        });
+
+        res
+    }
+
+    pub fn inst_to_info(&mut self, key: FnInstKey) -> String {
+        let res: String;
+        let krate_name = match key.krate {
+            Some(val) => val,
+            None => {return String::from("no crate");}
+        };
+
+        let path = key.path;
+        res = krate_name + &path;
+        res
+    }
 
     // push for tcx._bb_seq
     pub fn push_bb(&mut self, s: String) {

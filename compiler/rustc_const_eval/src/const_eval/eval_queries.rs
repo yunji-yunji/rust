@@ -86,7 +86,9 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
     } else {
         // 1. _bb_seq
         ecx.push_bb(String::from("[Call<eval_body>"));
-        let info = format!("#{:?}", fn_inst_key);
+        // let info = format!("#{:?}", fn_inst_key);
+        let info = ecx.inst_to_info(fn_inst_key.clone());
+        // let info = ecx.crate_info();
         ecx.push_bb(info);
 
         // 2. _call_stack
@@ -115,7 +117,12 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
 
     // The main interpreter loop.
     while ecx.step()? {}
-
+    match std::env::var_os("BB_SEQ_EVAL") {
+        None => (),
+        Some(_val) => {
+            println!("eval_body_using_ecx {:?}", ecx.tcx._bb_seq);
+        }
+    }
     // Intern the result
     intern_const_alloc_recursive(ecx, intern_kind, &ret)?;
 

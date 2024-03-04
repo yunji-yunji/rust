@@ -412,8 +412,10 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             this.set_skip_true();
         } else {
             // if should skip: std, core, alloc, ..
-            this.push_bb(String::from("[helperCall:")); // is called (with miri)
-            let info = format!("*{:?}", fn_inst_key);
+            this.push_bb(String::from("[Call<helpers>")); // is called (with miri)
+            let info = this.inst_to_info(fn_inst_key.clone());
+            // let info = format!("*{:?}", fn_inst_key);
+            // let info = this.crate_info();
             this.push_bb(info);
 
             // call_stack
