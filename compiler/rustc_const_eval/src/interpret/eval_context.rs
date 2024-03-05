@@ -31,6 +31,7 @@ use crate::errors;
 use crate::util;
 use crate::{fluent_generated as fluent, ReportErrorExt};
 use rustc_middle::ty::print::with_no_trimmed_paths;
+use std::cell::RefCell;
 
 pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
     /// Stores the `Machine` instance.
@@ -51,6 +52,10 @@ pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
 
     /// The recursion limit (cached from `tcx.recursion_limit(())`)
     pub recursion_limit: Limit,
+
+    // my variables
+    pub call_return_vec: RefCell<Vec<String>>,
+    pub skip_cnt: RefCell<usize>,
 }
 
 // The Phantomdata exists to prevent this type from being `Send`. If it were sent across a thread
@@ -495,6 +500,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             param_env,
             memory: Memory::new(),
             recursion_limit: tcx.recursion_limit(),
+            call_return_vec: RefCell::new(vec![]),
+            skip_cnt: RefCell::new(0),
         }
     }
 

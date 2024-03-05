@@ -833,7 +833,7 @@ impl FnInstKey {
                     None => false, 
                     Some(k_name) => match k_name {
                         // if it is std library and
-                        "core" | "std" | "alloc" | "backtrace" | "hashbrown" | "petgraph" | "bcs" | "getopts" => { // getopts
+                        "core" | "std" | "alloc" | "backtrace" | "hashbrown" | "petgraph" | "bcs" => {
                             // if any generic has functor, can_skip = false
                             !self.generics.iter().any(|g| g.has_functor())
                         }
@@ -2052,6 +2052,7 @@ impl<'tcx> TyCtxt<'tcx> {
             generics: vec![],
         };
         let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key.clone(), _steps: steps.to_vec() };
+        println!("crate id [{:?}]{:?}", crate_types, stable_crate_id);
         // let trace_idx_vec : Vec<usize> = vec![0];
         // let curr = Some(&)
         GlobalCtxt {

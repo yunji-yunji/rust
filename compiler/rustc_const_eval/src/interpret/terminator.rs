@@ -79,17 +79,24 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
+                let crate_info = self.crate_info();
+
                 let can_skip = self.tcx._ret_can_skip.borrow();
                 if *can_skip {
                     // print!(".");
                 } else {
-                    let crate_info = self.crate_info();
-                    self.push_bb(crate_info);
+                    self.push_bb(crate_info.clone());
                     self.push_bb(String::from("Ret]"));
-
+                    
                     self.call_stk_pop();
                     self.push_step_call();
                 }
+
+                // let mut can_skip_miri = *self.skip_cnt.borrow();
+                // if can_skip_miri { } else {
+                    self.push_to_ecx(crate_info);
+                    self.push_to_ecx(String::from("Ret]"));
+                // }
 
                 match std::env::var_os("TF") {
                     None => (),
@@ -144,16 +151,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let instance_def = self.body().source.instance;
                 let def_id = instance_def.def_id();
                 let fn_inst_key = self.create_fn_inst_key(def_id, func);
+                let info = self.inst_to_info(fn_inst_key.clone());
 
                 let can_skip = fn_inst_key.can_skip();
                 if can_skip {
                     self.set_skip_true();
                 } else {
+
                     self.push_bb("[Call<term>".to_string());
-                    // let info = self.crate_info();
-                    let info = self.inst_to_info(fn_inst_key.clone());
-                    // let info = format!("@{:?}", fn_inst_key);
-                    self.push_bb(info);
+                    self.push_bb(info.clone());
 
                     let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
                     self.call_stk_push(call_name);
@@ -173,6 +179,16 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     //     serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
                     // println!("test{:?}", content);
                 }
+
+                // let mut skip_cnt_miri = *self.skip_cnt.borrow();
+                // if skip_cnt_miri == 0 {
+                    self.push_to_ecx("[Call<term>".to_string());
+                    self.push_to_ecx(info);
+                // }
+                // if can_skip {
+                    // self.skip_cnt.replace(skip_cnt_miri+1);
+                // }
+
                 self.push_trace_stack1(fn_inst_key);            
 
                 let old_stack = self.frame_idx();

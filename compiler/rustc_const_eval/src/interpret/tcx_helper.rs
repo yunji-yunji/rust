@@ -59,6 +59,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         let path = key.path;
         res = krate_name + &path;
+
         res
     }
 
@@ -177,5 +178,11 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             .open(dump_path)
             .expect("unable to create output file");
         file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
+    }
+
+    // pair calls and returns
+    pub fn push_to_ecx(&mut self, s: String) {
+        let mut tmp_vec: std::cell::RefMut<'_, Vec<String>> = self.call_return_vec.borrow_mut();
+        tmp_vec.push(s);
     }
 }

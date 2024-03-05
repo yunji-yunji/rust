@@ -31,9 +31,9 @@ pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
 
     let (_, units) = tcx.collect_and_partition_mono_items(());
     for unit in units {
-        println!("unit;{:?}---------------", unit);
+        println!("unit {:?}---------------", unit);
         for item in unit.items().keys() {
-            println!("* {:?}---------------", item);
+            println!("* {:?}", item);
 
             // filter
             let instance = match item {
@@ -62,6 +62,8 @@ pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
                 bug!("unbalanced call stack");
             }
         }
+        println!("===========================");
+
     }
 
     // dump output

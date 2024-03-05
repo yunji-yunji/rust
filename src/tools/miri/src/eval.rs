@@ -20,6 +20,7 @@ use rustc_middle::ty::{
 use rustc_target::spec::abi::Abi;
 
 use rustc_session::config::EntryFnType;
+// use::rustc_codegen_ssa::pafl;
 
 use crate::shims::tls;
 use crate::*;
@@ -268,6 +269,8 @@ pub fn create_ecx<'mir, 'tcx: 'mir>(
     let mut ecx =
         InterpCx::new(tcx, rustc_span::DUMMY_SP, param_env, MiriMachine::new(config, layout_cx));
 
+    println!("create ecx (MiriMachine) {:?}{:?}[{:?}]", 
+    tcx.crate_name(entry_id.krate).to_string(), tcx.def_path_debug_str(entry_id), entry_type);
     // Some parts of initialization require a full `InterpCx`.
     MiriMachine::late_init(&mut ecx, config, {
         let mut state = MainThreadState::default();
@@ -422,15 +425,41 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
-    match std::env::var_os("DUMP_IN_EVAL") {
-        None => (),
-        Some(val) => {
-            println!("Start Dump!");
-            let outdir: PathBuf = std::path::PathBuf::from(val);
-            dump::dump_in_eval_entry(tcx, entry_id, entry_type, &outdir);
-            println!("Complete Dump!");
-        }
-    }
+    // match std::env::var_os("DUMP_IN_EVAL") {
+    //     None => (),
+    //     Some(val) => {
+    //         println!("Start Dump!");
+    //         let outdir: PathBuf = std::path::PathBuf::from(val);
+    //         dump::dump_in_eval_entry(tcx, entry_id, entry_type, &outdir);
+
+
+    //         println!("Complete Dump!");
+    //     }
+    // }
+
+    // Hijack the process for collecting information for path-based fuzzing
+    // match std::env::var_os("DUMP_IN_EVAL") {
+    //     None => {},
+    //     Some(val) => {
+    //         let outdir = std::path::PathBuf::from(val.clone());
+    //         let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+    //             None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+    //             Some(v) => std::path::PathBuf::from(v),
+    //         };
+
+    //         println!("DUMP IN MIRI {:?}", val.clone());
+    //         match tcx.sess.local_crate_source_file() {
+    //             None => bug!("unable to locate local crate source file"),
+    //             Some(src) => {
+    //                 if src.starts_with(&prefix) {
+    //                     // we are compiling a target crate
+    //                     // let ttcx : TyCtxt<'_> = tcx;
+    //                     pafl::dump(tcx, &outdir);
+    //                 }
+    //             }
+    //         }
+    //     }
+    // };
 
     // Copy setting before we move `config`.
     let ignore_leaks = config.ignore_leaks;
@@ -443,10 +472,12 @@ pub fn eval_entry<'tcx>(
             panic!("Miri initialization error: {kind:?}")
         }
     };
-    
+    println!("miri interpreter after create ecx {:?}", ecx.call_return_vec.borrow());
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
+    println!("miri after run_thread {:?}", ecx.call_return_vec.borrow());
+    
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
         panic::resume_unwind(panic_payload)

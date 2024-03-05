@@ -22,7 +22,7 @@ struct ItemShort<'a> {
 }
 
 // test : DUMP_IN_EVAL
-pub fn dump_in_eval_entry(
+pub fn _dump_in_eval_entry(
     tcx: TyCtxt<'_>,
     _entry_id: DefId,
     _entry_type: EntryFnType,
