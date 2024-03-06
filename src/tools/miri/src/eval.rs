@@ -20,7 +20,6 @@ use rustc_middle::ty::{
 use rustc_target::spec::abi::Abi;
 
 use rustc_session::config::EntryFnType;
-
 use crate::shims::tls;
 use crate::*;
 
@@ -427,6 +426,39 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
+    // match std::env::var_os("DUMP_IN_EVAL") {
+    //     None => (),
+    //     Some(val) => {
+    //         println!("Start Dump!");
+    //         let outdir: PathBuf = std::path::PathBuf::from(val);
+    //         dump::dump_in_eval_entry(tcx, entry_id, entry_type, &outdir);
+    //         println!("Complete Dump!");
+    //     }
+    // }
+
+    match std::env::var_os("DUMP_IN_EVAL") {
+        None => {},
+        Some(val) => {
+            let outdir = std::path::PathBuf::from(val.clone());
+            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
+                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
+                Some(v) => std::path::PathBuf::from(v),
+            };
+            println!("DUMP IN MIRI {:?}", val.clone());
+            match tcx.sess.local_crate_source_file() {
+                None => bug!("unable to locate local crate source file"),
+                Some(src) => {
+                    if src.starts_with(&prefix) {
+                        // dump::dump_in_miri(tcx, &outdir);
+                        // dump(tcx, &outdir);
+                        // dump_cp(tcx, &outdir);
+                        tcx.dump_cp(&outdir);
+                    }
+                }
+            }
+        }
+    };
+
     // Copy setting before we move `config`.
     let ignore_leaks = config.ignore_leaks;
 

@@ -1312,7 +1312,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     pub fn process_callsite(&mut self, callee: &Operand<'tcx>, span: Span) -> CallSite {
         // extract def_id and generic arguments for callee
         let cty = match callee.constant() {
-            None => bug!("callee is not a constant: {:?}", span),
+            None => {
+                bug!("callee is not a constant: operand={:?} {:?}", callee, span)
+                // println!("callee is not a constant: operand={:?} span={:?}", callee, span);
+            },
             Some(c) => c.const_.ty(),
         };
         let (def_id, generic_args) = match cty.kind() {
@@ -1922,6 +1925,8 @@ pub struct GlobalCtxt<'tcx> {
     current_gcx: CurrentGcx,
 }
 
+use crate::mir::mono::MonoItem;
+
 impl<'tcx> GlobalCtxt<'tcx> {
     /// Installs `self` in a `TyCtxt` and `ImplicitCtxt` for the duration of
     /// `f`.
@@ -2096,6 +2101,174 @@ impl<'tcx> TyCtxt<'tcx> {
         value.lift_to_tcx(self)
     }
 
+    pub fn dump_cp(self, outdir: &Path) {
+        println!("dump func is called");
+        // prepare directory layout
+        fs::create_dir_all(outdir).expect("unable to create output directory");
+        let path_meta = outdir.join("meta");
+        fs::create_dir_all(&path_meta).expect("unable to create meta directory");
+        let path_data = outdir.join("data");
+        fs::create_dir_all(&path_data).expect("unable to create data directory");
+        let path_build = outdir.join("build");
+        fs::create_dir_all(&path_build).expect("unable to create build directory");
+    
+        // verbosity
+        let verbose = std::env::var_os("PAFL_VERBOSE")
+            .and_then(|v| v.into_string().ok())
+            .map_or(false, |v| v.as_str() == "1");
+    
+        // extract the mir for each codegen unit
+        let mut cache = FxHashMap::default();
+        let mut summary = PaflCrate { functions: Vec::new() };
+    
+        let (_, units) = self.collect_and_partition_mono_items(());
+        for unit in units {
+            println!("unit {:?}---------------", unit);
+            for item in unit.items().keys() {
+                println!("* {:?}", item);
+    
+                // filter
+                let instance = match item {
+                    MonoItem::Fn(i) => *i,
+                    MonoItem::Static(_) => continue,
+                    MonoItem::GlobalAsm(_) => bug!("unexpected assembly"),
+                };
+                if !instance.def_id().is_local() {
+                    continue;
+                }
+    
+                // process it and save the result to summary
+                let mut stack = vec![];
+                PaflDump::summarize_instance(
+                    self,
+                    ParamEnv::reveal_all(),
+                    instance,
+                    verbose,
+                    &path_meta,
+                    &path_data,
+                    &mut stack,
+                    &mut cache,
+                    &mut summary.functions,
+                );
+                if !stack.is_empty() {
+                    bug!("unbalanced call stack");
+                }
+            }
+            println!("===========================");
+    
+        }
+    
+        // dump output
+        let content =
+            serde_json::to_string_pretty(&summary).expect("unexpected failure on JSON encoding");
+        let symbol = self.crate_name(LOCAL_CRATE);
+        let crate_name = symbol.as_str();
+        let output = path_build.join(crate_name).with_extension("json");
+        println!("out={:?}", output.to_str());
+    
+        // let mut file = OpenOptions::new()
+        //     .write(true)
+        //     .create_new(true)
+        //     .open(output)
+        //     .expect("unable to create output file");
+        let mut file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(output)
+            .expect("unable to create output file2");
+        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
+    }
+
+    pub fn create_fn_inst_key2(self, def: DefId, term: &Terminator<'tcx>) -> FnInstKey {
+
+        let tcx = self.tcx();
+        let param_env = self.param_env(def);
+        // 1. krate
+        // let krate = if def.is_local() { None } else { Some(tcx.crate_name(def.krate).to_string()) };
+        let krate = Some(tcx.crate_name(def.krate).to_string());
+
+        // 2.1. dumper ===============================================
+        // let param_env: ParamEnv<'_> = self.param_env;
+        let verbose = false;
+
+        let outdir= PathBuf::from("./yjtmp/");
+        fs::create_dir_all(outdir.clone()).expect("unable to create output directory");
+        let path_meta = outdir.join("meta");
+        fs::create_dir_all(&path_meta).expect("unable to create meta directory");
+        let path_data = outdir.join("data");
+        fs::create_dir_all(&path_data).expect("unable to create meta directory");
+
+        let path_prefix: PathBuf = PathBuf::default();
+        let mut stack = vec![];
+        let mut cache = FxHashMap::default();
+        
+        let pafl_crate = PaflCrate { functions: Vec::new() };
+        let mut summary = pafl_crate.functions;
+
+        let dumper: PaflDump<'_, '_> = PaflDump {
+            tcx: tcx,
+            param_env: param_env,
+            verbose: verbose,
+            path_meta: path_meta.to_path_buf(),
+            path_data: path_data.to_path_buf(),
+            path_prefix: path_prefix,
+            stack: &mut stack,
+            cache: &mut cache,
+            summary: &mut summary,
+        };
+
+        // ================ ===============================================
+
+        let kind = &term.kind;
+        match kind {
+            TerminatorKind::Call { func, args: _, destination: _, target: _, unwind: _, call_source: _, fn_span: _ } => 
+            {
+                // 2.2. args
+                let const_ty = match func.constant() {
+                    None => {
+                        bug!("callee is not a constant:");
+                    },
+                    Some(const_op) => const_op.const_.ty(),
+                };
+                let (_def_id, generic_args) = match const_ty.kind() {
+                    ty::Closure(def_id, generic_args)
+                    | ty::FnDef(def_id, generic_args) => {
+                        (*def_id, *generic_args)
+                    },
+                    _ => bug!("callee is not a function or closure"),
+                };
+
+                // 2.3. generics
+                let mut my_generics: Vec<PaflGeneric> = vec![];
+                for arg in generic_args {
+                    let sub = match arg.unpack() {
+                        GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
+                        GenericArgKind::Type(_item) => PaflGeneric::Type(PaflType::Never),
+                        // GenericArgKind::Type(item) => PaflGeneric::Type(dumper.process_type(item)),
+                        GenericArgKind::Const(item) => PaflGeneric::Const(dumper.process_const(item)),
+                        // _ => {},
+                    };
+                    my_generics.push(sub);
+                }
+
+                // 3. FnInstKey ===============================================
+                let fn_inst_key = FnInstKey {
+                    krate,
+                    index: def.index.as_usize(),
+                    path: tcx.def_path(def).to_string_no_crate_verbose(),
+                    generics: my_generics,
+                };
+                // print!("[createFnKey({:?})];", fn_inst_key.generics.len()); 
+
+                fn_inst_key
+            },
+            _ => {
+                bug!("Terminator kind is not Call");
+            }
+        }
+    }
+
     /// Creates a type context. To use the context call `fn enter` which
     /// provides a `TyCtxt`.
     ///
@@ -2122,7 +2295,23 @@ impl<'tcx> TyCtxt<'tcx> {
         let common_types = CommonTypes::new(&interners, s, &untracked);
         let common_lifetimes = CommonLifetimes::new(&interners);
         let common_consts = CommonConsts::new(&interners, &common_types, s, &untracked);
+<<<<<<< HEAD
 
+=======
+        
+        // let dummy_generics: Vec<PaflGeneric> = vec![];
+        let steps: Vec<Step> = vec![];
+        let dummy_fn_inst_key = FnInstKey {
+            krate: None,
+            index: 0,
+            path: String::from(""),
+            generics: vec![],
+        };
+        let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key.clone(), _steps: steps.to_vec() };
+        // println!("crate id [{:?}]{:?}", crate_types, stable_crate_id);
+        // let trace_idx_vec : Vec<usize> = vec![0];
+        // let curr = Some(&)
+>>>>>>> 2f5a12d2461 (dump in miri (callee is not constant))
         GlobalCtxt {
             sess: s,
             crate_types,
