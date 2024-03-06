@@ -1158,7 +1158,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     pub fn process_callsite(&mut self, callee: &Operand<'tcx>, span: Span) -> CallSite {
         // extract def_id and generic arguments for callee
         let cty = match callee.constant() {
-            None => bug!("callee is not a constant: {:?}", span),
+            None => {
+                bug!("callee is not a constant: operand={:?} {:?}", callee, span)
+                // println!("callee is not a constant: operand={:?} span={:?}", callee, span);
+            },
             Some(c) => c.const_.ty(),
         };
         let (def_id, generic_args) = match cty.kind() {
@@ -1811,6 +1814,8 @@ pub struct GlobalCtxt<'tcx> {
 }
 use rustc_middle::mir::Terminator;
 
+use crate::mir::mono::MonoItem;
+
 impl<'tcx> GlobalCtxt<'tcx> {
     /// Installs `self` in a `TyCtxt` and `ImplicitCtxt` for the duration of
     /// `f`.
@@ -1926,6 +1931,85 @@ impl<'tcx> TyCtxt<'tcx> {
 
     pub fn lift<T: Lift<'tcx>>(self, value: T) -> Option<T::Lifted> {
         value.lift_to_tcx(self)
+    }
+
+    pub fn dump_cp(self, outdir: &Path) {
+        println!("dump func is called");
+        // prepare directory layout
+        fs::create_dir_all(outdir).expect("unable to create output directory");
+        let path_meta = outdir.join("meta");
+        fs::create_dir_all(&path_meta).expect("unable to create meta directory");
+        let path_data = outdir.join("data");
+        fs::create_dir_all(&path_data).expect("unable to create data directory");
+        let path_build = outdir.join("build");
+        fs::create_dir_all(&path_build).expect("unable to create build directory");
+    
+        // verbosity
+        let verbose = std::env::var_os("PAFL_VERBOSE")
+            .and_then(|v| v.into_string().ok())
+            .map_or(false, |v| v.as_str() == "1");
+    
+        // extract the mir for each codegen unit
+        let mut cache = FxHashMap::default();
+        let mut summary = PaflCrate { functions: Vec::new() };
+    
+        let (_, units) = self.collect_and_partition_mono_items(());
+        for unit in units {
+            println!("unit {:?}---------------", unit);
+            for item in unit.items().keys() {
+                println!("* {:?}", item);
+    
+                // filter
+                let instance = match item {
+                    MonoItem::Fn(i) => *i,
+                    MonoItem::Static(_) => continue,
+                    MonoItem::GlobalAsm(_) => bug!("unexpected assembly"),
+                };
+                if !instance.def_id().is_local() {
+                    continue;
+                }
+    
+                // process it and save the result to summary
+                let mut stack = vec![];
+                PaflDump::summarize_instance(
+                    self,
+                    ParamEnv::reveal_all(),
+                    instance,
+                    verbose,
+                    &path_meta,
+                    &path_data,
+                    &mut stack,
+                    &mut cache,
+                    &mut summary.functions,
+                );
+                if !stack.is_empty() {
+                    bug!("unbalanced call stack");
+                }
+            }
+            println!("===========================");
+    
+        }
+    
+        // dump output
+        let content =
+            serde_json::to_string_pretty(&summary).expect("unexpected failure on JSON encoding");
+        let symbol = self.crate_name(LOCAL_CRATE);
+        let crate_name = symbol.as_str();
+        let output = path_build.join(crate_name).with_extension("json");
+        println!("out={:?}", output.to_str());
+    
+        // let mut file = OpenOptions::new()
+        //     .write(true)
+        //     .create_new(true)
+        //     .open(output)
+        //     .expect("unable to create output file");
+        let mut file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(output)
+            .expect("unable to create output file2");
+        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
     }
 
     pub fn create_fn_inst_key2(self, def: DefId, term: &Terminator<'tcx>) -> FnInstKey {
@@ -2052,7 +2136,7 @@ impl<'tcx> TyCtxt<'tcx> {
             generics: vec![],
         };
         let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key.clone(), _steps: steps.to_vec() };
-        println!("crate id [{:?}]{:?}", crate_types, stable_crate_id);
+        // println!("crate id [{:?}]{:?}", crate_types, stable_crate_id);
         // let trace_idx_vec : Vec<usize> = vec![0];
         // let curr = Some(&)
         GlobalCtxt {

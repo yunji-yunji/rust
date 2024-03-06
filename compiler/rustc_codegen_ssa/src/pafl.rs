@@ -9,7 +9,8 @@ use rustc_middle::ty::context::{PaflDump, PaflCrate, };
 use rustc_span::def_id::{LOCAL_CRATE};
 
 /// A complete dump of both the control-flow graph and the call graph of the compilation context
-pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
+// pub fn dump(tcx: TyCtxt<'_>, outdir: &Path) {
+pub fn dump<'tcx>(tcx: TyCtxt<'tcx>, outdir: &Path) {
     println!("dump func is called");
     // prepare directory layout
     fs::create_dir_all(outdir).expect("unable to create output directory");

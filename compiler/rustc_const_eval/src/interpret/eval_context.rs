@@ -576,11 +576,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         instance: ty::InstanceDef<'tcx>,
         promoted: Option<mir::Promoted>,
     ) -> InterpResult<'tcx, &'tcx mir::Body<'tcx>> {
-        trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
+        // trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
+        // println!("load mir(instance={:?}, promoted={:?})", instance, promoted);
         let body = if let Some(promoted) = promoted {
             let def = instance.def_id();
+            // println!("load mir(promoted_mir)");
             &self.tcx.promoted_mir(def)[promoted]
         } else {
+            // println!("load mir(optimized_mir)");
             M::load_mir(self, instance)?
         };
         // do not continue if typeck errors occurred (can only occur in local crate)
