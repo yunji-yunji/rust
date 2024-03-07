@@ -157,6 +157,7 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                             // println!("after miri2 {:?}", tcx._tmp_trace.borrow());
                         }
                     }
+                    /*
                     let trace_stack = tcx._trace_stack.borrow();
                     let trace = trace_stack.last().unwrap();
                     if trace._steps.len() > 0 {
@@ -164,6 +165,7 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                     } else {
                         println!("empty trace");
                     };
+                    */
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {
                         tcx.reachable_set(()).to_sorted(&hcx, true)
                     });

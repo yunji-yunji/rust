@@ -89,7 +89,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     self.push_bb(String::from("Ret]"));
                     
                     self.call_stk_pop();
-                    self.push_step_call();
                 }
 
                 // let mut can_skip_miri = *self.skip_cnt.borrow();

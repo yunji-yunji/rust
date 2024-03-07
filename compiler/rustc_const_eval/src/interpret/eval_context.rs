@@ -16,7 +16,7 @@ use rustc_middle::ty::layout::{
     self, FnAbiError, FnAbiOfHelpers, FnAbiRequest, LayoutError, LayoutOf, LayoutOfHelpers,
     TyAndLayout,
 };
-use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance};
+use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance, context::{FnInstKey, Trace}};
 use rustc_mir_dataflow::storage::always_storage_live_locals;
 use rustc_session::Limit;
 use rustc_span::Span;
@@ -56,6 +56,9 @@ pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
     // my variables
     pub call_return_vec: RefCell<Vec<String>>,
     pub skip_cnt: RefCell<usize>,
+
+    pub _trace_stack: Vec<Trace>,
+    pub _skip_counter: usize,
 }
 
 // The Phantomdata exists to prevent this type from being `Send`. If it were sent across a thread
@@ -494,6 +497,13 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         param_env: ty::ParamEnv<'tcx>,
         machine: M,
     ) -> Self {
+        let dummy_fn_inst_key = FnInstKey {
+            krate: None,
+            index: 0,
+            path: String::from(""),
+            generics: vec![],
+        };
+
         InterpCx {
             machine,
             tcx: tcx.at(root_span),
@@ -502,6 +512,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             recursion_limit: tcx.recursion_limit(),
             call_return_vec: RefCell::new(vec![]),
             skip_cnt: RefCell::new(0),
+            _trace_stack: vec![Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }, Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }],
+            _skip_counter: 0,
         }
     }
 

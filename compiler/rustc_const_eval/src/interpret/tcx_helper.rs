@@ -20,18 +20,18 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             let body = self.body();
             let instance_def = body.source.instance;
             let def_id = instance_def.def_id();
-    
+
             // 0. terminator kind
             // let term_kind = &terminator.kind;
             // let s = format!("{:?}", term_kind);
             // let name = with_no_trimmed_paths!(s);
             // v.push(name);
-    
+
             // 1. krate name
             let krate_name = self.tcx.crate_name(def_id.krate).to_string();
             let tmp = with_no_trimmed_paths!(krate_name.to_string());
             v.push(tmp);
-    
+
             // 3. def path
             let def_path = self.tcx.def_path(def_id);
             let def_paths = def_path.data;
@@ -97,65 +97,51 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         let mut steps= self.tcx._tmp_steps.borrow_mut();
         steps.push(Step::B(bb));
     }
-    
-    // called by Return
-    pub fn push_step_call(&mut self,) {
-        let mut tmp_trace = self.tcx._tmp_trace.borrow_mut();
-        let mut tmp_steps= self.tcx._tmp_steps.borrow_mut();
-        tmp_trace._steps = tmp_steps.to_vec();
-        *tmp_steps = vec![];
-
-        let mut final_trace= self.tcx._trace.borrow_mut();
-        final_trace._steps.push(Step::Call(tmp_trace.clone()));
-    }
 
     // new) called by call
     pub fn push_trace_stack1(&mut self, fn_key: FnInstKey) {
         // println!("call {:?}", fn_key);
-        let skip = *self.tcx._skip_counter.borrow();
         let can_skip = fn_key.can_skip();
-        if skip == 0 {
-            self.tcx._trace_stack.borrow_mut().push(Trace {_entry: fn_key, _steps: Vec::new()});
+        if self._skip_counter == 0 {
+            self._trace_stack.push(Trace {_entry: fn_key, _steps: Vec::new()});
         };
         if can_skip {
-            self.tcx._skip_counter.replace(skip + 1);
+            self._skip_counter += 1;
         };
     }
 
     // new) called by return
     pub fn merge_trace_stack1(&mut self, ) {
         // can't be empty, unless return unmatched with call
-        let mut skip = *self.tcx._skip_counter.borrow();
-        if self.tcx._trace_stack.borrow().last().unwrap()._entry.can_skip() {
-            skip -= 1;
-            self.tcx._skip_counter.replace(skip);
+        if self._trace_stack.last().unwrap()._entry.can_skip() {
+            self._skip_counter -= 1;
         };
-        if skip == 0 {
-            let trace = self.tcx._trace_stack.borrow_mut().pop().unwrap();
+        if self._skip_counter == 0 {
+            let trace = self._trace_stack.pop().unwrap();
             // println!("return {:?}", trace._entry);
-            let l = self.tcx._trace_stack.borrow().len();
+            let l = self._trace_stack.len();
             if l == 0 {
                 // println!("WARNING: call stack exceeded!");
-                self.tcx._trace_stack.borrow_mut().push(trace);
+                self._trace_stack.push(trace);
             } else {
-                self.tcx._trace_stack.borrow_mut().last_mut().unwrap()._steps.push(Step::Call(trace));
+                self._trace_stack.last_mut().unwrap()._steps.push(Step::Call(trace));
             };
         };
     }
 
     // new) called by BB(X)
     pub fn push_bb_stack1(&mut self, bb: BasicBlock) {
-        if *self.tcx._skip_counter.borrow() == 0 {
-            self.tcx._trace_stack.borrow_mut().last_mut().unwrap()._steps.push(Step::B(bb));
+        if self._skip_counter == 0 {
+            self._trace_stack.last_mut().unwrap()._steps.push(Step::B(bb));
         };
     }
-    
+
     // test: env var DUMP_FIN_TRACE
     pub fn dump_fin_trace(&mut self, file_name: &str) {
         let t = self.tcx._trace.borrow();
         let content =
             serde_json::to_string_pretty(&*t).expect("unexpected failure on JSON encoding");
-  
+
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
@@ -170,7 +156,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         let t = self.tcx._tmp_trace.borrow();
         let content =
             serde_json::to_string_pretty(&*t).expect("unexpected failure on JSON encoding");
-  
+
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)

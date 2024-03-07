@@ -495,6 +495,13 @@ pub fn eval_entry<'tcx>(
         EnvVars::cleanup(&mut ecx).expect("error during env var cleanup");
     }
 
+    let trace = ecx._trace_stack.last().unwrap();
+    if trace._steps.len() > 0 {
+        println!("after miri2 {:?}", trace._steps.last().unwrap());
+    } else {
+        println!("empty trace");
+    };
+
     // Process the result.
     let (return_code, leak_check) = report_error(&ecx, res)?;
     if leak_check && !ignore_leaks {
