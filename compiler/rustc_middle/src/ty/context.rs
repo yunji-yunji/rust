@@ -13,7 +13,7 @@ use crate::middle::codegen_fn_attrs::CodegenFnAttrs;
 use crate::middle::resolve_bound_vars;
 use crate::middle::stability;
 use crate::mir::interpret::{self, Allocation, ConstAllocation};
-use crate::mir::{Body, Local, Place, PlaceElem, ProjectionKind, Promoted};
+use crate::mir::{Body, Local, LocalDecls, Place, PlaceElem, ProjectionKind, Promoted};
 use crate::query::plumbing::QuerySystem;
 use crate::query::LocalCrate;
 use crate::query::Providers;
@@ -1086,7 +1086,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             ty::Foreign(def_id) => PaflType::Opaque((*def_id).into()),
             ty::FnPtr(binder) => {
                 if !matches!(binder.abi(), Abi::Rust | Abi::RustCall) {
-                    bug!("fn ptr not following the RustCall ABI: {}", binder.abi());
+
+                    println!("fn ptr not following the RustCall ABI: {}", binder.abi());
+                    return PaflType::Never;
                 }
                 if binder.c_variadic() {
                     bug!("variadic not supported yet");
@@ -1154,13 +1156,12 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
         generics
     }
 
-    /// Resolve the call target
-    pub fn process_callsite(&mut self, callee: &Operand<'tcx>, span: Span) -> CallSite {
+    /// Resolve the call targetG1
+    pub fn process_callsite(&mut self, callee: &Operand<'tcx>, span: Span, _local_decls: &LocalDecls<'tcx>) -> CallSite {
         // extract def_id and generic arguments for callee
         let cty = match callee.constant() {
             None => {
-                bug!("callee is not a constant: operand={:?} {:?}", callee, span)
-                // println!("callee is not a constant: operand={:?} span={:?}", callee, span);
+                bug!("[IN]callee is not a constant: operand={:?} {:?}", callee, span)
             },
             Some(c) => c.const_.ty(),
         };
@@ -1168,7 +1169,11 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             ty::Closure(def_id, generic_args) | ty::FnDef(def_id, generic_args) => {
                 (*def_id, *generic_args)
             }
-            _ => bug!("callee is not a function or closure: {:?}", span),
+            _ => {
+                bug!("callee is not a function or closure: [{:?}] {:?}", cty.kind(), span);
+                // (CRATE_DEF_ID, &[])
+                // bug!("callee is not a function or closure: {:?}", span),
+            }
         };
 
         // test if we should skip this function
@@ -1357,7 +1362,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     }
 
     /// Process the mir for one basic block
-    pub fn process_block(&mut self, id: BasicBlock, data: &BasicBlockData<'tcx>) -> PaflBlock {
+    pub fn process_block(&mut self, id: BasicBlock, data: &BasicBlockData<'tcx>, local_decls: &LocalDecls<'tcx>) -> PaflBlock {
         let term = data.terminator();
 
         // match by the terminator
@@ -1378,10 +1383,28 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 unwind,
                 call_source: _,
                 fn_span: _,
-            } => TermKind::Call {
-                site: self.process_callsite(func, term.source_info.span),
-                target: target.as_ref().map(|t| (*t).into()),
-                unwind: unwind.into(),
+            } => {
+                match func.constant() {
+                    None => {
+                        let pl = func.place();
+                        let cty = match pl {
+                            None => bug!("cannot convert move or copy to place"),
+                            Some(place) => {
+                                // let local = place.local;
+                                place.ty(local_decls, self.tcx).ty
+                            }
+                        };
+                        println!("callee is not a constant: operand={:?} [{:?}] span={:?}", func, cty.kind(), term.source_info.span);
+                        TermKind::Unreachable
+                    },
+                    Some(_c) => {
+                        TermKind::Call {
+                            site: self.process_callsite(func, term.source_info.span, local_decls),
+                            target: target.as_ref().map(|t| (*t).into()),
+                            unwind: unwind.into(),
+                        }
+                    }
+                }
             },
             TerminatorKind::Drop { place: _, target, unwind, replace: _ } => {
                 TermKind::Drop { target: (*target).into(), unwind: unwind.into() }
@@ -1412,7 +1435,6 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     /// Process the mir body for one function
     pub fn process_cfg(&mut self, id: DefId, body: &Body<'tcx>) -> PaflCFG {
         let _path = self.tcx.def_path(id).to_string_no_crate_verbose();
-
         // dump the control flow graph if requested
         match std::env::var_os("PAFL_CFG") {
             None => (),
@@ -1460,12 +1482,13 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                  */
             }
         }
+        let local_decls = body.local_decls.as_slice();
 
         // iterate over each basic blocks
         let mut blocks = vec![];
         for blk_id in body.basic_blocks.reverse_postorder() {
             let blk_data = body.basic_blocks.get(*blk_id).unwrap();
-            blocks.push(self.process_block(*blk_id, blk_data));
+            blocks.push(self.process_block(*blk_id, blk_data, &local_decls));
         }
 
         // done
