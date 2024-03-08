@@ -686,7 +686,7 @@ impl Native {
 
 
 /// Identifier mimicking `DefId`
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Ident2 {
     pub krate: usize,
     pub index: usize,
@@ -700,21 +700,21 @@ impl From<DefId> for Ident2 {
 
 
 /// Constant value or aggregates
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum ValueTree {
     Scalar { bit: usize, val: u128 },
     Struct(Vec<ValueTree>),
 }
 
 /// Serializable information about a Rust const
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum PaflConst {
     Param { index: u32, name: String },
     Value(ValueTree),
 }
 
 /// Serializable information about a Rust type
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub enum PaflType {
     Never,
     Bool,
@@ -789,7 +789,7 @@ impl PaflType {
 }
 
 /// Serializable information about a Rust generic argument
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 // #[derive(Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 pub enum PaflGeneric {
     Lifetime,
@@ -807,7 +807,7 @@ impl PaflGeneric {
 }
 
 /// Identifier for type instance
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct TyInstKey {
     pub krate: Option<String>,
     pub index: usize,
@@ -816,7 +816,7 @@ pub struct TyInstKey {
 }
 
 /// Identifier for function instance
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct FnInstKey {
     pub krate: Option<String>,
     pub index: usize,
@@ -1978,7 +1978,7 @@ impl<'tcx> TyCtxt<'tcx> {
         for unit in units {
             println!("unit {:?}---------------", unit);
             for item in unit.items().keys() {
-                println!("* {:?}", item);
+                // println!("* {:?}", item);
     
                 // filter
                 let instance = match item {

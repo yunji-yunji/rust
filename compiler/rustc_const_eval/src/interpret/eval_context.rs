@@ -55,7 +55,7 @@ pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
 
     // my variables
     pub call_return_vec: RefCell<Vec<String>>,
-    pub skip_cnt: RefCell<usize>,
+    pub keep_call: RefCell<Vec<FnInstKey>>,
 
     pub _trace_stack: Vec<Trace>,
     pub _skip_counter: usize,
@@ -511,7 +511,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             memory: Memory::new(),
             recursion_limit: tcx.recursion_limit(),
             call_return_vec: RefCell::new(vec![]),
-            skip_cnt: RefCell::new(0),
+            keep_call: RefCell::new(vec![]),
             _trace_stack: vec![Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }, Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }],
             _skip_counter: 0,
         }

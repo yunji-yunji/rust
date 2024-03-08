@@ -104,6 +104,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         let can_skip = fn_key.can_skip();
         if self._skip_counter == 0 {
             self._trace_stack.push(Trace {_entry: fn_key, _steps: Vec::new()});
+            // let info = self.inst_to_info(fn_key);
+            // self.push_to_ecx("[Call<term>".to_string());
+            // self.push_to_ecx(info);
         };
         if can_skip {
             self._skip_counter += 1;
@@ -111,7 +114,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     }
 
     // new) called by return
-    pub fn merge_trace_stack1(&mut self, ) {
+    pub fn merge_trace_stack1(&mut self/* , info: String*/) {
         // can't be empty, unless return unmatched with call
         let mut can_skip = false;
         if self._trace_stack.last().unwrap()._entry.can_skip() {
@@ -119,6 +122,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             can_skip = true;
         };
         if self._skip_counter == 0 {
+            // self.push_to_ecx(info);
+            // self.push_to_ecx(String::from("Ret]"));
             let trace = self._trace_stack.pop().unwrap();
             // println!("return {:?}", trace._entry);
             if !can_skip {
@@ -175,4 +180,27 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         let mut tmp_vec: std::cell::RefMut<'_, Vec<String>> = self.call_return_vec.borrow_mut();
         tmp_vec.push(s);
     }
+    pub fn keep_call_push(&mut self, fn_inst: FnInstKey) {
+        let mut keep_call_vec: std::cell::RefMut<'_, Vec<FnInstKey>> = self.keep_call.borrow_mut();
+        keep_call_vec.push(fn_inst);
+    }
+    pub fn keep_call_pop(&mut self,) {
+        let mut keep_call_vec: std::cell::RefMut<'_, Vec<FnInstKey>> = self.keep_call.borrow_mut();
+        keep_call_vec.pop();
+    }
+    pub fn keep_call_cond(&mut self, caller_inst: FnInstKey) -> bool {
+        match self.keep_call.borrow().last() {
+            None => {
+                false
+            },
+            Some(key) => {
+                if *key == caller_inst {
+                    true
+                } else { 
+                    false
+                }
+            }
+        }
+    }
+
 }

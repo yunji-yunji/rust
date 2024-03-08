@@ -474,6 +474,7 @@ pub fn eval_entry<'tcx>(
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
     println!("miri after run_thread {:?}", ecx.call_return_vec.borrow());
+    println!("miri after run_thread test {:?}", ecx._trace_stack);
     
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();

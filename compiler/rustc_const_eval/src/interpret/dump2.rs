@@ -21,10 +21,73 @@ use rustc_middle::ty::{self, GenericArgKind, InstanceDef};
 use rustc_middle::ty::context::{
     PaflType, PaflGeneric, FnInstKey,
 };
-use rustc_middle::ty::ParamEnv;
+use rustc_middle::ty::{ParamEnv, Instance};
 
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
+
+    pub fn instance_to_inst_key(&mut self, caller: Instance<'tcx>) -> FnInstKey {
+        let tcx = self.tcx.tcx;
+
+        // let instance_def = self.body().source.instance;
+        let instance_def = caller.def;
+        let def_id = instance_def.def_id();
+
+        let krate = Some(tcx.crate_name(def_id.krate).to_string());
+
+
+        // 2.1. dumper ===============================================
+        let param_env: ParamEnv<'_> = self.param_env;
+        let verbose = false;
+
+        let outdir= PathBuf::from("./yjtmp/");
+        fs::create_dir_all(outdir.clone()).expect("unable to create output directory");
+        let path_meta = outdir.join("meta");
+        fs::create_dir_all(&path_meta).expect("unable to create meta directory");
+        let path_data = outdir.join("data");
+        fs::create_dir_all(&path_data).expect("unable to create meta directory");
+
+        let path_prefix: PathBuf = PathBuf::default();
+        let mut stack = vec![];
+        let mut cache = FxHashMap::default();
+        
+        let pafl_crate = PaflCrate { functions: Vec::new() };
+        let mut summary = pafl_crate.functions;
+        let dumper: PaflDump<'_, '_> = PaflDump {
+            tcx: tcx,
+            param_env: param_env,
+            verbose: verbose,
+            path_meta: path_meta.to_path_buf(),
+            path_data: path_data.to_path_buf(),
+            path_prefix: path_prefix,
+            stack: &mut stack,
+            cache: &mut cache,
+            summary: &mut summary,
+        };
+
+        // generic ===============================================
+        let generic_args = caller.args;
+        let mut my_generics: Vec<PaflGeneric> = vec![];
+        for arg in generic_args {
+            let sub = match arg.unpack() {
+                GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
+                GenericArgKind::Type(_item) => PaflGeneric::Type(PaflType::Never),
+                // GenericArgKind::Type(item) => PaflGeneric::Type(dumper.process_type(item)),
+                GenericArgKind::Const(item) => PaflGeneric::Const(dumper.process_const(item)),
+                // _ => {},
+            };
+            my_generics.push(sub);
+        }
+
+        // 3. FnInstKey ===============================================
+        let fn_inst_key = FnInstKey {
+            krate,
+            index: def_id.index.as_usize(),
+            path: tcx.def_path(def_id).to_string_no_crate_verbose(),
+            generics: my_generics,
+        };
+        fn_inst_key
+    }
 
     //pub fn inst_dump(&mut self, args: GenericArgsRef<'tcx>, outdir: &Path ) 
     // term -> generic_args

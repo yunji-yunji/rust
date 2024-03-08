@@ -90,12 +90,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     
                     self.call_stk_pop();
                 }
+                let caller = self.stack().last().unwrap().instance;
+                // println!("caller of ret{:?}", caller.def);
+                let caller_inst = self.instance_to_inst_key(caller);
 
-                // let mut can_skip_miri = *self.skip_cnt.borrow();
-                // if can_skip_miri { } else {
+                if self.keep_call_cond(caller_inst) {
+                    self.keep_call_pop();
                     self.push_to_ecx(crate_info);
                     self.push_to_ecx(String::from("Ret]"));
-                // }
+                }
 
                 match std::env::var_os("TF") {
                     None => (),
@@ -107,6 +110,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 }
+
                 self.merge_trace_stack1();
                 self.pop_stack_frame(/* unwinding */ false)?
             }
@@ -179,14 +183,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     // println!("test{:?}", content);
                 }
 
-                // let mut skip_cnt_miri = *self.skip_cnt.borrow();
-                // if skip_cnt_miri == 0 {
+
+                if can_skip {
+
+                } else {
+                    self.keep_call_push(fn_inst_key.clone());
                     self.push_to_ecx("[Call<term>".to_string());
                     self.push_to_ecx(info);
-                // }
-                // if can_skip {
-                    // self.skip_cnt.replace(skip_cnt_miri+1);
-                // }
+                }
 
                 self.push_trace_stack1(fn_inst_key);            
 
