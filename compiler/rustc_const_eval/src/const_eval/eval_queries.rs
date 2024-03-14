@@ -99,7 +99,7 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
         ecx.update_fn_key(fn_inst_key.clone());
     }
 
-    ecx.push_trace_stack1(fn_inst_key.clone());
+    // ecx.push_trace_stack1(fn_inst_key.clone());
     ecx.push_stack_frame(
         cid.instance,
         body,

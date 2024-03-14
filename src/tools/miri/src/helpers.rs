@@ -440,7 +440,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
                 println!("dump final trace in helpers.rs");
             }
         }
-        this.push_trace_stack1(fn_inst_key.clone());
+        // this.push_trace_stack1(fn_inst_key.clone());
 
         this.push_stack_frame(f, mir, &dest, stack_pop)?;
 

@@ -207,11 +207,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             | InstanceDef::DropGlue(def, _)
             | InstanceDef::CloneShim(def, _)
             | InstanceDef::FnPtrAddrShim(def, _) => { def },
-            InstanceDef::ClosureOnceShim { .. } 
-            | InstanceDef::ConstructCoroutineInClosureShim {..}
-            | InstanceDef::CoroutineKindShim{..} => {
-                panic!("closure once shim, constructCoroutineINclosureshim, coroutineKindShim")
-            },
+            InstanceDef::ClosureOnceShim { call_once, .. } => { call_once }, 
+            InstanceDef::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
+            InstanceDef::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
         };
 
         // =================================

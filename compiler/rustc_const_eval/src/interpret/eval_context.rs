@@ -512,7 +512,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             recursion_limit: tcx.recursion_limit(),
             call_return_vec: RefCell::new(vec![]),
             keep_call: RefCell::new(vec![]),
-            _trace_stack: vec![Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }, Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }],
+            _trace_stack: vec![Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }],
             _skip_counter: 0,
         }
     }
@@ -883,6 +883,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
 
         // done
         M::after_stack_push(self)?;
+
+        let fn_inst_key = self.create_fn_inst_key3(instance);
+        self.push_trace_stack1(fn_inst_key);
+
         self.frame_mut().loc = Left(mir::Location::START);
 
         let span = info_span!("frame", "{}", instance);
@@ -1029,6 +1033,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             // Skip machine hook.
             return Ok(());
         }
+
+        self.merge_trace_stack1();
+
         if M::after_stack_pop(self, frame, unwinding)? == StackPopJump::NoJump {
             // The hook already did everything.
             return Ok(());

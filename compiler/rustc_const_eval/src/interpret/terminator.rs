@@ -87,7 +87,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 } else {
                     self.push_bb(crate_info.clone());
                     self.push_bb(String::from("Ret]"));
-                    
+
                     self.call_stk_pop();
                 }
                 let caller = self.stack().last().unwrap().instance;
@@ -111,7 +111,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     }
                 }
 
-                self.merge_trace_stack1();
+                // self.merge_trace_stack1();
                 self.pop_stack_frame(/* unwinding */ false)?
             }
 
@@ -169,7 +169,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     // let s = self.fn_info(self.body());
                     // self.push_bb(s);
                     self.set_skip_false();
-        
+
                     self.update_fn_key(fn_inst_key.clone());
                     match std::env::var_os("DUMP_FIN_TRACE") {
                         None => (),
@@ -192,7 +192,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     self.push_to_ecx(info);
                 }
 
-                self.push_trace_stack1(fn_inst_key);            
+                // self.push_trace_stack1(fn_inst_key);
 
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;

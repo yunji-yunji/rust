@@ -109,6 +109,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             // self.push_to_ecx(info);
         };
         if can_skip {
+            println!("???");
             self._skip_counter += 1;
         };
     }
@@ -116,17 +117,15 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     // new) called by return
     pub fn merge_trace_stack1(&mut self/* , info: String*/) {
         // can't be empty, unless return unmatched with call
-        let mut can_skip = false;
         if self._trace_stack.last().unwrap()._entry.can_skip() {
             self._skip_counter -= 1;
-            can_skip = true;
         };
         if self._skip_counter == 0 {
             // self.push_to_ecx(info);
             // self.push_to_ecx(String::from("Ret]"));
             let trace = self._trace_stack.pop().unwrap();
             // println!("return {:?}", trace._entry);
-            if !can_skip {
+            if !trace._entry.can_skip() {
                 let l = self._trace_stack.len();
                 if l == 0 {
                     println!("WARNING: call stack exceeded!");

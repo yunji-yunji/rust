@@ -455,9 +455,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     None => (),
                     Some(_val) => {
                         self.push_step_bb(loc.block);
-                        self.push_bb_stack1(loc.block);
                     }
                 }
+                self.push_bb_stack1(loc.block);
                 info!("// executing {:?}", loc.block);
             }
         }

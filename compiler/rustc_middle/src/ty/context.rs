@@ -826,7 +826,8 @@ pub struct FnInstKey {
 
 impl FnInstKey {
     pub fn can_skip(&self) -> bool {
-
+        return false;
+        /*
         match std::env::var_os("SIMP") {
             None => {
                 match self.krate.as_deref() {
@@ -855,6 +856,7 @@ impl FnInstKey {
                 }
             }
         }
+        */
     }
 }
 

@@ -269,7 +269,7 @@ pub fn create_ecx<'mir, 'tcx: 'mir>(
     let mut ecx =
         InterpCx::new(tcx, rustc_span::DUMMY_SP, param_env, MiriMachine::new(config, layout_cx));
 
-    println!("create ecx (MiriMachine) {:?}{:?}[{:?}]", 
+    println!("create ecx (MiriMachine) {:?}{:?}[{:?}]",
     tcx.crate_name(entry_id.krate).to_string(), tcx.def_path_debug_str(entry_id), entry_type);
     // Some parts of initialization require a full `InterpCx`.
     MiriMachine::late_init(&mut ecx, config, {
@@ -469,13 +469,14 @@ pub fn eval_entry<'tcx>(
             panic!("Miri initialization error: {kind:?}")
         }
     };
+    println!("early trace {:?}", ecx._trace_stack);
     println!("miri interpreter after create ecx {:?}", ecx.call_return_vec.borrow());
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
     println!("miri after run_thread {:?}", ecx.call_return_vec.borrow());
     println!("miri after run_thread test {:?}", ecx._trace_stack);
-    
+
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
         panic::resume_unwind(panic_payload)
@@ -497,6 +498,7 @@ pub fn eval_entry<'tcx>(
     }
 
     let trace = ecx._trace_stack.last().unwrap();
+    println!("size of trace stack {}", ecx._trace_stack.len());
     if trace._steps.len() > 0 {
         println!("after miri2 {:?}", trace._steps.last().unwrap());
     } else {
