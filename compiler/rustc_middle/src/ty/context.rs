@@ -1248,6 +1248,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
                 // extract the actual callee
                 let body = self.tcx.instance_mir(resolved.def).clone();
+                // let body = self.tcx.promoted_mir(shim_id).clone();
+
                 let instantiated = resolved.instantiate_mir_and_normalize_erasing_regions(
                     self.tcx,
                     self.param_env,
@@ -1576,7 +1578,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             InstanceDef::Item(id) => {
                 if dumper.tcx.is_mir_available(*id) {
                     let body = dumper.tcx.instance_mir(instance.def).clone();
-                                    
+                    // let body = dumper.tcx.promoted_mir(*id).clone();
+
                     let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
                         dumper.tcx,
                         dumper.param_env,
@@ -1593,6 +1596,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             | InstanceDef::CloneShim(id, _)
             | InstanceDef::FnPtrShim(id, _) => {
                 let body = dumper.tcx.instance_mir(instance.def).clone();
+                // let body = dumper.tcx.promoted_mir(*id).clone();
+
                 let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
                     dumper.tcx,
                     dumper.param_env,
@@ -1980,7 +1985,6 @@ impl<'tcx> TyCtxt<'tcx> {
         for unit in units {
             println!("unit {:?}---------------", unit);
             for item in unit.items().keys() {
-                // println!("* {:?}", item);
     
                 // filter
                 let instance = match item {
@@ -1991,6 +1995,13 @@ impl<'tcx> TyCtxt<'tcx> {
                 if !instance.def_id().is_local() {
                     continue;
                 }
+                let generics = instance.args;
+                print!("* [{:?}] {:?}", item, instance.args);
+                for g in generics {
+                    print!("{:?}", g);
+                }
+                println!("");
+
     
                 // process it and save the result to summary
                 let mut stack = vec![];

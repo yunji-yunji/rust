@@ -190,12 +190,14 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn keep_call_cond(&mut self, caller_inst: FnInstKey) -> bool {
         match self.keep_call.borrow().last() {
             None => {
+                // println!("[F1] nothing to keep caller={:?}/{:?}", caller_inst.clone().krate, caller_inst.clone().path);
                 false
             },
             Some(key) => {
-                if *key == caller_inst {
+                if key.path == caller_inst.path {
                     true
-                } else { 
+                } else {
+                    // println!("[F2] not same key to keep={:?} caller={:?}", key, caller_inst);
                     false
                 }
             }

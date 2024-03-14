@@ -5,7 +5,7 @@
 use either::Either;
 
 use rustc_index::IndexSlice;
-use rustc_middle::{mir, ty::context::Step};
+use rustc_middle::mir;
 use rustc_middle::ty::layout::LayoutOf;
 use rustc_target::abi::{FieldIdx, FIRST_VARIANT};
 
@@ -426,9 +426,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     }
                 }
 
-
-                // TODO: remove
-                match std::env::var_os("BB2") {
+                // 4. body info
+                match std::env::var_os("MIRI_BODY") {
                     None => (),
                     Some(val) => {
                         let name = match val.into_string() {
@@ -436,17 +435,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             Err(_e) => { panic!("wrong env var") },
                         };
                         if krate.contains(&name) | path.contains(&name) {
-                            let s1 = self.tcx._s1.borrow();
-                            print!("bbs=#{:?}#", s1.len());
-                            for bb in &*s1 {
-                                match bb {
-                                    Step::Call(_) => {
-                                        print!("[C]");
-                                    },
-                                    Step::B(b) => { print!("[{:?}]", b.as_usize()); }
-                                }
-                            }
-                            print!("\n");
+                            println!("* {:?}{:?}<{:?}>[{:?}] is polymorpihc?({:?}) phase=({:?}) injected={:?}",
+                                krate, path, loc.block, self.body().basic_blocks.clone().len(),
+                                body.is_polymorphic, body.phase, body.injection_phase
+                            );
                         }
                     }
                 }
@@ -458,6 +450,37 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     }
                 }
                 self.push_bb_stack1(loc.block);
+                // // TODO: remove
+                // match std::env::var_os("BB2") {
+                //     None => (),
+                //     Some(val) => {
+                //         let name = match val.into_string() {
+                //             Ok(s) =>{ s },
+                //             Err(_e) => { panic!("wrong env var") },
+                //         };
+                //         if krate.contains(&name) | path.contains(&name) {
+                //             let s1 = self.tcx._s1.borrow();
+                //             print!("bbs=#{:?}#", s1.len());
+                //             for bb in &*s1 {
+                //                 match bb {
+                //                     Step::Call(_) => {
+                //                         print!("[C]");
+                //                     },
+                //                     Step::B(b) => { print!("[{:?}]", b.as_usize()); }
+                //                 }
+                //             }
+                //             print!("\n");
+                //         }
+                //     }
+                // }
+                // // TODO: remove
+                // match std::env::var_os("BB3") {
+                //     None => (),
+                //     Some(_val) => {
+                //         self.push_step_bb(loc.block);
+                //         self.push_bb_stack1(loc.block);
+                //     }
+                // }
                 info!("// executing {:?}", loc.block);
             }
         }

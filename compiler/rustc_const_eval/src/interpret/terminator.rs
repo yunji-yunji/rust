@@ -94,12 +94,20 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 // println!("caller of ret{:?}", caller.def);
                 let caller_inst = self.instance_to_inst_key(caller);
 
-                if self.keep_call_cond(caller_inst) {
+                if self.keep_call_cond(caller_inst.clone()) {
+                    // match std::env::var_os("KEEP") {
+                    //     None => (),
+                    //     Some(_val) => {
+                    //         println!("[T] {:?} [{:?}]", caller_inst.clone().path, self.keep_call.borrow());
+                    //     }
+                    // };
+
                     self.keep_call_pop();
                     self.push_to_ecx(crate_info);
                     self.push_to_ecx(String::from("Ret]"));
                 }
 
+<<<<<<< HEAD
                 match std::env::var_os("TF") {
                     None => (),
                     Some(_val) => {
@@ -112,6 +120,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 }
 
                 // self.merge_trace_stack1();
+=======
+                self.merge_trace_stack1();
+>>>>>>> 25e38815901 (cfg sync test)
                 self.pop_stack_frame(/* unwinding */ false)?
             }
 
