@@ -128,7 +128,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             if !trace._entry.can_skip() {
                 let l = self._trace_stack.len();
                 if l == 0 {
-                    println!("WARNING: call stack exceeded!");
+                    // println!("WARNING: call stack exceeded!");
                     self._trace_stack.push(trace);
                 } else {
                     self._trace_stack.last_mut().unwrap()._steps.push(Step::Call(trace));

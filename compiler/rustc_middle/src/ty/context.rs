@@ -1247,8 +1247,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 }
 
                 // extract the actual callee
+                println!("(dump) instacne1{:?}[{:?}]", resolved, resolved.def);
                 let body = self.tcx.instance_mir(resolved.def).clone();
                 // let body = self.tcx.promoted_mir(shim_id).clone();
+                // let body = self.tcx.load_mir(resolved.def, None);
 
                 let instantiated = resolved.instantiate_mir_and_normalize_erasing_regions(
                     self.tcx,
@@ -1578,7 +1580,11 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             InstanceDef::Item(id) => {
                 if dumper.tcx.is_mir_available(*id) {
                     let body = dumper.tcx.instance_mir(instance.def).clone();
-                    // let body = dumper.tcx.promoted_mir(*id).clone();
+                    let def_kind = tcx.def_kind(id);
+                    println!("(dump) instacne2={:?}[{:?}] <{:?}>", instance, instance.def, def_kind);
+                // let body = dumper.tcx.promoted_mir(*id).clone();
+                    // let body = self.tcx.load_mir(instance.def, None);
+
 
                     let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
                         dumper.tcx,
@@ -1596,7 +1602,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             | InstanceDef::CloneShim(id, _)
             | InstanceDef::FnPtrShim(id, _) => {
                 let body = dumper.tcx.instance_mir(instance.def).clone();
-                // let body = dumper.tcx.promoted_mir(*id).clone();
+                    println!("(dump) instacne3{:?}[{:?}]", instance, instance.def);
+                    // let body = dumper.tcx.promoted_mir(*id).clone();
 
                 let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
                     dumper.tcx,
@@ -1981,10 +1988,12 @@ impl<'tcx> TyCtxt<'tcx> {
         let mut cache = FxHashMap::default();
         let mut summary = PaflCrate { functions: Vec::new() };
     
-        let (_, units) = self.collect_and_partition_mono_items(());
+        let (_def_id_sets, units) = self.collect_and_partition_mono_items(());
+        // println!("def ids={:?}", def_id_sets);
         for unit in units {
-            println!("unit {:?}---------------", unit);
+            // println!("unit {:?}---------------", unit.name());
             for item in unit.items().keys() {
+                // println!("@ {:?}", item);
     
                 // filter
                 let instance = match item {
@@ -1995,14 +2004,13 @@ impl<'tcx> TyCtxt<'tcx> {
                 if !instance.def_id().is_local() {
                     continue;
                 }
-                let generics = instance.args;
-                print!("* [{:?}] {:?}", item, instance.args);
-                for g in generics {
-                    print!("{:?}", g);
-                }
-                println!("");
+                // let generics = instance.args;
+                // print!("* [{:?}] {:?}", item, instance.args);
+                // for g in generics {
+                //     print!("{:?}", g);
+                // }
+                // println!("");
 
-    
                 // process it and save the result to summary
                 let mut stack = vec![];
                 PaflDump::summarize_instance(

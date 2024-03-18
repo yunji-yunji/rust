@@ -1089,6 +1089,7 @@ where
 fn collect_and_partition_mono_items(tcx: TyCtxt<'_>, (): ()) -> (&DefIdSet, &[CodegenUnit<'_>]) {
     let collection_strategy = match tcx.sess.opts.unstable_opts.print_mono_items {
         Some(ref s) => {
+            println!("cmode={:?}", s);
             let mode = s.to_lowercase();
             let mode = mode.trim();
             if mode == "eager" {
@@ -1102,6 +1103,7 @@ fn collect_and_partition_mono_items(tcx: TyCtxt<'_>, (): ()) -> (&DefIdSet, &[Co
             }
         }
         None => {
+            println!("cmode=None");
             if tcx.sess.link_dead_code() {
                 MonoItemCollectionStrategy::Eager
             } else {
@@ -1109,6 +1111,7 @@ fn collect_and_partition_mono_items(tcx: TyCtxt<'_>, (): ()) -> (&DefIdSet, &[Co
             }
         }
     };
+    println!("Collect mode [{:?}]", collection_mode);
 
     let (items, usage_map) = collector::collect_crate_mono_items(tcx, collection_strategy);
 

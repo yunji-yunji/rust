@@ -28,10 +28,9 @@ pub fn log_in_eval_query( // eval_queries.rs => DUMP_ON
     tcx: TyCtxt<'_>,
     body: &Body<'_>,
 ) {
-
     let instance_def = body.source.instance;
     let def_id: DefId = instance_def.def_id();
-    
+
     let crate_name2 = tcx.crate_name(def_id.krate);
     // content.push_str(&format!("[{:?}]", crate_name2));
     let s1 = format!("[{:?}]", crate_name2);

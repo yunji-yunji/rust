@@ -425,16 +425,6 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
-    // match std::env::var_os("DUMP_IN_EVAL") {
-    //     None => (),
-    //     Some(val) => {
-    //         println!("Start Dump!");
-    //         let outdir: PathBuf = std::path::PathBuf::from(val);
-    //         dump::dump_in_eval_entry(tcx, entry_id, entry_type, &outdir);
-    //         println!("Complete Dump!");
-    //     }
-    // }
-
     match std::env::var_os("DUMP_IN_EVAL") {
         None => {},
         Some(val) => {
@@ -448,9 +438,6 @@ pub fn eval_entry<'tcx>(
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
                     if src.starts_with(&prefix) {
-                        // dump::dump_in_miri(tcx, &outdir);
-                        // dump(tcx, &outdir);
-                        // dump_cp(tcx, &outdir);
                         tcx.dump_cp(&outdir);
                     }
                 }

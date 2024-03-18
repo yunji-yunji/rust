@@ -67,6 +67,7 @@ use std::mem;
 use std::num::NonZero;
 use std::ptr::NonNull;
 use std::{fmt, str};
+use rustc_middle::ty::print::with_no_trimmed_paths;
 
 pub use crate::ty::diagnostics::*;
 pub use rustc_type_ir::ConstKind::{
@@ -1721,11 +1722,33 @@ impl<'tcx> TyCtxt<'tcx> {
     /// Returns the possibly-auto-generated MIR of a [`ty::InstanceDef`].
     #[instrument(skip(self), level = "debug")]
     pub fn instance_mir(self, instance: ty::InstanceDef<'tcx>) -> &'tcx Body<'tcx> {
-        match instance {
+        
+        match std::env::var_os("INST_MIR") {
+            None => (),
+            Some(val) => {
+                let name = match val.into_string() {
+                    Ok(s) =>{ s },
+                    Err(_e) => { panic!("wrong env var") },
+                };
+                with_no_trimmed_paths!({
+                    let def_id = instance.def_id();
+                    let krate = self.crate_name(def_id.krate).to_string();
+                    let path = self.def_path(def_id).to_string_no_crate_verbose();
+                    if krate.contains(&name) | path.contains(&name) {
+                        println!("instance def cehck= {:?}{:?}<{:?}> ----------", 
+                        krate, path, instance);
+                    }
+                });
+            }
+        }
+                        
+        let body = match instance {
             ty::InstanceDef::Item(def) => {
                 debug!("calling def_kind on def: {:?}", def);
+                // println!("calling def_kind on def: {:?}", def);
                 let def_kind = self.def_kind(def);
                 debug!("returned from def_kind: {:?}", def_kind);
+                // println!("returned from def_kind: {:?}", def_kind);
                 match def_kind {
                     DefKind::Const
                     | DefKind::Static { .. }
@@ -1750,7 +1773,48 @@ impl<'tcx> TyCtxt<'tcx> {
             | ty::InstanceDef::CloneShim(..)
             | ty::InstanceDef::ThreadLocalShim(..)
             | ty::InstanceDef::FnPtrAddrShim(..) => self.mir_shims(instance),
+        };
+
+
+
+
+        match std::env::var_os("INST_MIR_BODY") {
+            None => (),
+            Some(val) => {
+                let name = match val.into_string() {
+                    Ok(s) => s,
+                    Err(_e) => {
+                        panic!("wrong env var")
+                    }
+                };
+                let def_id = instance.def_id();
+                let krate = self.crate_name(def_id.krate).to_string();
+                let path = self.def_path(def_id).to_string_no_crate_verbose();
+        
+                if krate.contains(&name) | path.contains(&name) {
+                    println!("#@#@ instance={:?}", instance);
+
+                    println!(
+                        "-{:?}{:?}[{:?}] -------------------------",
+                        krate,
+                        path,
+                        body.basic_blocks.clone().len()
+                    );
+                    for (source, _) in body.basic_blocks.iter_enumerated() {
+                        let bb_data = &body.basic_blocks[source];
+                        println!(
+                            "* [{:?}][{:?}][{:?}][{:?}]",
+                            source,
+                            bb_data.statements.len(),
+                            bb_data.terminator.clone().unwrap().kind,
+                            bb_data.statements
+                        );
+                    }
+                    println!("--------------------------");
+                }
+            }
         }
+        body
     }
 
     // FIXME(@lcnr): Remove this function.

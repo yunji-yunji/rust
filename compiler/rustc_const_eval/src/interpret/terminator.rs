@@ -107,22 +107,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     self.push_to_ecx(String::from("Ret]"));
                 }
 
-<<<<<<< HEAD
-                match std::env::var_os("TF") {
-                    None => (),
-                    Some(_val) => {
-                        if *can_skip {
-                            print!("T ");
-                        } else {
-                            print!("F ");
-                        }
-                    }
-                }
-
                 // self.merge_trace_stack1();
-=======
                 self.merge_trace_stack1();
->>>>>>> 25e38815901 (cfg sync test)
                 self.pop_stack_frame(/* unwinding */ false)?
             }
 

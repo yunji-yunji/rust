@@ -626,7 +626,8 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
                 Some(src) => {
                     if src.starts_with(&prefix) {
                         // we are compiling a target crate
-                        crate::pafl::dump(tcx, &outdir);
+                        tcx.dump_cp(&outdir);
+                        // crate::pafl::dump(tcx, &outdir);
                     }
                 }
             }

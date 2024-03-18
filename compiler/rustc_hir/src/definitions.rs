@@ -339,6 +339,7 @@ impl Definitions {
         let mut table = DefPathTable::new(stable_crate_id);
         let root = LocalDefId { local_def_index: table.allocate(key, def_path_hash) };
         assert_eq!(root.local_def_index, CRATE_DEF_INDEX);
+        // println!("table={:?}", stable_crate_id);
 
         Definitions { table, next_disambiguator: Default::default() }
     }
