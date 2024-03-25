@@ -1294,18 +1294,21 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                     },
                     _ => bug!("unrecognized fn ptr shim: {}{}", shim_crate, shim_path),
                 };
-
                 let unwrapped = match fn_ty.kind() {
                     ty::Closure(fn_def_id, fn_generic_args)
                     | ty::FnDef(fn_def_id, fn_generic_args) => {
                         Instance::new(*fn_def_id, *fn_generic_args)
                     }
-                    _ => bug!(
-                        "{}{} into neither a function nor closure: {:?}",
-                        shim_crate,
-                        shim_path,
-                        span
-                    ),
+                    _ => {
+                        // bug!(
+                        println!(
+                            "{}{} into neither a function nor closure: {:?}",
+                            shim_crate,
+                            shim_path,
+                            span
+                        );
+                        resolved
+                    }
                 };
 
                 // handle the actual callee
@@ -1559,7 +1562,6 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
         // derive the inst key and mark it in the cache
         let inst = dumper.resolve_fn_key(id, instance.args);
-
         // mark beginning of processing
         if verbose {
             println!(
@@ -1577,14 +1579,23 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
         // branch processing by instance type
         let body = match &instance.def {
+            // InstanceDef::Virtual(id, _) |
             InstanceDef::Item(id) => {
+
+                let tmp_path = tcx.def_path(*id).to_string_no_crate_verbose();
+                let mut tmp_flag = false;
+                if tmp_path.contains("::control_flow_graph") {
+                // if tmp_path.contains("state::set_state::{closure#0}") {
+                    println!("# path={:?}, id={:?}, inst={:?}", tmp_path, id, instance);
+                    tmp_flag = true;
+                }
+
                 if dumper.tcx.is_mir_available(*id) {
                     let body = dumper.tcx.instance_mir(instance.def).clone();
                     let def_kind = tcx.def_kind(id);
-                    println!("(dump) instacne2={:?}[{:?}] <{:?}>", instance, instance.def, def_kind);
-                // let body = dumper.tcx.promoted_mir(*id).clone();
+                    println!("(dump) instance2={:?}[{:?}] <{:?}>", instance, instance.def, def_kind);
+                    // let body = dumper.tcx.promoted_mir(*id).clone();
                     // let body = self.tcx.load_mir(instance.def, None);
-
 
                     let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
                         dumper.tcx,
@@ -1594,6 +1605,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                     let cfg = dumper.process_cfg(*id, &instantiated);
                     FnBody::Defined(cfg)
                 } else {
+                    if tmp_flag {
+                        println!("dump mir unavailable");
+                    }
                     FnBody::Skipped
                 }
             }
@@ -1622,7 +1636,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             | InstanceDef::ThreadLocalShim(..) 
             | InstanceDef::ConstructCoroutineInClosureShim {..}
             | InstanceDef::CoroutineKindShim{..} => {
-                bug!("unexpected instance type: {}", instance);
+                // bug!("unexpected instance type: {}", instance);
+                println!("unexpected instance type: {}", instance);
+                FnBody::Skipped
             }
         };
 
@@ -1991,9 +2007,9 @@ impl<'tcx> TyCtxt<'tcx> {
         let (_def_id_sets, units) = self.collect_and_partition_mono_items(());
         // println!("def ids={:?}", def_id_sets);
         for unit in units {
-            // println!("unit {:?}---------------", unit.name());
+            println!("unit {:?}---------------", unit.name());
             for item in unit.items().keys() {
-                // println!("@ {:?}", item);
+                println!("+ {:?}", item);
     
                 // filter
                 let instance = match item {
@@ -2001,9 +2017,11 @@ impl<'tcx> TyCtxt<'tcx> {
                     MonoItem::Static(_) => continue,
                     MonoItem::GlobalAsm(_) => bug!("unexpected assembly"),
                 };
-                if !instance.def_id().is_local() {
-                    continue;
-                }
+                // if !instance.def_id().is_local() {
+                //     println!("it's not local");
+                //     continue;
+                // }
+
                 // let generics = instance.args;
                 // print!("* [{:?}] {:?}", item, instance.args);
                 // for g in generics {
@@ -2024,6 +2042,7 @@ impl<'tcx> TyCtxt<'tcx> {
                     &mut cache,
                     &mut summary.functions,
                 );
+
                 if !stack.is_empty() {
                     bug!("unbalanced call stack");
                 }
