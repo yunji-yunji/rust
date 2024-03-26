@@ -30,7 +30,7 @@ struct EntryContext<'tcx> {
 }
 
 fn entry_fn(tcx: TyCtxt<'_>, (): ()) -> Option<(DefId, EntryFnType)> {
-    println!("in entry_fn function {:?} ", tcx.hir().opt_name(CRATE_HIR_ID));
+    // println!("in entry_fn function {:?} ", tcx.hir().opt_name(CRATE_HIR_ID));
     let any_exe = tcx.crate_types().iter().any(|ty| *ty == CrateType::Executable);
     if !any_exe {
         // No need to find a main function.
@@ -46,7 +46,7 @@ fn entry_fn(tcx: TyCtxt<'_>, (): ()) -> Option<(DefId, EntryFnType)> {
         EntryContext { tcx, attr_main_fn: None, start_fn: None, non_main_fns: Vec::new() };
 
     for id in tcx.hir().items() {
-        println!("+ {:?}", id);
+        // println!("+ {:?}", id);
         find_item(id, &mut ctxt);
     }
 

@@ -55,12 +55,7 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
             providers.extern_queries.used_crate_source = |tcx, cnum| {
                 let mut providers = Providers::default();
                 rustc_metadata::provide(&mut providers);
-                match std::env::var_os("BB_SEQ") {
-                    None => (),
-                    Some(_val) => {
-                        println!("miri CB1 {:?}", tcx._bb_seq);
-                    }
-                }
+
                 let mut crate_source = (providers.extern_queries.used_crate_source)(tcx, cnum);
                 // HACK: rustc will emit "crate ... required to be available in rlib format, but
                 // was not found in this form" errors once we use `tcx.dependency_formats()` if
@@ -93,12 +88,7 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
                 tcx.dcx().fatal("miri can only run programs that have a main function");
             };
             let mut config = self.miri_config.clone();
-            match std::env::var_os("BB_SEQ") {
-                None => (),
-                Some(_val) => {
-                    println!("miri after analysis CB1 {:?}", tcx._bb_seq);
-                }
-            }
+
             // Add filename to `miri` arguments.
             config.args.insert(0, tcx.sess.io.input.filestem().to_string());
 
@@ -150,13 +140,7 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // `exported_symbols` and `reachable_non_generics` provided by rustc always returns
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
-                    match std::env::var_os("BB_SEQ") {
-                        None => (),
-                        Some(_val) => {
-                            println!("miri CB2 {:?}", tcx._bb_seq);
-                            // println!("after miri2 {:?}", tcx._tmp_trace.borrow());
-                        }
-                    }
+
                     /*
                     let trace_stack = tcx._trace_stack.borrow();
                     let trace = trace_stack.last().unwrap();

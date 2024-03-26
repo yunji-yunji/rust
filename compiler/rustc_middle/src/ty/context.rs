@@ -72,8 +72,6 @@ use rustc_type_ir::WithCachedTypeInfo;
 use rustc_type_ir::{CollectAndApply, Interner, TypeFlags};
 
 use std::borrow::Borrow;
-use std::cell::RefCell;
-// use std::rc::Rc;
 use std::cmp::Ordering;
 use std::{fmt, fs};
 use std::hash::{Hash, Hasher};
@@ -82,7 +80,6 @@ use std::marker::PhantomData;
 use std::mem;
 use std::ops::{Bound, Deref};
 use std::path::PathBuf;
-// use rustc_codegen_ssa::pafl::{};
 use rustc_middle::ty::print::with_no_trimmed_paths;
 
 #[allow(rustc::usage_of_ty_tykind)]
@@ -826,8 +823,7 @@ pub struct FnInstKey {
 
 impl FnInstKey {
     pub fn can_skip(&self) -> bool {
-        return false;
-        /*
+        // return false;
         match std::env::var_os("SIMP") {
             None => {
                 match self.krate.as_deref() {
@@ -856,7 +852,6 @@ impl FnInstKey {
                 }
             }
         }
-        */
     }
 }
 
@@ -1844,24 +1839,6 @@ pub struct GlobalCtxt<'tcx> {
 
     /// Stores memory for globals (statics/consts).
     pub(crate) alloc_map: Lock<interpret::AllocMap<'tcx>>,
-
-    pub _trace: RefCell<Trace>,
-
-    // variable to check the pair of Call and Return (use push)
-    // output: (miri.rs) env val BB_SEQ
-    pub _bb_seq: RefCell<Vec<String>>,
-
-    // variable to check the pair of Call and Return (use push, pop)
-    // No output
-    pub _call_stack: RefCell<Vec<String>>,
-
-    pub _ret_can_skip : RefCell<bool>,
-    pub _tmp_trace: RefCell<Trace>, 
-    pub _tmp_steps: RefCell<Vec<Step>>,
-
-    pub _prev: RefCell<FnInstKey>, 
-    pub _v1: RefCell<Vec<Trace>>,
-    pub _s1: RefCell<Vec<Step>>,
 }
 use rustc_middle::mir::Terminator;
 
@@ -2188,18 +2165,6 @@ impl<'tcx> TyCtxt<'tcx> {
         let common_lifetimes = CommonLifetimes::new(&interners);
         let common_consts = CommonConsts::new(&interners, &common_types, s, &untracked);
         
-        // let dummy_generics: Vec<PaflGeneric> = vec![];
-        let steps: Vec<Step> = vec![];
-        let dummy_fn_inst_key = FnInstKey {
-            krate: None,
-            index: 0,
-            path: String::from(""),
-            generics: vec![],
-        };
-        let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key.clone(), _steps: steps.to_vec() };
-        // println!("crate id [{:?}]{:?}", crate_types, stable_crate_id);
-        // let trace_idx_vec : Vec<usize> = vec![0];
-        // let curr = Some(&)
         GlobalCtxt {
             sess: s,
             crate_types,
@@ -2225,16 +2190,6 @@ impl<'tcx> TyCtxt<'tcx> {
             canonical_param_env_cache: Default::default(),
             data_layout,
             alloc_map: Lock::new(interpret::AllocMap::new()),
-            _trace: RefCell::new(fin_trace.clone()),
-            _bb_seq: RefCell::new(vec![]),
-            _call_stack: RefCell::new(vec![]),
-            _ret_can_skip: RefCell::new(false),
-
-            _tmp_trace: RefCell::new(Trace { _entry: dummy_fn_inst_key.clone(), _steps: vec![] }),
-            _tmp_steps: RefCell::new(vec![]),
-            _prev: RefCell::new(dummy_fn_inst_key.clone()), 
-            _v1: RefCell::new(vec![]),
-            _s1: RefCell::new(vec![]),
         }
     }
 

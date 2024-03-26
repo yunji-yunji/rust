@@ -79,33 +79,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         use rustc_middle::mir::TerminatorKind::*;
         match terminator.kind {
             Return => {
-                let crate_info = self.crate_info();
-
-                let can_skip = self.tcx._ret_can_skip.borrow();
-                if *can_skip {
-                    // print!(".");
-                } else {
-                    self.push_bb(crate_info.clone());
-                    self.push_bb(String::from("Ret]"));
-
-                    self.call_stk_pop();
-                }
-                let caller = self.stack().last().unwrap().instance;
+                // let crate_info = self.crate_info();
+                // let caller = self.stack().last().unwrap().instance;
                 // println!("caller of ret{:?}", caller.def);
-                let caller_inst = self.instance_to_inst_key(caller);
-
-                if self.keep_call_cond(caller_inst.clone()) {
-                    // match std::env::var_os("KEEP") {
-                    //     None => (),
-                    //     Some(_val) => {
-                    //         println!("[T] {:?} [{:?}]", caller_inst.clone().path, self.keep_call.borrow());
-                    //     }
-                    // };
-
-                    self.keep_call_pop();
-                    self.push_to_ecx(crate_info);
-                    self.push_to_ecx(String::from("Ret]"));
-                }
 
                 // self.merge_trace_stack1();
                 self.merge_trace_stack1();
@@ -148,47 +124,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 fn_span: _,
             } => {
 
-                let instance_def = self.body().source.instance;
-                let def_id = instance_def.def_id();
-                let fn_inst_key = self.create_fn_inst_key(def_id, func);
-                let info = self.inst_to_info(fn_inst_key.clone());
-
-                let can_skip = fn_inst_key.can_skip();
-                if can_skip {
-                    self.set_skip_true();
-                } else {
-
-                    self.push_bb("[Call<term>".to_string());
-                    self.push_bb(info.clone());
-
-                    let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
-                    self.call_stk_push(call_name);
-                    // let s = self.fn_info(self.body());
-                    // self.push_bb(s);
-                    self.set_skip_false();
-
-                    self.update_fn_key(fn_inst_key.clone());
-                    match std::env::var_os("DUMP_FIN_TRACE") {
-                        None => (),
-                        Some(_val) => {
-                            self.dump_fin_trace("/home/y23kim/rust/last_rust/aptos-core/terminator_call.json");
-                        }
-                    }
-                    // let final_trace = self.tcx._trace.borrow();
-                    // let content =
-                    //     serde_json::to_string_pretty(&*final_trace).expect("unexpected failure on JSON encoding");
-                    // println!("test{:?}", content);
-                }
-
-
-                if can_skip {
-
-                } else {
-                    self.keep_call_push(fn_inst_key.clone());
-                    self.push_to_ecx("[Call<term>".to_string());
-                    self.push_to_ecx(info);
-                }
-
+                // let instance_def = self.body().source.instance;
+                // let def_id = instance_def.def_id();
+                // let fn_inst_key = self.create_fn_inst_key(def_id, func);
                 // self.push_trace_stack1(fn_inst_key);
 
                 let old_stack = self.frame_idx();
@@ -281,11 +219,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 trace!("unwinding: resuming from cleanup");
                 // By definition, a Resume terminator means
                 // that we're unwinding
-
-                // let crate_info = self.crate_info(terminator);
-                // self.push_bb(crate_info);
-                let s1 = String::from("unwindResume");
-                self.push_bb(s1.clone());
                 self.pop_stack_frame(/* unwinding */ true)?;
                 return Ok(());
             }

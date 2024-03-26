@@ -404,42 +404,7 @@ pub trait EvalContextExt<'mir, 'tcx: 'mir>: crate::MiriInterpCxExt<'mir, 'tcx> {
             None => MPlaceTy::fake_alloc_zst(this.layout_of(mir.return_ty())?),
         };
 
-        // create function info
-        let fn_inst_key = this.create_fn_inst_key3(f);
-        let can_skip = fn_inst_key.can_skip();
-
-        if can_skip {
-            this.set_skip_true();
-        } else {
-            // if should skip: std, core, alloc, ..
-            this.push_bb(String::from("[Call<helpers>")); // is called (with miri)
-            let info = this.inst_to_info(fn_inst_key.clone());
-            // let info = format!("*{:?}", fn_inst_key);
-            // let info = this.crate_info();
-            this.push_bb(info);
-
-            // call_stack
-            let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
-            this.call_stk_push(call_name);
-            this.set_skip_false();
-            this.update_fn_key(fn_inst_key.clone());
-        }
-
-        match std::env::var_os("DUMP_FIN_TRACE") {
-            None => (),
-            Some(_val) => {
-                println!("dump file in helpers.json");
-                this.dump_fin_trace("/home/y23kim/rust/last_rust/aptos-core/helpers.json");
-            }
-        }
-
-        match std::env::var_os("DUMP_TMP_TRACE") {
-            None => (),
-            Some(_val) => {
-                this.dump_tmp_trace("./trace_in_helper.json");
-                println!("dump final trace in helpers.rs");
-            }
-        }
+        // let fn_inst_key = this.create_fn_inst_key3(f);
         // this.push_trace_stack1(fn_inst_key.clone());
 
         this.push_stack_frame(f, mir, &dest, stack_pop)?;

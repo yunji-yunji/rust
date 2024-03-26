@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 use std::sync::atomic::Ordering::Relaxed;
 
-=======
->>>>>>> f88fe390187 (build after rebase)
 use either::{Left, Right};
 
 use rustc_hir::def::DefKind;
@@ -28,7 +25,6 @@ use crate::interpret::{
     StackPopCleanup,
 };
 use crate::CTRL_C_RECEIVED;
-use crate::interpret::dump;
 
 // Returns a pointer to where the result lives
 #[instrument(level = "trace", skip(ecx, body))]
@@ -78,28 +74,10 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
     );
 
 
-    let f: ty::Instance<'_> = cid.instance;
-    let fn_inst_key = ecx.create_fn_inst_key3(f);
-    let can_skip = fn_inst_key.can_skip();
-    if can_skip {
-        ecx.set_skip_true();
-    } else {
-        // 1. _bb_seq
-        ecx.push_bb(String::from("[Call<eval_body>"));
-        // let info = format!("#{:?}", fn_inst_key);
-        let info = ecx.inst_to_info(fn_inst_key.clone());
-        // let info = ecx.crate_info();
-        ecx.push_bb(info);
-
-        // 2. _call_stack
-        let call_name = fn_inst_key.clone().krate.unwrap() + &fn_inst_key.path;
-        ecx.call_stk_push(call_name);
-
-        ecx.set_skip_false();
-        ecx.update_fn_key(fn_inst_key.clone());
-    }
-
+    // let f: ty::Instance<'_> = cid.instance;
+    // let fn_inst_key = ecx.create_fn_inst_key3(f);
     // ecx.push_trace_stack1(fn_inst_key.clone());
+
     ecx.push_stack_frame(
         cid.instance,
         body,
@@ -117,12 +95,7 @@ fn eval_body_using_ecx<'mir, 'tcx, R: InterpretationResult<'tcx>>(
 
     // The main interpreter loop.
     while ecx.step()? {}
-    match std::env::var_os("BB_SEQ_EVAL") {
-        None => (),
-        Some(_val) => {
-            println!("eval_body_using_ecx {:?}", ecx.tcx._bb_seq);
-        }
-    }
+
     // Intern the result
     intern_const_alloc_recursive(ecx, intern_kind, &ret)?;
 

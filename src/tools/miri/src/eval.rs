@@ -457,11 +457,9 @@ pub fn eval_entry<'tcx>(
         }
     };
     println!("early trace {:?}", ecx._trace_stack);
-    println!("miri interpreter after create ecx {:?}", ecx.call_return_vec.borrow());
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
-    println!("miri after run_thread {:?}", ecx.call_return_vec.borrow());
     println!("miri after run_thread test {:?}", ecx._trace_stack);
 
     let res = res.unwrap_or_else(|panic_payload| {

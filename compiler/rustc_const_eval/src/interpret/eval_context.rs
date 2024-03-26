@@ -31,7 +31,6 @@ use crate::errors;
 use crate::util;
 use crate::{fluent_generated as fluent, ReportErrorExt};
 use rustc_middle::ty::print::with_no_trimmed_paths;
-use std::cell::RefCell;
 
 pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
     /// Stores the `Machine` instance.
@@ -54,9 +53,6 @@ pub struct InterpCx<'mir, 'tcx, M: Machine<'mir, 'tcx>> {
     pub recursion_limit: Limit,
 
     // my variables
-    pub call_return_vec: RefCell<Vec<String>>,
-    pub keep_call: RefCell<Vec<FnInstKey>>,
-
     pub _trace_stack: Vec<Trace>,
     pub _skip_counter: usize,
 }
@@ -510,8 +506,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             param_env,
             memory: Memory::new(),
             recursion_limit: tcx.recursion_limit(),
-            call_return_vec: RefCell::new(vec![]),
-            keep_call: RefCell::new(vec![]),
             _trace_stack: vec![Trace {  _entry: dummy_fn_inst_key.clone(), _steps: vec![] }],
             _skip_counter: 0,
         }

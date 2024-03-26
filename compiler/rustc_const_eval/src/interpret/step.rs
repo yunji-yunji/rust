@@ -366,9 +366,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
-                let s = format!("{:?}", loc.block.as_usize());
-                self.push_bb(s.clone());
-
                 // information to print
                 let tcx = self.tcx.tcx;
                 let body = self.body();
@@ -376,6 +373,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 let def_id = instance_def.def_id();
                 let krate = tcx.crate_name(def_id.krate).to_string();
                 let path = tcx.def_path(def_id).to_string_no_crate_verbose();
+
                 // 1. krate info + bb id
                 match std::env::var_os("BB_SHORT") {
                     None => (),
@@ -389,6 +387,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 }
+            
                 // 2. krate info + bb id + statements + terminator
                 match std::env::var_os("BB_LONG") {
                     None => (),
@@ -442,45 +441,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                         }
                     }
                 }
-                // TODO: remove
-                match std::env::var_os("BB3") {
-                    None => (),
-                    Some(_val) => {
-                        self.push_step_bb(loc.block);
-                    }
-                }
+
                 self.push_bb_stack1(loc.block);
-                // // TODO: remove
-                // match std::env::var_os("BB2") {
-                //     None => (),
-                //     Some(val) => {
-                //         let name = match val.into_string() {
-                //             Ok(s) =>{ s },
-                //             Err(_e) => { panic!("wrong env var") },
-                //         };
-                //         if krate.contains(&name) | path.contains(&name) {
-                //             let s1 = self.tcx._s1.borrow();
-                //             print!("bbs=#{:?}#", s1.len());
-                //             for bb in &*s1 {
-                //                 match bb {
-                //                     Step::Call(_) => {
-                //                         print!("[C]");
-                //                     },
-                //                     Step::B(b) => { print!("[{:?}]", b.as_usize()); }
-                //                 }
-                //             }
-                //             print!("\n");
-                //         }
-                //     }
-                // }
-                // // TODO: remove
-                // match std::env::var_os("BB3") {
-                //     None => (),
-                //     Some(_val) => {
-                //         self.push_step_bb(loc.block);
-                //         self.push_bb_stack1(loc.block);
-                //     }
-                // }
+
                 info!("// executing {:?}", loc.block);
             }
         }
