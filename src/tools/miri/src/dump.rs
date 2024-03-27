@@ -1,12 +1,5 @@
-use std::fs::{self, OpenOptions};
-use std::io::Write;
-use std::path::Path;
-
-use rustc_middle::ty::{TyCtxt, Generics};
-
-use rustc_session::StableCrateId;
-use rustc_session::config::EntryFnType;
-
+/* 
+use rustc_middle::ty::Generics;
 use rustc_span::Symbol;
 // use rustc_span::sym::crate_name;
 // use rustc_span::def_id::{LocalDefId, DefIndex, CrateNum};
@@ -83,3 +76,4 @@ pub fn dump_in_eval_entry( // src/tools/miri/src/eval.rs => OUTDIR
     file.write_all(content.as_bytes()).expect("Fail to write file.");
 }
 
+*/
