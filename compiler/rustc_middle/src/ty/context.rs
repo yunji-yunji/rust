@@ -1108,9 +1108,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                     Mutability::Mut => PaflType::MutRef(converted.into()),
                 }
             }
-            ty::RawPtr(ty_and_mut) => {
-                let converted = self.process_type(ty_and_mut.ty);
-                match ty_and_mut.mutbl {
+            ty::RawPtr(ty, mutability) => {
+                let converted = self.process_type(*ty);
+                match mutability {
                     Mutability::Not => PaflType::ImmPtr(converted.into()),
                     Mutability::Mut => PaflType::MutPtr(converted.into()),
                 }

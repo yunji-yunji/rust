@@ -21,7 +21,7 @@ use rustc_span::def_id::{LOCAL_CRATE};
 
 use rustc_data_structures::sync;
 // use rustc_monomorphize::collector::UsageMap;
-use rustc_monomorphize::collector::{self, MonoItemCollectionMode};
+use rustc_monomorphize::collector::{self, MonoItemCollectionStrategy};
 use rustc_monomorphize::partitioning::{partition, assert_symbols_are_distinct};
 use rustc_monomorphize::errors::UnknownCguCollectionMode;
 pub struct Marker(pub &'static str);
@@ -94,20 +94,20 @@ pub fn emit_mir(tcx: TyCtxt<'_>) -> io::Result<()> {
                                 let mode = s.to_lowercase();
                                 let mode = mode.trim();
                                 if mode == "eager" {
-                                    MonoItemCollectionMode::Eager
+                                    MonoItemCollectionStrategy::Eager
                                 } else {
                                     if mode != "lazy" {
                                         tcx.dcx().emit_warn(UnknownCguCollectionMode { mode });
                                     }
                     
-                                    MonoItemCollectionMode::Lazy
+                                    MonoItemCollectionStrategy::Lazy
                                 }
                             }
                             None => {
                                 if tcx.sess.link_dead_code() {
-                                    MonoItemCollectionMode::Eager
+                                    MonoItemCollectionStrategy::Eager
                                 } else {
-                                    MonoItemCollectionMode::Lazy
+                                    MonoItemCollectionStrategy::Lazy
                                 }
                             }
                         };

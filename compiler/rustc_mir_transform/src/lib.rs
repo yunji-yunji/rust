@@ -651,23 +651,7 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
         Some(other) => panic!("do not use `optimized_mir` for constants: {other:?}"),
     }
     debug!("about to call mir_drops_elaborated...");
-    let body = tcx.mir_drops_elaborated_and_const_checked(did).steal();
-
-    // can i call dump here??
-    // match std::env::var_os("DUMP_IN_OPT_MIR") {
-    //     None => {},
-    //     Some(val) => {
-    //         println!("dump in inner_optimized_mir {:?}", val);
-    //         let instance_def = body.source.instance;
-    //         let def_id = instance_def.def_id();
-    //         let my_generics = GenericArgs::identity_for_item(tcx, def_id);
-    //         let my_inst = Instance::new(def_id, my_generics);
-
-
-    //         let res = dump_mir::emit_mir(tcx);
-    //         println!("emit in opt_mir {:?}", res);
-    //     }
-    // }
+    let mut body = tcx.mir_drops_elaborated_and_const_checked(did).steal();
 
     match std::env::var_os("OPT_CFG_SHORT") {
         None => (),
