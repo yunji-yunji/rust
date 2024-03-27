@@ -118,8 +118,6 @@ impl rustc_driver::Callbacks for MiriCompilerCalls {
                 );
             }
             tcx.dcx().abort_if_errors();
-            println!("after analysis2 yj vec={:?}", tcx._vec.borrow());
-
         });
 
         Compilation::Stop
@@ -141,15 +139,6 @@ impl rustc_driver::Callbacks for MiriBeRustCompilerCalls {
                 // an empty result if `tcx.sess.opts.output_types.should_codegen()` is false.
                 local_providers.exported_symbols = |tcx, LocalCrate| {
 
-                    /*
-                    let trace_stack = tcx._trace_stack.borrow();
-                    let trace = trace_stack.last().unwrap();
-                    if trace._steps.len() > 0 {
-                        println!("after miri2 {:?}", trace._steps.last().unwrap());
-                    } else {
-                        println!("empty trace");
-                    };
-                    */
                     let reachable_set = tcx.with_stable_hashing_context(|hcx| {
                         tcx.reachable_set(()).to_sorted(&hcx, true)
                     });

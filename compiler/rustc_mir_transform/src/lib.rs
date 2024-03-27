@@ -651,8 +651,23 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
         Some(other) => panic!("do not use `optimized_mir` for constants: {other:?}"),
     }
     debug!("about to call mir_drops_elaborated...");
-    let mut body = tcx.mir_drops_elaborated_and_const_checked(did).steal();
+    // let mut body = tcx.mir_drops_elaborated_and_const_checked(did).steal();
 
+    let body = tcx.mir_drops_elaborated_and_const_checked(did).steal();
+    let mut body = remap_mir_for_const_eval_select(tcx, body, hir::Constness::NotConst);
+    if body.tainted_by_errors.is_some() {
+        return body;
+    }
+
+    // If `mir_drops_elaborated_and_const_checked` found that the current body has unsatisfiable
+    // predicates, it will shrink the MIR to a single `unreachable` terminator.
+    // More generally, if MIR is a lone `unreachable`, there is nothing to optimize.
+    if let TerminatorKind::Unreachable = body.basic_blocks[START_BLOCK].terminator().kind
+        && body.basic_blocks[START_BLOCK].statements.is_empty()
+    {
+        return body;
+    }
+    
     match std::env::var_os("OPT_CFG_SHORT") {
         None => (),
         Some(val) => {

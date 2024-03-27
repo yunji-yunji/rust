@@ -1,16 +1,7 @@
-use std::fs::{self, OpenOptions};
-use std::io::Write;
-use std::path::Path;
-
-use rustc_middle::ty::{TyCtxt, Generics};
-
-use rustc_session::StableCrateId;
-use rustc_session::config::EntryFnType;
-
+/* 
+use rustc_middle::ty::Generics;
 use rustc_span::Symbol;
-
-use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
-use rustc_hir::def_id::{LOCAL_CRATE, DefId};
+use rustc_hir::definitions::DisambiguatedDefPathData;
 use rustc_hir::def::DefKind;
 
 #[derive(Debug)]
@@ -82,3 +73,4 @@ pub fn _dump_in_eval_entry(
     file.write_all(content.as_bytes()).expect("Fail to write file.");
 }
 
+*/
