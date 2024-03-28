@@ -1757,9 +1757,6 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
 pub enum Step {
     B(BasicBlock),
-    // Call(&'a Trace<'a>),
-    // Call(Box<&'a Trace<'a>>),
-    // Call(Box<*mut Trace<'a>>),
     Call(Trace),
 }
 

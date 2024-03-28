@@ -109,6 +109,25 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         final_trace._steps.push(Step::Call(tmp_trace.clone()));
     }
 
+    pub fn dump_trace(&mut self, file_path: &str) {
+        let trace = self._trace_stack.last().unwrap();
+        let size = self._trace_stack.len();
+        println!("[dump] size of trace stack {}", size);
+        assert_eq!(size, 1);
+
+        
+        let content =
+            serde_json::to_string_pretty(&*trace).expect("unexpected failure on JSON encoding");
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(file_path)
+            .expect("unable to create output file");
+        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
+    }
+
     // new) called by call
     pub fn push_trace_stack1(&mut self, fn_key: FnInstKey) {
         // println!("call {:?}", fn_key);
