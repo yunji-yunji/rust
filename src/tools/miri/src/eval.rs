@@ -462,6 +462,8 @@ pub fn eval_entry<'tcx>(
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
     println!("miri after run_thread test {:?}", ecx._trace_stack);
 
+    ecx.dump_trace("<file_path>");
+
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
         panic::resume_unwind(panic_payload)
@@ -489,6 +491,7 @@ pub fn eval_entry<'tcx>(
     } else {
         println!("empty trace");
     };
+
 
     // Process the result.
     let (return_code, leak_check) = report_error(&ecx, res)?;

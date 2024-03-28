@@ -17,7 +17,8 @@ use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 use rustc_data_structures::fx::FxHashMap;
 use rustc_middle::ty::context::{PaflDump, PaflCrate};
 
-
+use std::fs::OpenOptions;
+use std::io::Write;
 
 impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     pub fn crate_info(&mut self,) -> String {
@@ -172,6 +173,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         fn_inst_key
     }
 
+    // TODO: remove
     pub fn _log_in_eval_query(
         &mut self, 
     ) {
@@ -201,7 +203,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         // println!("{:?}", content);
     }
 
-
+    // TODO: remove
     #[inline(always)]
     pub fn _bb_dump_in_step(&mut self) { 
 
@@ -246,6 +248,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         }
     }
 
+    // TODO: remove
     fn _print_crate_info(&mut self, /*def: DefId, */ _term: &Terminator<'tcx>) {
         if let Some(last) = self.stack().last() {
 
@@ -285,6 +288,25 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             }
         }
 
+    }
+
+    pub fn dump_trace(&mut self, file_path: &str) {
+        let trace = self._trace_stack.last().unwrap();
+        let size = self._trace_stack.len();
+        println!("[dump] size of trace stack {}", size);
+        assert_eq!(size, 1);
+
+        
+        let content =
+            serde_json::to_string_pretty(&*trace).expect("unexpected failure on JSON encoding");
+
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(file_path)
+            .expect("unable to create output file");
+        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
     }
 
     // new) called by call
