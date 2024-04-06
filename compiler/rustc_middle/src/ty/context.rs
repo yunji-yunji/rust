@@ -836,9 +836,6 @@ impl Native {
     }
 }
 
-
-
-
 /// Identifier mimicking `DefId`
 #[derive(Serialize, Clone, Debug)]
 pub struct Ident2 {
@@ -903,6 +900,9 @@ pub enum PaflType {
     Slice(Box<PaflType>),
     Array(Box<PaflType>, PaflConst),
     Tuple(Vec<PaflType>),
+    CoroutineClosure(FnInstKey),
+    Coroutine(FnInstKey),
+    CoroutineWitness(FnInstKey),
 }
 
 impl PaflType {
@@ -931,6 +931,7 @@ impl PaflType {
             | Self::Dynamic(_) => false,
             Self::Adt(ty_inst) | Self::Alias(ty_inst) => ty_inst.generics.iter().any(|g| g.has_functor()),
             Self::FnPtr(..) | Self::FnDef(_) | Self::Closure(_) => true, // TRUE
+            Self::CoroutineClosure(_) | Self::Coroutine(_) | Self::CoroutineWitness(_) => true, // TRUE?
             Self::ImmRef(t)
             | Self::MutRef(t)
             | Self::ImmPtr(t)
@@ -980,7 +981,6 @@ pub struct FnInstKey {
 
 impl FnInstKey {
     pub fn can_skip(&self) -> bool {
-
         match std::env::var_os("SIMP") {
             None => {
                 match self.krate.as_deref() {
@@ -1009,6 +1009,7 @@ impl FnInstKey {
                 }
             }
         }
+         */
     }
 }
 
@@ -1173,8 +1174,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
     /// Resolve an instantiation to a fn key
     pub fn resolve_fn_key(&self, id: DefId, args: GenericArgsRef<'tcx>) -> FnInstKey {
-        let krate =
-            if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        // let krate = if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        let krate = Some(self.tcx.crate_name(id.krate).to_string());
         FnInstKey {
             krate,
             index: id.index.as_usize(),
@@ -1256,6 +1257,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             }
             ty::FnDef(def_id, args) => PaflType::FnDef(self.resolve_fn_key(*def_id, *args)),
             ty::Closure(def_id, args) => PaflType::Closure(self.resolve_fn_key(*def_id, *args)),
+            ty::CoroutineClosure(def_id, args) => PaflType::CoroutineClosure(self.resolve_fn_key(*def_id, *args)),
+            ty::Coroutine(def_id, args) => PaflType::Coroutine(self.resolve_fn_key(*def_id, *args)),
+            ty::CoroutineWitness(def_id, args) => PaflType::CoroutineWitness(self.resolve_fn_key(*def_id, *args)),
             ty::Ref(_region, sub, mutability) => {
                 let converted = self.process_type(*sub);
                 match mutability {
@@ -1289,7 +1293,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                     traits.push(def_id.into());
                 }
                 PaflType::Dynamic(traits)
-            }
+            }, 
             _ => bug!("unrecognized type: {:?}", item),
         }
     }
@@ -1743,20 +1747,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 // ==============
 
 #[allow(dead_code)]
-
 #[derive(Serialize, Clone, Debug)]
-// pub enum Step<'a> {
-// pub enum Step {
-//     B(BasicBlock),
-//     // Call(&'a Trace<'a>),
-//     // Call(Box<&'a Trace<'a>>),
-//     Call(Box<Trace>),
-//     // Call(Box<Ref)
-//     // Err,
-// }
-
 pub enum Step {
-    B(BasicBlock),
+    // B(BasicBlock),
+    B(usize),
     Call(Trace),
 }
 
@@ -1766,6 +1760,7 @@ pub struct Trace {
     pub _steps: Vec<Step>,
 }
 
+<<<<<<< HEAD
 // impl Serialize for Step {
 //     // impl<'a> Serialize for *mut Trace<'a> {
 //     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -1815,6 +1810,9 @@ pub struct Trace {
 
 
 >>>>>>> e311c37f83c (print full cfg)
+=======
+/// The central data structure of the compiler. It stores references
+>>>>>>> 539f42dac72 (Fix Never type bug)
 /// to the various **arenas** and also houses the results of the
 /// various **compiler queries** that have been performed. See the
 /// [rustc dev guide] for more details.
@@ -2177,6 +2175,7 @@ impl<'tcx> TyCtxt<'tcx> {
         file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
     }
 
+
     pub fn create_fn_inst_key2(self, def: DefId, term: &Terminator<'tcx>) -> FnInstKey {
 
         let tcx = self.tcx();
@@ -2292,23 +2291,6 @@ impl<'tcx> TyCtxt<'tcx> {
         let common_types = CommonTypes::new(&interners, s, &untracked);
         let common_lifetimes = CommonLifetimes::new(&interners);
         let common_consts = CommonConsts::new(&interners, &common_types, s, &untracked);
-<<<<<<< HEAD
-
-=======
-        
-        // let dummy_generics: Vec<PaflGeneric> = vec![];
-        let steps: Vec<Step> = vec![];
-        let dummy_fn_inst_key = FnInstKey {
-            krate: None,
-            index: 0,
-            path: String::from(""),
-            generics: vec![],
-        };
-        let fin_trace : Trace = Trace { _entry: dummy_fn_inst_key.clone(), _steps: steps.to_vec() };
-        // println!("crate id [{:?}]{:?}", crate_types, stable_crate_id);
-        // let trace_idx_vec : Vec<usize> = vec![0];
-        // let curr = Some(&)
->>>>>>> 2f5a12d2461 (dump in miri (callee is not constant))
         GlobalCtxt {
             sess: s,
             crate_types,

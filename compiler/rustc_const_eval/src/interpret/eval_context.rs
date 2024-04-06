@@ -623,9 +623,10 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         args: GenericArgsRef<'tcx>,
     ) -> InterpResult<'tcx, ty::Instance<'tcx>> {
         trace!("resolve: {:?}, {:#?}", def, args);
+        // println!("1) resolve: def={:?}, args={:#?}", def, args);
         trace!("param_env: {:#?}", self.param_env);
         trace!("args: {:#?}", args);
-        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) {
+        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) { // cannot find never here
             Ok(Some(instance)) => Ok(instance),
             Ok(None) => throw_inval!(TooGeneric),
 
@@ -824,6 +825,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         };
         let frame = M::init_frame(self, pre_frame)?;
         self.stack_mut().push(frame);
+        // if print {println!("4.1) push_stack_frame args={:?}", instance.args);}
 
         // Make sure all the constants required by this frame evaluate successfully (post-monomorphization check).
         for &const_ in &body.required_consts {
@@ -834,7 +836,8 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 err
             })?;
         }
-
+        
+        // if print {println!("4.2) push_stack_frame args={:?}", instance.args);}
         // done
         M::after_stack_push(self)?;
         self.frame_mut().loc = Left(mir::Location::START);

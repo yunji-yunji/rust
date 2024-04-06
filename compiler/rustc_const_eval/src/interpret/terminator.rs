@@ -137,10 +137,14 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                     ty::FnPtr(_sig) => {
                         let fn_ptr = self.read_pointer(&func)?;
                         let fn_val = self.get_ptr_fn(fn_ptr)?;
+                        println!("[FnPtr]");
                         (fn_val, self.fn_abi_of_fn_ptr(fn_sig_binder, extra_args)?, false)
                     }
                     ty::FnDef(def_id, args) => {
                         let instance = self.resolve(def_id, args)?;
+                        // with_no_trimmed_paths!({
+                        //     println!("2)after resolve (FnDef): def=[{:?}] args=[{:?}] ", self.tcx.def_path_debug_str(def_id), args); // cannot find never
+                        // });
                         (
                             FnVal::Instance(instance),
                             self.fn_abi_of_instance(instance, extra_args)?,
@@ -153,9 +157,8 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                         func.layout.ty
                     ),
                 };
-
                 let destination = self.force_allocation(&self.eval_place(destination)?)?;
-                self.eval_fn_call(
+                self.eval_fn_call( // eval_fn_Call --> push_stack_frame(never) --> push_to_trace(Never)
                     fn_val,
                     (fn_sig.abi, fn_abi),
                     &args,
@@ -601,6 +604,11 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                     return Ok(());
                 };
 
+                // with_no_trimmed_paths!({
+                //     println!("3) eval_fn_call: args=[{:?}]", instance.args);
+                // });
+                
+
                 // Compute callee information using the `instance` returned by
                 // `find_mir_or_eval_fn`.
                 // FIXME: for variadic support, do we have to somehow determine callee's extra_args?
@@ -619,17 +627,24 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                         )
                     }
                 }
-
+                // with_no_trimmed_paths!({
+                //     println!("3.1) {:?}", instance.args);
+                // });
                 // Check that all target features required by the callee (i.e., from
                 // the attribute `#[target_feature(enable = ...)]`) are enabled at
                 // compile time.
                 self.check_fn_target_features(instance)?;
-
+                // with_no_trimmed_paths!({
+                //     println!("3.2) {:?}", instance.args);
+                // });
                 if !callee_fn_abi.can_unwind {
                     // The callee cannot unwind, so force the `Unreachable` unwind handling.
                     unwind = mir::UnwindAction::Unreachable;
                 }
-
+                // with_no_trimmed_paths!({
+                //     println!("3.3) {:?}", instance.args);
+                // });
+                // CAN find never
                 self.push_stack_frame(
                     instance,
                     body,
