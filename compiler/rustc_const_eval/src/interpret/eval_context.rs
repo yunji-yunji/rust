@@ -636,9 +636,10 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         args: GenericArgsRef<'tcx>,
     ) -> InterpResult<'tcx, ty::Instance<'tcx>> {
         trace!("resolve: {:?}, {:#?}", def, args);
+        // println!("1) resolve: def={:?}, args={:#?}", def, args);
         trace!("param_env: {:#?}", self.param_env);
         trace!("args: {:#?}", args);
-        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) {
+        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) { // cannot find never here
             Ok(Some(instance)) => Ok(instance),
             Ok(None) => throw_inval!(TooGeneric),
 
@@ -861,7 +862,9 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         };
         let frame = M::init_frame_extra(self, pre_frame)?;
 
+        // let print = !instance.args.is_empty();
         self.stack_mut().push(frame);
+        // if print {println!("4.1) push_stack_frame args={:?}", instance.args);}
 
         // Make sure all the constants required by this frame evaluate successfully (post-monomorphization check).
         if M::POST_MONO_CHECKS {
@@ -874,11 +877,26 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 })?;
             }
         }
-
+        
+        // if print {println!("4.2) push_stack_frame args={:?}", instance.args);}
         // done
         M::after_stack_push(self)?;
 
-        let fn_inst_key = self.create_fn_inst_key3(instance);
+        // let fn_inst_key = self.create_fn_inst_key3(instance);
+        let fn_inst_key = self.get_fn_inst_key(instance);
+        // if !fn_inst_key.generics.is_empty() {
+        // }
+
+        match std::env::var_os("INST_DUMP") {
+            None => {},
+            Some(_val) => {
+                with_no_trimmed_paths!({
+                    println!("4.3) caller_def=[{}] args=[{:?}] ", fn_inst_key.path, fn_inst_key.generics);
+                    println!("4.4) {:?}", instance.args);
+                });
+            }
+        };
+
         self.push_trace_stack1(fn_inst_key);
 
         self.frame_mut().loc = Left(mir::Location::START);

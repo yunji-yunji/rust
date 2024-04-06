@@ -679,9 +679,6 @@ impl Native {
     }
 }
 
-
-
-
 /// Identifier mimicking `DefId`
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 pub struct Ident2 {
@@ -746,6 +743,9 @@ pub enum PaflType {
     Slice(Box<PaflType>),
     Array(Box<PaflType>, PaflConst),
     Tuple(Vec<PaflType>),
+    CoroutineClosure(FnInstKey),
+    Coroutine(FnInstKey),
+    CoroutineWitness(FnInstKey),
 }
 
 impl PaflType {
@@ -774,6 +774,7 @@ impl PaflType {
             | Self::Dynamic(_) => false,
             Self::Adt(ty_inst) | Self::Alias(ty_inst) => ty_inst.generics.iter().any(|g| g.has_functor()),
             Self::FnPtr(..) | Self::FnDef(_) | Self::Closure(_) => true, // TRUE
+            Self::CoroutineClosure(_) | Self::Coroutine(_) | Self::CoroutineWitness(_) => true, // TRUE?
             Self::ImmRef(t)
             | Self::MutRef(t)
             | Self::ImmPtr(t)
@@ -787,7 +788,6 @@ impl PaflType {
 
 /// Serializable information about a Rust generic argument
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
-// #[derive(Deserialize, Ord, PartialOrd, Eq, PartialEq)]
 pub enum PaflGeneric {
     Lifetime,
     Type(PaflType),
@@ -823,7 +823,8 @@ pub struct FnInstKey {
 
 impl FnInstKey {
     pub fn can_skip(&self) -> bool {
-        // return false;
+        return false;
+        /*
         match std::env::var_os("SIMP") {
             None => {
                 match self.krate.as_deref() {
@@ -852,6 +853,7 @@ impl FnInstKey {
                 }
             }
         }
+         */
     }
 }
 
@@ -1016,8 +1018,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
     /// Resolve an instantiation to a fn key
     pub fn resolve_fn_key(&self, id: DefId, args: GenericArgsRef<'tcx>) -> FnInstKey {
-        let krate =
-            if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        // let krate = if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        let krate = Some(self.tcx.crate_name(id.krate).to_string());
         FnInstKey {
             krate,
             index: id.index.as_usize(),
@@ -1101,6 +1103,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             }
             ty::FnDef(def_id, args) => PaflType::FnDef(self.resolve_fn_key(*def_id, *args)),
             ty::Closure(def_id, args) => PaflType::Closure(self.resolve_fn_key(*def_id, *args)),
+            ty::CoroutineClosure(def_id, args) => PaflType::CoroutineClosure(self.resolve_fn_key(*def_id, *args)),
+            ty::Coroutine(def_id, args) => PaflType::Coroutine(self.resolve_fn_key(*def_id, *args)),
+            ty::CoroutineWitness(def_id, args) => PaflType::CoroutineWitness(self.resolve_fn_key(*def_id, *args)),
             ty::Ref(_region, sub, mutability) => {
                 let converted = self.process_type(*sub);
                 match mutability {
@@ -1134,7 +1139,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                     traits.push(def_id.into());
                 }
                 PaflType::Dynamic(traits)
-            }
+            }, 
             _ => bug!("unrecognized type: {:?}", item),
         }
     }
@@ -1168,7 +1173,6 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             }
             _ => {
                 bug!("callee is not a function or closure: [{:?}] {:?}", cty.kind(), span);
-                // (CRATE_DEF_ID, &[])
                 // bug!("callee is not a function or closure: {:?}", span),
             }
         };
@@ -1660,20 +1664,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 // ==============
 
 #[allow(dead_code)]
-
 #[derive(Serialize, Clone, Debug)]
-// pub enum Step<'a> {
-// pub enum Step {
-//     B(BasicBlock),
-//     // Call(&'a Trace<'a>),
-//     // Call(Box<&'a Trace<'a>>),
-//     Call(Box<Trace>),
-//     // Call(Box<Ref)
-//     // Err,
-// }
-
 pub enum Step {
-    B(BasicBlock),
+    // B(BasicBlock),
+    B(usize),
     Call(Trace),
 }
 
@@ -1682,54 +1676,6 @@ pub struct Trace {
     pub _entry: FnInstKey,
     pub _steps: Vec<Step>,
 }
-
-// impl Serialize for Step {
-//     // impl<'a> Serialize for *mut Trace<'a> {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: serde::Serializer,
-//     {
-//         match self {
-//             Step::Call(inner) => {
-//                 // Serialize the "Call" variant by recursively serializing the inner Trace
-//                 // let raw_ptr = *inner.clone();
-//                 let raw_ptr = inner.clone();
-//                 if !raw_ptr.is_null() {
-//                     // Dereference the raw pointer and clone the value
-//                     unsafe { 
-//                         let a = (*raw_ptr).clone(); 
-//                         a.serialize(serializer) 
-//                     }
-//                 } else {
-//                     // Handle the case where the raw pointer is null (optional)
-//                     // You might want to return a default value or panic depending on your use case
-//                     panic!("yyyjj Attempted to dereference a null pointer.")
-//                 }
-//                 // inner.serialize(serializer)
-//             }, 
-//             Step::B(bb) => {
-//                 bb.serialize(serializer)
-//             }
-//         }
-//         // Example: serializer.serialize_some_function(*self)
-//     }
-// }
-
-
-// pub struct Trace {
-//     pub _entry: FnInstKey,
-//     pub _steps: Vec<Step>,
-// }
-
-// impl<'a> Clone for Trace<'a> {
-//     fn clone(&self) -> Self {
-//         Trace {
-//             _entry: self._entry,
-//             _steps: self._steps.clone(),
-//         }
-//     }
-// }
-
 
 /// The central data structure of the compiler. It stores references
 /// to the various **arenas** and also houses the results of the
@@ -2046,6 +1992,7 @@ impl<'tcx> TyCtxt<'tcx> {
             .expect("unable to create output file2");
         file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
     }
+
 
     pub fn create_fn_inst_key2(self, def: DefId, term: &Terminator<'tcx>) -> FnInstKey {
 

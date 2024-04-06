@@ -1,9 +1,10 @@
 use super::{InterpCx, Machine};
 use rustc_middle::mir::Terminator;
 use rustc_middle::mir::BasicBlock;
+use rustc_middle::ty::layout::HasTyCtxt;
 use rustc_middle::ty::print::with_no_trimmed_paths;
-use rustc_middle::ty::{self, GenericArgKind, InstanceDef, ParamEnv};
-use rustc_middle::ty::context::{PaflType, PaflGeneric, FnInstKey, Step, Trace};
+use rustc_middle::ty::{self, GenericArgKind, InstanceDef, ParamEnv, Instance};
+use rustc_middle::ty::context::{PaflType, PaflGeneric, FnInstKey, Step, Trace, PaflDump, PaflCrate};
 
 use std::fs;
 use std::path::PathBuf;
@@ -15,7 +16,6 @@ use rustc_hir::def_id::DefId;
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 
 use rustc_data_structures::fx::FxHashMap;
-use rustc_middle::ty::context::{PaflDump, PaflCrate};
 
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -58,9 +58,73 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         res
     }
 
+    pub fn get_fn_inst_key(&mut self, instance: Instance<'tcx>) -> FnInstKey {
+        let tcx = self.tcx();
+
+        let path_meta = PathBuf::new();
+        let path_data = PathBuf::new();
+        let path_prefix = PathBuf::new();
+        let verbose = false;
+        // verbosity
+        // let mut cache = FxHashMap::default();
+        let mut cache: FxHashMap<Instance<'tcx>, FnInstKey> = FxHashMap::default();
+        let mut stack = vec![];
+        let param_env = ParamEnv::reveal_all();
+        // let mut cache = FxHashMap::default();
+        let mut summary = PaflCrate { functions: Vec::new() };
+    
+        if let Some(cached) = cache.get(&instance) {
+            return cached.clone();
+        }
+
+        // let id = instance.def_id();
+        // let path = self.tcx.def_path(id);
+        // let depth = stack.len();
+
+
+        // construct the worker
+        let dumper = PaflDump {
+            tcx,
+            param_env,
+            verbose,
+            path_meta: path_meta.to_path_buf(),
+            path_data: path_data.to_path_buf(),
+            path_prefix,
+            stack: &mut stack,
+            cache: &mut cache,
+            summary: &mut summary.functions,
+        };
+
+        // method 1: not accurate
+        // let id = instance.def_id();
+
+        // method 2
+        let inst_def: ty::InstanceDef<'_> = instance.def;
+        let id : DefId = match inst_def {
+            InstanceDef::Item(def)
+            | InstanceDef::Intrinsic(def)
+            | InstanceDef::VTableShim(def)
+            | InstanceDef::ReifyShim(def)
+            | InstanceDef::FnPtrShim(def, _)
+            | InstanceDef::Virtual(def, _)
+            | InstanceDef::ThreadLocalShim(def) 
+            | InstanceDef::DropGlue(def, _)
+            | InstanceDef::CloneShim(def, _)
+            | InstanceDef::FnPtrAddrShim(def, _) => { def },
+            InstanceDef::ClosureOnceShim { call_once, .. } => { call_once }, 
+            InstanceDef::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
+            InstanceDef::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
+        };
+
+        let inst = dumper.resolve_fn_key(id, instance.args);
+        inst
+    }
+
     pub fn create_fn_inst_key3(&mut self, func_inst: ty::Instance<'tcx>) -> FnInstKey {
         let func_instance: ty::InstanceDef<'_> = func_inst.def;
-        
+
+        let print = !func_inst.args.is_empty();
+        if print {println!("4.2.1) create_fn_key args=[{:?}]", func_inst.args);}
 
         let def: DefId = match func_instance {
             // InstanceDef::Item(_) => {
@@ -347,7 +411,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     // new) called by BB(X)
     pub fn push_bb_stack1(&mut self, bb: BasicBlock) {
         if self._skip_counter == 0 {
-            self._trace_stack.last_mut().unwrap()._steps.push(Step::B(bb));
+            self._trace_stack.last_mut().unwrap()._steps.push(Step::B(bb.as_usize()));
         };
     }
 

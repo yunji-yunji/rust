@@ -425,7 +425,7 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
-    match std::env::var_os("DUMP_IN_EVAL") {
+    match std::env::var_os("DUMP_CFG_JSON") {
         None => {},
         Some(val) => {
             let outdir = std::path::PathBuf::from(val.clone());
@@ -462,7 +462,15 @@ pub fn eval_entry<'tcx>(
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
     println!("miri after run_thread test {:?}", ecx._trace_stack);
 
-    ecx.dump_trace("<file_path>");
+    match std::env::var_os("DUMP_TRACE") {
+        None => {},
+        Some(val) => {
+            println!("DUMP runtime trace {:?}", val.clone());
+            if let Some(file_name) = val.to_str() {
+                ecx.dump_trace(file_name);
+            };
+        }
+    };
 
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
