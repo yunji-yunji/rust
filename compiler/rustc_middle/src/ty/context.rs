@@ -1162,8 +1162,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
     /// Resolve an instantiation to a ty key
     pub fn resolve_ty_key(&self, id: DefId, args: GenericArgsRef<'tcx>) -> TyInstKey {
-        let krate =
-            if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        // if id.is_local() { None } else { Some(self.tcx.crate_name(id.krate).to_string()) };
+        let krate = Some(self.tcx.crate_name(id.krate).to_string());
+            
         TyInstKey {
             krate,
             index: id.index.as_usize(),
