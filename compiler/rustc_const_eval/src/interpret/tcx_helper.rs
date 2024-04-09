@@ -376,43 +376,26 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
     // new) called by call
     pub fn push_trace_stack1(&mut self, fn_key: FnInstKey) {
         // println!("call {:?}", fn_key);
-        let can_skip = fn_key.can_skip();
-        if self._skip_counter == 0 {
-            self._trace_stack.push(Trace {_entry: fn_key, _steps: Vec::new()});
-            // let info = self.inst_to_info(fn_key);
-        };
-        if can_skip {
-            // println!("???");
-            self._skip_counter += 1;
-        };
+        self._trace_stack.push(Trace {_entry: fn_key, _steps: Vec::new()});
+        // let info = self.inst_to_info(fn_key);
     }
 
     // new) called by return
     pub fn merge_trace_stack1(&mut self/* , info: String*/) {
-        // can't be empty, unless return unmatched with call
-        if self._trace_stack.last().unwrap()._entry.can_skip() {
-            self._skip_counter -= 1;
-        };
-        if self._skip_counter == 0 {
-            let trace = self._trace_stack.pop().unwrap();
-            // println!("return {:?}", trace._entry);
-            if !trace._entry.can_skip() {
-                let l = self._trace_stack.len();
-                if l == 0 {
-                    // println!("WARNING: call stack exceeded!");
-                    self._trace_stack.push(trace);
-                } else {
-                    self._trace_stack.last_mut().unwrap()._steps.push(Step::Call(trace));
-                };
-            };
+        let trace = self._trace_stack.pop().unwrap();
+        // println!("return {:?}", trace._entry);
+        let l = self._trace_stack.len();
+        if l == 0 {
+            println!("WARNING: call stack exceeded!");
+            self._trace_stack.push(trace);
+        } else {
+            self._trace_stack.last_mut().unwrap()._steps.push(Step::Call(trace));
         };
     }
 
     // new) called by BB(X)
     pub fn push_bb_stack1(&mut self, bb: BasicBlock) {
-        if self._skip_counter == 0 {
-            self._trace_stack.last_mut().unwrap()._steps.push(Step::B(bb.as_usize()));
-        };
+        self._trace_stack.last_mut().unwrap()._steps.push(Step::B(bb.as_usize()));
     }
 
 }
