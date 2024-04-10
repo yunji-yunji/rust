@@ -85,8 +85,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 // let caller = self.stack().last().unwrap().instance;
                 // println!("caller of ret{:?}", caller.def);
 
-                // self.merge_trace_stack1();
-                self.merge_trace_stack1();
                 self.pop_stack_frame(/* unwinding */ false)?
             }
 
