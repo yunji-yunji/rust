@@ -442,6 +442,8 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     }
                 }
 
+                let fn_inst_key = self.get_fn_inst_key(self.frame().instance);
+                assert!(fn_inst_key == self._trace_stack.last().unwrap()._entry);
                 self.push_bb_stack1(loc.block);
 
                 info!("// executing {:?}", loc.block);
