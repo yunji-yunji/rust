@@ -1761,7 +1761,6 @@ pub struct Trace {
     pub _steps: Vec<Step>,
 }
 
-<<<<<<< HEAD
 // impl Serialize for Step {
 //     // impl<'a> Serialize for *mut Trace<'a> {
 //     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

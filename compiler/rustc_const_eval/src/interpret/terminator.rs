@@ -137,7 +137,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                     ty::FnPtr(_sig) => {
                         let fn_ptr = self.read_pointer(&func)?;
                         let fn_val = self.get_ptr_fn(fn_ptr)?;
-                        println!("[FnPtr]");
+                        // println!("[FnPtr]");
                         (fn_val, self.fn_abi_of_fn_ptr(fn_sig_binder, extra_args)?, false)
                     }
                     ty::FnDef(def_id, args) => {
