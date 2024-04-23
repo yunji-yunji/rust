@@ -1086,8 +1086,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             ty::Foreign(def_id) => PaflType::Opaque((*def_id).into()),
             ty::FnPtr(binder) => {
                 if !matches!(binder.abi(), Abi::Rust | Abi::RustCall) {
-
-                    println!("fn ptr not following the RustCall ABI: {}", binder.abi());
+                    // println!("WARNING: fn ptr not following the RustCall ABI: {}", binder.abi());
                     return PaflType::Never;
                 }
                 if binder.c_variadic() {

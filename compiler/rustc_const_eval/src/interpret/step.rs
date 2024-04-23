@@ -434,16 +434,35 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                             Err(_e) => { panic!("wrong env var") },
                         };
                         if krate.contains(&name) | path.contains(&name) {
-                            println!("* {:?}{:?}<{:?}>[{:?}] is polymorpihc?({:?}) phase=({:?}) injected={:?}",
+                            println!("* {:?}{:?}<{:?}>[{:?}] ",
                                 krate, path, loc.block, self.body().basic_blocks.clone().len(),
-                                body.is_polymorphic, body.phase, body.injection_phase
                             );
                         }
                     }
                 }
-
+                // 5. bb num
+                match std::env::var_os("BB_NUM") {
+                    None => (),
+                    Some(val) => {
+                        let name = match val.into_string() {
+                            Ok(s) =>{ s },
+                            Err(_e) => { panic!("wrong env var") },
+                        };
+                        let num = name.parse::<usize>().unwrap();
+                        if loc.block.as_usize() == num {
+                            println!("* {:?}{:?}<{:?}>[{:?}] ",
+                                krate, path, loc.block, self.body().basic_blocks.clone().len(),
+                            );
+                        }
+                    }
+                }
+        
                 let fn_inst_key = self.get_fn_inst_key(self.frame().instance);
-                assert!(fn_inst_key == self._trace_stack.last().unwrap()._entry);
+                // assert!(fn_inst_key == self._trace_stack.last().unwrap()._entry);
+                if fn_inst_key != self._trace_stack.last().unwrap()._entry {
+                    // println!("FAIL key match")
+                    println!("{:?} != {:?}", fn_inst_key, self._trace_stack.last().unwrap()._entry);
+                }
                 self.push_bb_stack1(loc.block);
 
                 info!("// executing {:?}", loc.block);

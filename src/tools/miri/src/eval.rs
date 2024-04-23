@@ -460,7 +460,7 @@ pub fn eval_entry<'tcx>(
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
-    println!("miri after run_thread test {:?}", ecx._trace_stack);
+    // println!("miri after run_thread test {:?}", ecx._trace_stack);
 
     match std::env::var_os("DUMP_TRACE") {
         None => {},
@@ -492,13 +492,13 @@ pub fn eval_entry<'tcx>(
         EnvVars::cleanup(&mut ecx).expect("error during env var cleanup");
     }
 
-    let trace = ecx._trace_stack.last().unwrap();
     println!("size of trace stack {}", ecx._trace_stack.len());
-    if trace._steps.len() > 0 {
-        println!("after miri2 {:?}", trace._steps.last().unwrap());
-    } else {
-        println!("empty trace");
-    };
+    // let trace = ecx._trace_stack.last().unwrap();
+    // if trace._steps.len() > 0 {
+    //     println!("after miri2 {:?}", trace._steps.last().unwrap());
+    // } else {
+    //     println!("empty trace");
+    // };
 
 
     // Process the result.
