@@ -45,6 +45,8 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             return Ok(false);
         }
 
+        let inst1 = self.frame().instance.def;
+
         let Either::Left(loc) = self.frame().loc else {
             // We are unwinding and this fn has no cleanup code.
             // Just go on unwinding.
@@ -53,6 +55,28 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             return Ok(true);
         };
         let basic_block = &self.body().basic_blocks[loc.block];
+        
+        let fn_inst_key = self.get_fn_inst_key(self.frame().instance);
+        // assert!(fn_inst_key == self._trace_stack.last().unwrap()._entry);
+        /*
+        if fn_inst_key != self._trace_stack.last().unwrap()._entry {
+            // println!("FAIL key match")
+            println!("official stack contents:");
+            for frame in self.stack() {
+                let fn_inst_key = self.get_fn_inst_key(frame.instance);
+                println!("{}", fn_inst_key.path);
+            }
+            println!("our stack contents:");
+            for item in &self._trace_stack {
+                println!("{}", item._entry.path);
+            }
+            println!("NEQ {:?} != {:?}", fn_inst_key.path, self._trace_stack.last().unwrap()._entry.path);
+        }
+        if self.frame().instance.def != self.body().source.instance {
+            // println!("FAIL key match")
+            println!("NEQABCD {:?} != {:?}", self.frame().instance.def, self.body().source.instance);
+        }*/
+        self.push_bb_stack1(loc.block);
 
         if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
             let old_frames = self.frame_idx();
@@ -66,6 +90,10 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         M::before_terminator(self)?;
 
+        let inst2 = self.body().source.instance;
+        if inst1 != inst2 {
+            println!("STEP {:?} {:?}", inst1, inst2);
+        }
         let terminator = basic_block.terminator();
         self.terminator(terminator)?;
         Ok(true)

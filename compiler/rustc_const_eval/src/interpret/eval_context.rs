@@ -825,6 +825,17 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         };
         let frame = M::init_frame(self, pre_frame)?;
         self.stack_mut().push(frame);
+
+        let fn_inst_key = self.get_fn_inst_key(instance);
+        if self.stack().last().unwrap().instance != instance {
+            with_no_trimmed_paths!({
+                println!("STACK MISMATCH {} {}", self.stack().last().unwrap().instance, instance);
+            });
+        }
+        self.push_trace_stack1(fn_inst_key.clone());
+        /*with_no_trimmed_paths!({
+            println!("PUSH {}", instance);
+        });*/
         // if print {println!("4.1) push_stack_frame args={:?}", instance.args);}
 
         // Make sure all the constants required by this frame evaluate successfully (post-monomorphization check).
@@ -971,11 +982,16 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 self.deallocate_local(local.value)?;
             }
         }
-
+/*
+        with_no_trimmed_paths!({
+            println!("POP {}", self.frame().instance);
+        });*/
+        
         // All right, now it is time to actually pop the frame.
         // Note that its locals are gone already, but that's fine.
         let frame =
             self.stack_mut().pop().expect("tried to pop a stack frame, but there were none");
+        self.merge_trace_stack1();
         // Report error from return value copy, if any.
         copy_ret_result?;
 
