@@ -635,6 +635,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                     StackPopCleanup::Goto { ret: target, unwind },
                 )?;
 
+
                 // If an error is raised here, pop the frame again to get an accurate backtrace.
                 // To this end, we wrap it all in a `try` block.
                 let res: InterpResult<'tcx> = try {
@@ -778,6 +779,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 match res {
                     Err(err) => {
                         self.stack_mut().pop();
+                        self.merge_trace_stack1();
                         Err(err)
                     }
                     Ok(()) => Ok(()),

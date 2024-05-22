@@ -58,7 +58,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         res
     }
 
-    pub fn get_fn_inst_key(&mut self, instance: Instance<'tcx>) -> FnInstKey {
+    pub fn get_fn_inst_key(&self, instance: Instance<'tcx>) -> FnInstKey {
         let tcx = self.tcx();
 
         let path_meta = PathBuf::new();
