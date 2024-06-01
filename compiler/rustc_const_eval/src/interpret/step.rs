@@ -40,8 +40,24 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             return Ok(true);
         };
         let basic_block = &self.body().basic_blocks[loc.block];
-        
-        let fn_inst_key = self.get_fn_inst_key(self.frame().instance);
+
+        if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
+            let old_frames = self.frame_idx();
+            self.statement(stmt)?;
+            // Make sure we are not updating `statement_index` of the wrong frame.
+            assert_eq!(old_frames, self.frame_idx());
+            // Advance the program counter.
+            self.frame_mut().loc.as_mut().left().unwrap().statement_index += 1;
+            return Ok(true);
+        }
+
+        M::before_terminator(self)?;
+
+        let inst2 = self.body().source.instance;
+        if inst1 != inst2 {
+            println!("STEP {:?} {:?}", inst1, inst2);
+        }
+        // let fn_inst_key = self.get_fn_inst_key(self.frame().instance);
         // assert!(fn_inst_key == self._trace_stack.last().unwrap()._entry);
         /*
         if fn_inst_key != self._trace_stack.last().unwrap()._entry {
@@ -63,22 +79,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         }*/
         self.push_bb_stack1(loc.block);
 
-        if let Some(stmt) = basic_block.statements.get(loc.statement_index) {
-            let old_frames = self.frame_idx();
-            self.statement(stmt)?;
-            // Make sure we are not updating `statement_index` of the wrong frame.
-            assert_eq!(old_frames, self.frame_idx());
-            // Advance the program counter.
-            self.frame_mut().loc.as_mut().left().unwrap().statement_index += 1;
-            return Ok(true);
-        }
-
-        M::before_terminator(self)?;
-
-        let inst2 = self.body().source.instance;
-        if inst1 != inst2 {
-            println!("STEP {:?} {:?}", inst1, inst2);
-        }
         let terminator = basic_block.terminator();
         self.terminator(terminator)?;
         Ok(true)
