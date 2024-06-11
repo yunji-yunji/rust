@@ -34,12 +34,7 @@ use crate::CTRL_C_RECEIVED;
 fn eval_body_using_ecx<'tcx, R: InterpretationResult<'tcx>>(
     ecx: &mut CompileTimeInterpCx<'tcx>,
     cid: GlobalId<'tcx>,
-<<<<<<< HEAD
     body: &'tcx mir::Body<'tcx>,
-    exec_t: &mut Trace,
-=======
-    body: &'mir mir::Body<'tcx>,
->>>>>>> 909c1fa0d39 (Add RefCell)
 ) -> InterpResult<'tcx, R> {
     trace!(?ecx.param_env);
     let tcx = *ecx.tcx;
@@ -81,11 +76,6 @@ fn eval_body_using_ecx<'tcx, R: InterpretationResult<'tcx>>(
         cid.promoted.map_or_else(String::new, |p| format!("::{p:?}"))
     );
 
-
-    // let f: ty::Instance<'_> = cid.instance;
-    // let fn_inst_key = ecx.create_fn_inst_key3(f);
-    // ecx.push_trace_stack1(fn_inst_key.clone());
-
     ecx.push_stack_frame(
         cid.instance,
         body,
@@ -100,9 +90,6 @@ fn eval_body_using_ecx<'tcx, R: InterpretationResult<'tcx>>(
             throw_exhaust!(Interrupted);
         }
     }
-
-    // The main interpreter loop.
-    while ecx.step()? {}
 
     // Intern the result
     let intern_result = intern_const_alloc_recursive(ecx, intern_kind, &ret);

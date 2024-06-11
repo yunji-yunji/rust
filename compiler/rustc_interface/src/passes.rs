@@ -1025,8 +1025,6 @@ pub(crate) fn start_codegen<'tcx>(
     info!("Pre-codegen\n{:?}", tcx.debug_stats());
     let (metadata, need_metadata_module) = rustc_metadata::fs::encode_and_write_metadata(tcx);
 
-    // incorrect location
-    // original dump location is in codegen_crate function.
     let codegen = tcx.sess.time("codegen_crate", move || {
         codegen_backend.codegen_crate(tcx, metadata, need_metadata_module)
     });

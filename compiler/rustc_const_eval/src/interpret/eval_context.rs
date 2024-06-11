@@ -592,14 +592,11 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         instance: ty::InstanceKind<'tcx>,
         promoted: Option<mir::Promoted>,
     ) -> InterpResult<'tcx, &'tcx mir::Body<'tcx>> {
-        // trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
-        // println!("load mir(instance={:?}, promoted={:?})", instance, promoted);
+        trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
         let body = if let Some(promoted) = promoted {
             let def = instance.def_id();
-            // println!("load mir(promoted_mir)");
             &self.tcx.promoted_mir(def)[promoted]
         } else {
-            // println!("load mir(optimized_mir)");
             M::load_mir(self, instance)?
         };
         // do not continue if typeck errors occurred (can only occur in local crate)
@@ -646,7 +643,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         args: GenericArgsRef<'tcx>,
     ) -> InterpResult<'tcx, ty::Instance<'tcx>> {
         trace!("resolve: {:?}, {:#?}", def, args);
-        // println!("1) resolve: def={:?}, args={:#?}", def, args);
         trace!("param_env: {:#?}", self.param_env);
         trace!("args: {:#?}", args);
         match ty::Instance::try_resolve(*self.tcx, self.param_env, def, args) {
@@ -829,7 +825,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         &mut self,
         // body: &Body<'_>,
         // instance: ty::Instance<'tcx>,
-        body: &'mir mir::Body<'tcx>,
+        body: &'tcx mir::Body<'tcx>,
     ) -> String {
         let instance_def = body.source.instance;
         let def_id = instance_def.def_id();
@@ -921,15 +917,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 err
             })?;
         }
-        
-        // if print {println!("4.2) push_stack_frame args={:?}", instance.args);}
+
         // done
         M::after_stack_push(self)?;
-
-        // let fn_inst_key = self.create_fn_inst_key3(instance);
-        // if !fn_inst_key.generics.is_empty() {
-        // }
-
         match std::env::var_os("INST_DUMP") {
             None => {},
             Some(_val) => {
@@ -1139,9 +1129,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         // Normal return, figure out where to jump.
         if unwinding {
-
-            // self.push_bb("unwind]".to_string());
-            // println!("unwiding: {:?}", name);
             // Follow the unwind edge.
             let unwind = match stack_pop_info.return_to_block {
                 StackPopCleanup::Goto { unwind, .. } => unwind,
@@ -1152,8 +1139,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             // This must be the very last thing that happens, since it can in fact push a new stack frame.
             self.unwind_to_block(unwind)
         } else {
-            // self.push_bb(name);
-            // self.push_bb("wind]".to_string());
             // Follow the normal return edge.
             match stack_pop_info.return_to_block {
                 StackPopCleanup::Goto { ret, .. } => self.return_to_block(ret),

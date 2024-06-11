@@ -442,7 +442,8 @@ pub fn eval_entry<'tcx>(
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
-                    if src.starts_with(&prefix) {
+                    if src.into_local_path().expect("get local path").starts_with(&prefix) {
+                    // if src.starts_with(&prefix) {
                         tcx.dump_cp(&outdir);
                     }
                 }

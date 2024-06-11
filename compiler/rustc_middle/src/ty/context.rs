@@ -89,6 +89,8 @@ use std::mem;
 use std::ops::{Bound, Deref};
 use std::path::PathBuf;
 use rustc_middle::ty::print::with_no_trimmed_paths;
+use rustc_middle::mir::Terminator;
+use crate::mir::mono::MonoItem;
 
 #[allow(rustc::usage_of_ty_tykind)]
 impl<'tcx> Interner for TyCtxt<'tcx> {
@@ -1606,7 +1608,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
         match tree {
             ValTree::Leaf(scalar) => ValueTree::Scalar {
                 bit: scalar.size().bits_usize(),
-                val: scalar.to_bits(scalar.size()).expect("scalar value"),
+                val: scalar.try_to_bits(scalar.size()).expect("scalar value"),
             },
             ValTree::Branch(items) => {
                 let mut subs = vec![];
@@ -1624,7 +1626,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             ConstKind::Param(param) => {
                 PaflConst::Param { index: param.index, name: param.name.to_string() }
             }
-            ConstKind::Value(value) => PaflConst::Value(self.process_vtree(value)),
+            ConstKind::Value(_, value) => PaflConst::Value(self.process_vtree(value)),
             _ => bug!("unrecognized constant: {:?}", item),
         }
     }
@@ -1930,7 +1932,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             | InstanceDef::FnPtrAddrShim(..)
             | InstanceDef::ThreadLocalShim(..)
             | InstanceDef::ConstructCoroutineInClosureShim {..}
-            | InstanceDef::CoroutineKindShim{..} => {
+            | InstanceDef::CoroutineKindShim{..}
+            | InstanceDef::AsyncDropGlueCtorShim(..) => {
                 bug!("unusual calls are not supported yet: {}", resolved);
             }
         };
@@ -2204,7 +2207,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             | InstanceDef::FnPtrAddrShim(..)
             | InstanceDef::ThreadLocalShim(..) 
             | InstanceDef::ConstructCoroutineInClosureShim {..}
-            | InstanceDef::CoroutineKindShim{..} => {
+            | InstanceDef::CoroutineKindShim{..} 
+            | InstanceDef::AsyncDropGlueCtorShim(..) => {
                 // bug!("unexpected instance type: {}", instance);
                 println!("unexpected instance type: {}", instance);
                 FnBody::Skipped
@@ -2352,10 +2356,9 @@ pub struct GlobalCtxt<'tcx> {
 
     /// Stores memory for globals (statics/consts).
     pub(crate) alloc_map: Lock<interpret::AllocMap<'tcx>>,
-}
-use rustc_middle::mir::Terminator;
 
-use crate::mir::mono::MonoItem;
+    current_gcx: CurrentGcx,
+}
 
 impl<'tcx> GlobalCtxt<'tcx> {
     /// Installs `self` in a `TyCtxt` and `ImplicitCtxt` for the duration of
@@ -2762,6 +2765,7 @@ impl<'tcx> TyCtxt<'tcx> {
             canonical_param_env_cache: Default::default(),
             data_layout,
             alloc_map: Lock::new(interpret::AllocMap::new()),
+            current_gcx,
         }
     }
 
