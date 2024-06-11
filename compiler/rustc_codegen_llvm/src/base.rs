@@ -121,7 +121,8 @@ pub fn compile_codegen_unit(tcx: TyCtxt<'_>, cgu_name: Symbol) -> (ModuleCodegen
                     match tcx.sess.local_crate_source_file() {
                         None => bug!("unable to locate local crate source file"),
                         Some(src) => {
-                            if src.starts_with(&prefix) {
+                            if src.into_local_path().expect("get local path").starts_with(&prefix) {
+
                                 println!("in miri 112codege11n@#");
                                 dump(tcx, &outdir);
                             }

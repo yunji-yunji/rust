@@ -622,7 +622,7 @@ pub fn codegen_crate<B: ExtraBackendMethods>(
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
-                    if src.starts_with(&prefix) {
+                    if src.into_local_path().expect("get local path").starts_with(&prefix) {
                         // we are compiling a target crate
                         tcx.dump_cp(&outdir);
                         // crate::pafl::dump(tcx, &outdir);

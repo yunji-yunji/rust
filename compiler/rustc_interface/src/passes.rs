@@ -41,20 +41,10 @@ use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 use std::{env, fs, iter};
-<<<<<<< HEAD
-<<<<<<< HEAD
 use tracing::{info, instrument};
-
-=======
-use rustc_middle::bug;
-use rustc_codegen_ssa::pafl::dump;
->>>>>>> 695b83df409 (print logs to sync trace)
-=======
 
 // use rustc_middle::bug;
 // use rustc_codegen_ssa::pafl::dump;
-
->>>>>>> d7ee2f7dfce (code clean up)
 pub fn parse<'a>(sess: &'a Session) -> PResult<'a, ast::Crate> {
     let krate = sess.time("parse_crate", || {
         let mut parser = unwrap_or_emit_fatal(match &sess.io.input {
@@ -759,16 +749,6 @@ fn run_required_analyses(tcx: TyCtxt<'_>) {
     });
     sess.time("MIR_effect_checking", || {
         for def_id in tcx.hir().body_owners() {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-            println!("is this executed?");
-=======
->>>>>>> 4e5c542d31c (code clean up)
-            if !tcx.sess.opts.unstable_opts.thir_unsafeck {
-                rustc_mir_transform::check_unsafety::check_unsafety(tcx, def_id);
-            }
->>>>>>> 42086caf671 (DUMP SYNC)
             tcx.ensure().has_ffi_unwind_calls(def_id);
 
             // If we need to codegen, ensure that we emit all errors from
@@ -955,8 +935,6 @@ pub fn start_codegen<'tcx>(
     info!("Pre-codegen\n{:?}", tcx.debug_stats());
     let (metadata, need_metadata_module) = rustc_metadata::fs::encode_and_write_metadata(tcx);
 
-    // incorrect location
-    // original dump location is in codegen_crate function.
     let codegen = tcx.sess.time("codegen_crate", move || {
         codegen_backend.codegen_crate(tcx, metadata, need_metadata_module)
     });

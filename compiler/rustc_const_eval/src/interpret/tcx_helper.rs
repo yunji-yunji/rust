@@ -20,7 +20,7 @@ use rustc_data_structures::fx::FxHashMap;
 use std::fs::OpenOptions;
 use std::io::Write;
 
-impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
+impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     pub fn crate_info(&mut self,) -> String {
         let mut v: Vec<String> = vec![];
         let res: String;
@@ -104,7 +104,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             InstanceDef::Item(def)
             | InstanceDef::Intrinsic(def)
             | InstanceDef::VTableShim(def)
-            | InstanceDef::ReifyShim(def)
+            | InstanceDef::ReifyShim(def, _)
             | InstanceDef::FnPtrShim(def, _)
             | InstanceDef::Virtual(def, _)
             | InstanceDef::ThreadLocalShim(def) 
@@ -114,6 +114,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             InstanceDef::ClosureOnceShim { call_once, .. } => { call_once }, 
             InstanceDef::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
             InstanceDef::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
+            InstanceDef::AsyncDropGlueCtorShim(def, _) => { def },
         };
 
         let inst = dumper.resolve_fn_key(id, instance.args);
@@ -147,7 +148,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             InstanceDef::Item(def) | 
             InstanceDef::Intrinsic(def) |
             InstanceDef::VTableShim(def)
-            | InstanceDef::ReifyShim(def)
+            | InstanceDef::ReifyShim(def, _)
             | InstanceDef::FnPtrShim(def, _)
             | InstanceDef::Virtual(def, _)
             | InstanceDef::ThreadLocalShim(def) 
@@ -157,6 +158,7 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
             InstanceDef::ClosureOnceShim { call_once, .. } => { call_once }, 
             InstanceDef::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
             InstanceDef::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
+            InstanceDef::AsyncDropGlueCtorShim(def, _) => { def },
         };
 
         let tcx = self.tcx.tcx;

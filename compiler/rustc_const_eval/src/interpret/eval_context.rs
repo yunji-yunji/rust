@@ -17,12 +17,9 @@ use rustc_middle::ty::layout::{
     self, FnAbiError, FnAbiOfHelpers, FnAbiRequest, LayoutError, LayoutOf, LayoutOfHelpers,
     TyAndLayout,
 };
-<<<<<<< HEAD
 use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance};
+use rustc_middle::ty::context::{FnInstKey, Trace};
 use rustc_middle::{bug, span_bug};
-=======
-use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance, context::{FnInstKey, Trace}};
->>>>>>> 6ed7d451b23 (move bb dumping to interpcx)
 use rustc_mir_dataflow::storage::always_storage_live_locals;
 use rustc_session::Limit;
 use rustc_span::Span;
@@ -587,14 +584,11 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         instance: ty::InstanceDef<'tcx>,
         promoted: Option<mir::Promoted>,
     ) -> InterpResult<'tcx, &'tcx mir::Body<'tcx>> {
-        // trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
-        // println!("load mir(instance={:?}, promoted={:?})", instance, promoted);
+        trace!("load mir(instance={:?}, promoted={:?})", instance, promoted);
         let body = if let Some(promoted) = promoted {
             let def = instance.def_id();
-            // println!("load mir(promoted_mir)");
             &self.tcx.promoted_mir(def)[promoted]
         } else {
-            // println!("load mir(optimized_mir)");
             M::load_mir(self, instance)?
         };
         // do not continue if typeck errors occurred (can only occur in local crate)
@@ -641,10 +635,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         args: GenericArgsRef<'tcx>,
     ) -> InterpResult<'tcx, ty::Instance<'tcx>> {
         trace!("resolve: {:?}, {:#?}", def, args);
-        // println!("1) resolve: def={:?}, args={:#?}", def, args);
         trace!("param_env: {:#?}", self.param_env);
         trace!("args: {:#?}", args);
-        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) { // cannot find never here
+        match ty::Instance::resolve(*self.tcx, self.param_env, def, args) {
             Ok(Some(instance)) => Ok(instance),
             Ok(None) => throw_inval!(TooGeneric),
 
@@ -823,7 +816,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         &mut self,
         // body: &Body<'_>,
         // instance: ty::Instance<'tcx>,
-        body: &'mir mir::Body<'tcx>,
+        body: &'tcx mir::Body<'tcx>,
     ) -> String {
         let instance_def = body.source.instance;
         let def_id = instance_def.def_id();
@@ -865,22 +858,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             tracing_span: SpanGuard::new(),
             extra: (),
         };
-<<<<<<< HEAD
         let frame = M::init_frame(self, pre_frame)?;
-=======
-        let frame = M::init_frame_extra(self, pre_frame)?;
-<<<<<<< HEAD
-        // self.yj_push(String::from("[ncall:"));
-        let s = self.fn_info(body);
-        self.yj_push(s);
->>>>>>> 2a9d421cde1 (Call push_stack_frame print info)
-=======
-
-<<<<<<< HEAD
->>>>>>> d8c30ebdc1a (Call-Return paired)
-=======
-        // let print = !instance.args.is_empty();
->>>>>>> 539f42dac72 (Fix Never type bug)
         self.stack_mut().push(frame);
 
         let fn_inst_key = self.get_fn_inst_key(instance);
@@ -904,15 +882,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 err
             })?;
         }
-        
-        // if print {println!("4.2) push_stack_frame args={:?}", instance.args);}
+
         // done
         M::after_stack_push(self)?;
-
-        // let fn_inst_key = self.create_fn_inst_key3(instance);
-        // if !fn_inst_key.generics.is_empty() {
-        // }
-
         match std::env::var_os("INST_DUMP") {
             None => {},
             Some(_val) => {
@@ -1074,7 +1046,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             // Skip machine hook.
             return Ok(());
         }
-
         if M::after_stack_pop(self, frame, unwinding)? == StackPopJump::NoJump {
             // The hook already did everything.
             return Ok(());
@@ -1082,9 +1053,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         // Normal return, figure out where to jump.
         if unwinding {
-
-            // self.push_bb("unwind]".to_string());
-            // println!("unwiding: {:?}", name);
             // Follow the unwind edge.
             let unwind = match return_to_block {
                 StackPopCleanup::Goto { unwind, .. } => unwind,
@@ -1095,8 +1063,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             // This must be the very last thing that happens, since it can in fact push a new stack frame.
             self.unwind_to_block(unwind)
         } else {
-            // self.push_bb(name);
-            // self.push_bb("wind]".to_string());
             // Follow the normal return edge.
             match return_to_block {
                 StackPopCleanup::Goto { ret, .. } => self.return_to_block(ret),
