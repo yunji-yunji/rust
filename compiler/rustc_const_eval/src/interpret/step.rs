@@ -350,32 +350,30 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
         self.eval_terminator(terminator)?;
         if !self.stack().is_empty() {
             if let Either::Left(loc) = self.frame().loc {
-                // open scc_info file and use it.
-                // let bd = self.body();
+                // yj: my code
                 let def_id = self.body().source.def_id();
-                // let def_id = bd.source.def_id();
-
                 let def_name = self.tcx.def_path_str(def_id);
-                if def_name.contains("std") {
-
-                } else {
-                    println!("[step][terminator] def string={:?} / def_krate ={:?}, def_index {:?} terminator kind = {:?} ",
-                             def_name, def_id.krate, def_id.index, terminator.kind.name(),);
-                }
-                // let type_id = self.body().source.type_id();
-                // let type_id = self.type_id();
-                // let type_id = bd.source.type_id();
+                println!("[terminator] BASIC INFO\n   * def string={:?}\n   * krate={:?}\n   * index={:?}\n   * terminator kind={:?}\n   * loc.block={:?}",
+                         def_name,
+                         def_id.krate.index(),
+                         def_id.index.index(),
+                         terminator.kind.name(),
+                         loc.block.clone(),
+                );
 
                 let type_id = self.body().clone().local_decls;
-                let _span = self.body().clone().span;
-                println!("[step] [{:?}] type id={:?} loc.block{:?}", type_id.len(), type_id.raw[0].clone().local_info,  loc.block.clone());
-                // println!("[step] type id=s{:?} span={:?} user type={:?}", type_id, span, self.body().clone().user_type_annotations);
+                let body_span = self.body().clone().span;
+                println!("[terminator] SPAN info\n   * type_id length={:?}\n   * type_id[0].span={:?}\n   * body.span={:?}",
+                         type_id.len(),
+                         type_id.raw[0].clone().source_info.span,
+                         body_span,
+                );
+
                 if terminator.kind.name() != "Call" {
-                    println!("[step] no generate path, def is constant {:?} /  {:?} / {:?} / {:?}",
-                             self.body().arg_count,def_name, type_id.raw[0].local_info.clone(), terminator.kind.name());
+                    //          self.body().arg_count, def_name, type_id.raw[0].local_info.clone(), terminator.kind.name());
                 } else {
-                    println!("[step] yes generate path, def is constant  {:?} / {:?} / {:?} / {:?}",
-                             self.body().arg_count, def_name, type_id.raw[0].local_info.clone(), terminator.kind.name());
+                    println!("[step id is Call] yes generate path, def is constant  {:?}\n--------------------------",
+                             self.body().arg_count);
 
                     // println!("print type!{:?}", Any::type_name(self.body().source.type_id()));
                     // let file_name = format!("/home/y23kim/rust/scc_info/{:?}.json", def_name);
@@ -431,7 +429,6 @@ impl<'mir, 'tcx: 'mir, M: Machine<'mir, 'tcx>> InterpCx<'mir, 'tcx, M> {
                 }
 
                 info!("[step] executing {:?}", loc.block);
-                // println!("[step] executing {:?}", loc.block);
             }
         }
         Ok(())
@@ -471,7 +468,7 @@ fn _generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                 }
                 last.prefix.push(sccid.try_into().unwrap());
             } else {
-                // fin.push(sccid.try_into().unwrap()); // for debugging
+                // fin.push(sccid.try_into().unwrap()); // for debuging
 
                 for p in prev.temp_path {
                     for pp in p {
@@ -521,13 +518,13 @@ fn _generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
                 let mut i=0;
                 while i<last.prefix.len() {
                     k = last.prefix[i];
-                    while k < 0 {
+                    while k < 0 { // until find inner scc
                         i += 1;
-                        if last.prefix[i] < 0 { break;}
+                        if last.prefix[i] < 0 { break;} // ignoore inner scc content
                         content.push(last.prefix[i].try_into().unwrap());
                     }
                     content.push(last.prefix[i].try_into().unwrap());
-                    prefix_to_key.push(k.try_into().unwrap());
+                    prefix_to_key.push(k.try_into().unwrap()); // k= scc_id
                     i += 1;
                 }
                 // println!("content {:?}", content);
@@ -599,7 +596,7 @@ fn _generate_path(scc_info_stk: IndexVec<usize, Vec<SccInfo>>,
 
     if *is_loop == false {
         // println!("push to final path (no loop) {:?}", t);
-        path.push(t);
+        z1.push(t);
         let bb_number = format!("{:?} ", t);
         let mut file = fs::OpenOptions::new().append(true).create(true)
             .open("/home/y23kim/rust/test_progs/corpus/sub_dir/new_path").expect("Fail to write yunji");

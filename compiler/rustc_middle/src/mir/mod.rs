@@ -1678,7 +1678,7 @@ pub enum NodeType {
 
 #[derive(Debug)]
 pub struct PathInfo {
-    pub counts: FxHashMap<Vec<i32>, usize>,
+    pub counts: FxHashMap<Vec<i32>, usize>, // scc_id -> count
     pub temp_path: Vec<Vec<i32>>,
     pub prefix: Vec<i32>,
 }
@@ -1976,7 +1976,6 @@ pub fn transform_to_single_latch<'tcx>(scc: &mut Vec<NodeIndex>,
     let mut remove = false;
 
     for edge in g.clone().raw_edges() {
-
         let mut test_g = g.clone();
         // println!("header, source, target {:?} {:?} {:?}", header.index(), edge.source().index(), edge.target().index());
         if scc.contains(&edge.source()) && scc.contains(&edge.target())
@@ -2117,10 +2116,7 @@ pub fn get_predecessors_of(header: NodeIndex, g:&Graph<usize, String>) ->Vec<Nod
         }
     }
     return preds;
-
 }
-
-
 
 pub fn break_down_and_mark<'tcx>(
     tcx: TyCtxt<'tcx>,
@@ -2281,3 +2277,4 @@ pub fn write_scc_info_to_file<'tcx>(body: &mut Body<'tcx>, file_name: String) {
     println!("## Create file  {:?}", file_name);
 
 }
+

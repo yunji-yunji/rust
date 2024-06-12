@@ -488,6 +488,9 @@ fn mir_drops_elaborated_and_const_checked(tcx: TyCtxt<'_>, def: LocalDefId) -> &
     let file_name = format!("/home/y23kim/rust/scc_info/{:?}_{:?}.json", def.to_def_id().krate, def.to_def_id().index);
     println!("[lib][mir_drops] def id {:?} def name {:?}, index={:?}", def, name, def.local_def_index );
 
+    let type_id = body.clone().local_decls;
+    println!("local_decls={:?}", type_id.raw); // to check span
+
     // if body.arg_count ==0 { // this means this mir is constant...
     //     println!("[trasnfrom] maybe it's constant {:?} / [{:?}] / {:?}",
     //              name, body.arg_count, def.to_def_id().krate);
