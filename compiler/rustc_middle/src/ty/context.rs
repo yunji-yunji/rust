@@ -1818,7 +1818,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 }
 
                 // extract the actual callee
-                println!("(dump) instacne1{:?}[{:?}]", resolved, resolved.def);
+                // println!("(dump) instacne1{:?}[{:?}]", resolved, resolved.def);
                 let body = self.tcx.instance_mir(resolved.def).clone();
                 // let body = self.tcx.promoted_mir(shim_id).clone();
                 // let body = self.tcx.load_mir(resolved.def, None);
@@ -2164,8 +2164,9 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
                 if dumper.tcx.is_mir_available(*id) {
                     let body = dumper.tcx.instance_mir(instance.def).clone();
-                    let def_kind = tcx.def_kind(id);
-                    println!("(dump) instance2={:?}[{:?}] <{:?}>", instance, instance.def, def_kind);
+                    print!(".");
+                    // let def_kind = tcx.def_kind(id);
+                    // println!("(dump) instance2={:?}[{:?}] <{:?}>", instance, instance.def, def_kind);
                     // let body = dumper.tcx.promoted_mir(*id).clone();
                     // let body = self.tcx.load_mir(instance.def, None);
 
@@ -2188,7 +2189,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             | InstanceDef::CloneShim(id, _)
             | InstanceDef::FnPtrShim(id, _) => {
                 let body = dumper.tcx.instance_mir(instance.def).clone();
-                    println!("(dump) instacne3{:?}[{:?}]", instance, instance.def);
+                    // println!("(dump) instacne3{:?}[{:?}]", instance, instance.def);
                     // let body = dumper.tcx.promoted_mir(*id).clone();
 
                 let instantiated = instance.instantiate_mir_and_normalize_erasing_regions(
@@ -2557,9 +2558,10 @@ impl<'tcx> TyCtxt<'tcx> {
         let (_def_id_sets, units) = self.collect_and_partition_mono_items(());
         // println!("def ids={:?}", def_id_sets);
         for unit in units {
-            println!("unit {:?}---------------", unit.name());
+            print!("*");
+            // println!("unit {:?}---------------", unit.name());
             for item in unit.items().keys() {
-                println!("+ {:?}", item);
+                // println!("+ {:?}", item);
     
                 // filter
                 let instance = match item {
@@ -2597,7 +2599,7 @@ impl<'tcx> TyCtxt<'tcx> {
                     bug!("unbalanced call stack");
                 }
             }
-            println!("===========================");
+            // println!("===========================");
     
         }
     

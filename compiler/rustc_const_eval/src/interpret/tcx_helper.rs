@@ -362,7 +362,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         println!("[dump] size of trace stack {}", size);
         assert_eq!(size, 1);
 
-        
         let content =
             serde_json::to_string_pretty(&*trace).expect("unexpected failure on JSON encoding");
 

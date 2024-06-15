@@ -438,10 +438,11 @@ pub fn eval_entry<'tcx>(
                 None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
                 Some(v) => std::path::PathBuf::from(v),
             };
-            println!("DUMP IN MIRI {:?}", val.clone());
+            println!("STATCI DUMP IN MIRI {:?}", val.clone());
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
+                    println!("src={:?}, {:?}[{:?}]", src.clone(), src.clone().into_local_path(), prefix.clone());
                     if src.into_local_path().expect("get local path").starts_with(&prefix) {
                     // if src.starts_with(&prefix) {
                         tcx.dump_cp(&outdir);
@@ -471,7 +472,7 @@ pub fn eval_entry<'tcx>(
     match std::env::var_os("DUMP_TRACE") {
         None => {},
         Some(val) => {
-            println!("DUMP runtime trace {:?}", val.clone());
+            println!("Write RUNTIME DUMP trace {:?}", val.clone());
             if let Some(file_name) = val.to_str() {
                 ecx.dump_trace(file_name);
             };
