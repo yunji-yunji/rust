@@ -360,8 +360,13 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         let trace = self._trace_stack.last().unwrap();
         let size = self._trace_stack.len();
         println!("[dump] size of trace stack {}, file_path {}", size, file_path,);
-        // assert_eq!(size, 1);1
+        // assert_eq!(size, 1);
         dbg!(&self._trace_stack);
+        // if trace._steps.len() > 0 {
+        //     println!("after miri2 {:?}", trace._steps.last().unwrap());
+        // } else {
+        //     println!("empty trace");
+        // };
 
         let content =
             serde_json::to_string_pretty(&*trace).expect("unexpected failure on JSON encoding");
