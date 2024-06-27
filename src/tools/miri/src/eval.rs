@@ -438,7 +438,7 @@ pub fn eval_entry<'tcx>(
                 None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
                 Some(v) => std::path::PathBuf::from(v),
             };
-            println!("STATCI DUMP IN MIRI {:?}", val.clone());
+            println!("STATIC DUMP IN MIRI {:?}", val.clone());
             match tcx.sess.local_crate_source_file() {
                 None => bug!("unable to locate local crate source file"),
                 Some(src) => {
