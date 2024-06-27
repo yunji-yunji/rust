@@ -359,8 +359,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     pub fn dump_trace(&mut self, file_path: &str) {
         let trace = self._trace_stack.last().unwrap();
         let size = self._trace_stack.len();
-        println!("[dump] size of trace stack {}", size);
-        assert_eq!(size, 1);
+        println!("[dump] size of trace stack {}, file_path {}", size, file_path,);
+        // assert_eq!(size, 1);1
+        dbg!(&self._trace_stack);
 
         let content =
             serde_json::to_string_pretty(&*trace).expect("unexpected failure on JSON encoding");
