@@ -15,10 +15,12 @@ use rustc_hir::def::DefKind;
 use rustc_hir::def_id::DefId;
 use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
 
-use rustc_data_structures::fx::FxHashMap;
+use rustc_data_structures::fx::{FxHashMap, FxHashSet};
 
 use std::fs::OpenOptions;
 use std::io::Write;
+
+use byteorder::{LittleEndian, WriteBytesExt};
 
 impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     pub fn crate_info(&mut self,) -> String {
@@ -356,20 +358,36 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
     }
 
+    #[allow(rustc::potential_query_instability)]
     pub fn dump_trace(&mut self, file_path: &str) {
         let trace = self._trace_stack.last().unwrap();
         let size = self._trace_stack.len();
         println!("[dump] size of trace stack {}, file_path {}", size, file_path,);
         // assert_eq!(size, 1);
-        dbg!(&self._trace_stack);
+        for i in 0..size {
+            println!("on stack: {:?}", self._trace_stack[i]._entry);
+        }
         // if trace._steps.len() > 0 {
         //     println!("after miri2 {:?}", trace._steps.last().unwrap());
         // } else {
         //     println!("empty trace");
         // };
 
-        let content =
-            serde_json::to_string_pretty(&*trace).expect("unexpected failure on JSON encoding");
+        let mut st = Vec::new();
+        let mut id_set = FxHashSet::default();
+        st.push(trace);
+        while let Some(cur) = st.pop() {
+            // when can this fail?
+            let entry = serde_cbor::ser::to_vec_packed(&cur._entry).unwrap();
+            id_set.insert(entry);
+            for step in cur._steps.iter() {
+                if let Step::Call(nxt) = step {
+                    st.push(nxt);
+                }
+            }
+        }
+        let mut id_vec: Vec<Vec<u8>> = id_set.drain().collect();
+        id_vec.sort();
 
         let mut file = OpenOptions::new()
             .write(true)
@@ -377,7 +395,42 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             .truncate(true)
             .open(file_path)
             .expect("unable to create output file");
-        file.write_all(content.as_bytes()).expect("unexpected failure on outputting to file");
+
+        file.write_u32::<LittleEndian>(id_vec.len() as u32).unwrap();
+        for buf in id_vec.iter() {
+            file.write_u16::<LittleEndian>(buf.len() as u16).unwrap();
+            file.write_all(buf).unwrap();
+        }
+
+        let id_map: FxHashMap<_, _> = id_vec.into_iter().enumerate().map(|(a, b)| (b, a)).collect();
+
+        let mut st = Vec::new();
+        file.write_u8(1).unwrap();
+        st.push((trace, 0));
+        'outer: while let Some((cur, mut idx)) = st.pop() {
+            while idx < cur._steps.len() {
+                let step = &cur._steps[idx];
+                idx += 1;
+                match step {
+                    Step::B(bb) => {
+                        file.write_u8(2).unwrap();
+                        file.write_u24::<LittleEndian>(*bb as u32).unwrap();
+                    },
+                    Step::Call(nxt) => {
+                        st.push((cur, idx));
+                        file.write_u8(1).unwrap();
+                        st.push((nxt, 0));
+                        continue 'outer;
+                    }
+                }
+            }
+            if idx == cur._steps.len() {
+                let entry = serde_cbor::ser::to_vec_packed(&cur._entry).unwrap();
+                let id = id_map[&entry];
+                file.write_u8(3).unwrap();
+                file.write_u24::<LittleEndian>(id as u32).unwrap();
+            }
+        }
     }
 
     // new) called by call
