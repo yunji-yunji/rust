@@ -31,3 +31,5 @@ colored = "2.0.0"
 # tidy-alphabetical-end
 serde = { version = "1.0.185", features = [ "derive" ] }
 serde_json = "1.0.59"
+serde_cbor = "0.11.1"
+byteorder = "1.5.0"
