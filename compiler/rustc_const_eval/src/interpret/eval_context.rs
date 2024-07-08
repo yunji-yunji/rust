@@ -920,16 +920,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         // done
         M::after_stack_push(self)?;
-        match std::env::var_os("INST_DUMP") {
-            None => {},
-            Some(_val) => {
-                with_no_trimmed_paths!({
-                    println!("4.3) caller_def=[{}] args=[{:?}] ", fn_inst_key.path, fn_inst_key.generics);
-                    println!("4.4) {:?}", instance.args);
-                });
-            }
-        };
-
         self.frame_mut().loc = Left(mir::Location::START);
 
         let span = info_span!("frame", "{}", instance);

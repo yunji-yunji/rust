@@ -1203,9 +1203,9 @@ use super::layout::HasTyCtxt;
 use rustc_middle::mir::{BasicBlockData, Operand, TerminatorKind, UnwindAction};
 use rustc_middle::ty::{
     ConstKind, EarlyBinder, ExistentialPredicate, FloatTy, GenericArgKind,
-    Instance, InstanceDef, IntTy, ParamEnv, UintTy, ValTree,
-    // ParamEnv, Instance, ValTree
+    Instance, InstanceKind, IntTy, ParamEnv, UintTy, ValTree,
 };
+
 use rustc_target::spec::abi::Abi;
 // use rustc_type_ir::Mutability;
 use crate::ty::Mutability;
@@ -1492,6 +1492,7 @@ pub enum TermKind {
     Assert { target: BlkId, unwind: UnwindRoute },
     Drop { target: BlkId, unwind: UnwindRoute },
     Call { site: CallSite, target: Option<BlkId>, unwind: UnwindRoute },
+    TailCall { site: CallSite },
 }
 
 /// Serializable information about a basic block
@@ -1765,9 +1766,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
         }
 
         // resolve trait targets, if possible
-        let resolved = Instance::expect_resolve(self.tcx, self.param_env, def_id, generic_args);
+        let resolved = Instance::expect_resolve(self.tcx, self.param_env, def_id, generic_args, DUMMY_SP);
+
         let call_site = match resolved.def {
-            InstanceDef::Item(_) => {
+            InstanceKind::Item(_) => {
                 if self.verbose {
                     println!(" ~> direct");
                 }
@@ -1784,7 +1786,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 );
                 CallSite { inst, kind: CallKind::Direct }
             }
-            InstanceDef::ClosureOnceShim { .. } => {
+            InstanceKind::ClosureOnceShim { .. } => {
                 if self.verbose {
                     println!(" ~> closure");
                 }
@@ -1812,7 +1814,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 );
                 CallSite { inst, kind: CallKind::Direct }
             }
-            InstanceDef::FnPtrShim(shim_id, _) => {
+            InstanceKind::FnPtrShim(shim_id, _) => {
                 if self.verbose {
                     println!(" ~> indirect");
                 }
@@ -1896,7 +1898,7 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 );
                 CallSite { inst, kind: CallKind::Direct }
             }
-            InstanceDef::DropGlue(_, _) | InstanceDef::CloneShim(_, _) => {
+            InstanceKind::DropGlue(_, _) | InstanceKind::CloneShim(_, _) => {
                 if self.verbose {
                     println!(" ~> bridge");
                 }
@@ -1913,27 +1915,27 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 );
                 CallSite { inst, kind: CallKind::Bridge }
             }
-            InstanceDef::Virtual(virtual_id, offset) => {
+            InstanceKind::Virtual(virtual_id, offset) => {
                 if self.verbose {
                     println!(" ~> virtual#{}", offset);
                 }
                 let inst = self.resolve_fn_key(virtual_id, resolved.args);
                 CallSite { inst, kind: CallKind::Virtual(offset) }
             }
-            InstanceDef::Intrinsic(intrinsic_id) => {
+            InstanceKind::Intrinsic(intrinsic_id) => {
                 if self.verbose {
                     println!(" ~> intrinsic");
                 }
                 let inst: FnInstKey = self.resolve_fn_key(intrinsic_id, resolved.args);
                 CallSite { inst, kind: CallKind::Intrinsic }
             }
-            InstanceDef::VTableShim(..)
-            | InstanceDef::ReifyShim(..)
-            | InstanceDef::FnPtrAddrShim(..)
-            | InstanceDef::ThreadLocalShim(..)
-            | InstanceDef::ConstructCoroutineInClosureShim {..}
-            | InstanceDef::CoroutineKindShim{..}
-            | InstanceDef::AsyncDropGlueCtorShim(..) => {
+            InstanceKind::VTableShim(..)
+            | InstanceKind::ReifyShim(..)
+            | InstanceKind::FnPtrAddrShim(..)
+            | InstanceKind::ThreadLocalShim(..)
+            | InstanceKind::ConstructCoroutineInClosureShim {..}
+            | InstanceKind::CoroutineKindShim{..}
+            | InstanceKind::AsyncDropGlueCtorShim(..) => {
                 bug!("unusual calls are not supported yet: {}", resolved);
             }
         };
@@ -2007,6 +2009,31 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
             }
             // assembly
             TerminatorKind::InlineAsm { .. } => bug!("unexpected inline assembly"),
+            TerminatorKind::TailCall { 
+                func,
+                args: _,
+                fn_span: _,
+             } => {
+                println!("TailCall detected.");
+                match func.constant() {
+                    None => {
+                        let pl = func.place();
+                        let cty = match pl {
+                            None => bug!("cannot convert move or copy to place"),
+                            Some(place) => {
+                                place.ty(local_decls, self.tcx).ty
+                            }
+                        };
+                        println!("[tailcall] callee is not a constant: operand={:?} [{:?}] span={:?}", func, cty.kind(), term.source_info.span);
+                        TermKind::Unreachable
+                    },
+                    Some(_) => {
+                        TermKind::TailCall {
+                            site: self.process_callsite(func, term.source_info.span, local_decls),
+                        }
+                    }
+                }
+            },
         };
 
         // done
@@ -2151,8 +2178,8 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
 
         // branch processing by instance type
         let body = match &instance.def {
-            // InstanceDef::Virtual(id, _) |
-            InstanceDef::Item(id) => {
+            // InstanceKind::Virtual(id, _) |
+            InstanceKind::Item(id) => {
 
                 let tmp_path = tcx.def_path(*id).to_string_no_crate_verbose();
                 let mut tmp_flag = false;
@@ -2184,10 +2211,10 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                     FnBody::Skipped
                 }
             }
-            InstanceDef::ClosureOnceShim { call_once: id, track_caller: _ }
-            | InstanceDef::DropGlue(id, _)
-            | InstanceDef::CloneShim(id, _)
-            | InstanceDef::FnPtrShim(id, _) => {
+            InstanceKind::ClosureOnceShim { call_once: id, track_caller: _ }
+            | InstanceKind::DropGlue(id, _)
+            | InstanceKind::CloneShim(id, _)
+            | InstanceKind::FnPtrShim(id, _) => {
                 let body = dumper.tcx.instance_mir(instance.def).clone();
                     // println!("(dump) instacne3{:?}[{:?}]", instance, instance.def);
                     // let body = dumper.tcx.promoted_mir(*id).clone();
@@ -2200,16 +2227,16 @@ impl<'sum, 'tcx> PaflDump<'sum, 'tcx> {
                 let cfg = dumper.process_cfg(*id, &instantiated);
                 FnBody::Bridged(cfg)
             }
-            InstanceDef::Intrinsic(..) => FnBody::Intrinsic,
+            InstanceKind::Intrinsic(..) => FnBody::Intrinsic,
             // not supported
-            InstanceDef::Virtual(..)
-            | InstanceDef::VTableShim(..)
-            | InstanceDef::ReifyShim(..)
-            | InstanceDef::FnPtrAddrShim(..)
-            | InstanceDef::ThreadLocalShim(..) 
-            | InstanceDef::ConstructCoroutineInClosureShim {..}
-            | InstanceDef::CoroutineKindShim{..} 
-            | InstanceDef::AsyncDropGlueCtorShim(..) => {
+            InstanceKind::Virtual(..)
+            | InstanceKind::VTableShim(..)
+            | InstanceKind::ReifyShim(..)
+            | InstanceKind::FnPtrAddrShim(..)
+            | InstanceKind::ThreadLocalShim(..) 
+            | InstanceKind::ConstructCoroutineInClosureShim {..}
+            | InstanceKind::CoroutineKindShim{..} 
+            | InstanceKind::AsyncDropGlueCtorShim(..) => {
                 // bug!("unexpected instance type: {}", instance);
                 println!("unexpected instance type: {}", instance);
                 FnBody::Skipped

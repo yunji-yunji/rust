@@ -44,9 +44,6 @@ use std::sync::{Arc, LazyLock};
 use std::{env, fs, iter};
 use tracing::{info, instrument};
 
-use rustc_middle::bug;
-use rustc_codegen_ssa::pafl::dump;
-
 pub(crate) fn parse<'a>(sess: &'a Session) -> Result<ast::Crate> {
     let krate = sess
         .time("parse_crate", || {

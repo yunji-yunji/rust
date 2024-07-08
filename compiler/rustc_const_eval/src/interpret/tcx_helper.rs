@@ -3,7 +3,7 @@ use rustc_middle::mir::Terminator;
 use rustc_middle::mir::BasicBlock;
 use rustc_middle::ty::layout::HasTyCtxt;
 use rustc_middle::ty::print::with_no_trimmed_paths;
-use rustc_middle::ty::{self, GenericArgKind, InstanceDef, ParamEnv, Instance};
+use rustc_middle::ty::{self, GenericArgKind, InstanceKind, ParamEnv, Instance};
 use rustc_middle::ty::context::{PaflType, PaflGeneric, FnInstKey, Step, Trace, PaflDump, PaflCrate};
 
 use std::fs;
@@ -101,22 +101,22 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         // let id = instance.def_id();
 
         // method 2
-        let inst_def: ty::InstanceDef<'_> = instance.def;
+        let inst_def: ty::InstanceKind<'_> = instance.def;
         let id : DefId = match inst_def {
-            InstanceDef::Item(def)
-            | InstanceDef::Intrinsic(def)
-            | InstanceDef::VTableShim(def)
-            | InstanceDef::ReifyShim(def, _)
-            | InstanceDef::FnPtrShim(def, _)
-            | InstanceDef::Virtual(def, _)
-            | InstanceDef::ThreadLocalShim(def) 
-            | InstanceDef::DropGlue(def, _)
-            | InstanceDef::CloneShim(def, _)
-            | InstanceDef::FnPtrAddrShim(def, _) => { def },
-            InstanceDef::ClosureOnceShim { call_once, .. } => { call_once }, 
-            InstanceDef::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
-            InstanceDef::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
-            InstanceDef::AsyncDropGlueCtorShim(def, _) => { def },
+            InstanceKind::Item(def)
+            | InstanceKind::Intrinsic(def)
+            | InstanceKind::VTableShim(def)
+            | InstanceKind::ReifyShim(def, _)
+            | InstanceKind::FnPtrShim(def, _)
+            | InstanceKind::Virtual(def, _)
+            | InstanceKind::ThreadLocalShim(def) 
+            | InstanceKind::DropGlue(def, _)
+            | InstanceKind::CloneShim(def, _)
+            | InstanceKind::FnPtrAddrShim(def, _) => { def },
+            InstanceKind::ClosureOnceShim { call_once, .. } => { call_once }, 
+            InstanceKind::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
+            InstanceKind::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
+            InstanceKind::AsyncDropGlueCtorShim(def, _) => { def },
         };
 
         let inst = dumper.resolve_fn_key(id, instance.args);
@@ -124,13 +124,13 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     }
 
     pub fn create_fn_inst_key3(&mut self, func_inst: ty::Instance<'tcx>) -> FnInstKey {
-        let func_instance: ty::InstanceDef<'_> = func_inst.def;
+        let func_instance: ty::InstanceKind<'_> = func_inst.def;
 
         let print = !func_inst.args.is_empty();
         if print {println!("4.2.1) create_fn_key args=[{:?}]", func_inst.args);}
 
         let def: DefId = match func_instance {
-            // InstanceDef::Item(_) => {
+            // InstanceKind::Item(_) => {
             //     if self.verbose {
             //         println!(" ~> direct");
             //     }
@@ -147,20 +147,20 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             //     );
             //     // CallSite { inst, kind: CallKind::Direct }
             // },
-            InstanceDef::Item(def) | 
-            InstanceDef::Intrinsic(def) |
-            InstanceDef::VTableShim(def)
-            | InstanceDef::ReifyShim(def, _)
-            | InstanceDef::FnPtrShim(def, _)
-            | InstanceDef::Virtual(def, _)
-            | InstanceDef::ThreadLocalShim(def) 
-            | InstanceDef::DropGlue(def, _)
-            | InstanceDef::CloneShim(def, _)
-            | InstanceDef::FnPtrAddrShim(def, _) => { def },
-            InstanceDef::ClosureOnceShim { call_once, .. } => { call_once }, 
-            InstanceDef::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
-            InstanceDef::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
-            InstanceDef::AsyncDropGlueCtorShim(def, _) => { def },
+            InstanceKind::Item(def) | 
+            InstanceKind::Intrinsic(def) |
+            InstanceKind::VTableShim(def)
+            | InstanceKind::ReifyShim(def, _)
+            | InstanceKind::FnPtrShim(def, _)
+            | InstanceKind::Virtual(def, _)
+            | InstanceKind::ThreadLocalShim(def) 
+            | InstanceKind::DropGlue(def, _)
+            | InstanceKind::CloneShim(def, _)
+            | InstanceKind::FnPtrAddrShim(def, _) => { def },
+            InstanceKind::ClosureOnceShim { call_once, .. } => { call_once }, 
+            InstanceKind::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
+            InstanceKind::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
+            InstanceKind::AsyncDropGlueCtorShim(def, _) => { def },
         };
 
         let tcx = self.tcx.tcx;

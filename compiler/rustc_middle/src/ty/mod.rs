@@ -71,7 +71,6 @@ use std::mem;
 use std::num::NonZero;
 use std::ptr::NonNull;
 use std::{fmt, str};
-use rustc_middle::ty::print::with_no_trimmed_paths;
 
 pub use crate::ty::diagnostics::*;
 pub use rustc_type_ir::ConstKind::{
@@ -1721,10 +1720,8 @@ impl<'tcx> TyCtxt<'tcx> {
         match instance {
             ty::InstanceKind::Item(def) => {
                 debug!("calling def_kind on def: {:?}", def);
-                // println!("calling def_kind on def: {:?}", def);
                 let def_kind = self.def_kind(def);
                 debug!("returned from def_kind: {:?}", def_kind);
-                // println!("returned from def_kind: {:?}", def_kind);
                 match def_kind {
                     DefKind::Const
                     | DefKind::Static { .. }
@@ -1736,7 +1733,7 @@ impl<'tcx> TyCtxt<'tcx> {
                     // `instance_mir`, so we'll assume const fn also wants the optimized version.
                     _ => self.optimized_mir(def),
                 }
-            }
+            },
             ty::InstanceKind::VTableShim(..)
             | ty::InstanceKind::ReifyShim(..)
             | ty::InstanceKind::Intrinsic(..)
@@ -1751,7 +1748,7 @@ impl<'tcx> TyCtxt<'tcx> {
             | ty::InstanceKind::FnPtrAddrShim(..)
             | ty::InstanceKind::AsyncDropGlueCtorShim(..) => self.mir_shims(instance),
         }
-        body
+        // body
     }
 
     // FIXME(@lcnr): Remove this function.
