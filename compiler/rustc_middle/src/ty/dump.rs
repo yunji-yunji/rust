@@ -1066,6 +1066,11 @@ impl<'tcx> TyCtxt<'tcx> {
         let path_build = outdir.join("build");
         fs::create_dir_all(&path_build).expect("unable to create build directory");
     
+        let path_traces = outdir.join("traces");
+        fs::create_dir_all(&path_traces).expect("unable to create traces directory");
+        let path_inputs = outdir.join("inputs");
+        fs::create_dir_all(&path_inputs).expect("unable to create inputs directory");
+
         // verbosity
         let verbose = std::env::var_os("PAFL_VERBOSE")
             .and_then(|v| v.into_string().ok())

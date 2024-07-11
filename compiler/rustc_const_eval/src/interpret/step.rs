@@ -55,7 +55,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         let inst2 = self.body().source.instance;
         if inst1 != inst2 {
-            println!("STEP {:?} {:?}", inst1, inst2);
+            println!("[RUSTC][STEP] {:?} {:?}", inst1, inst2);
         }
         // let fn_inst_key = self.get_fn_inst_key(self.frame().instance);
         // assert!(fn_inst_key == self._trace_stack.last().unwrap()._entry);

@@ -69,7 +69,7 @@ impl<'tcx> BasicBlocks<'tcx> {
     ///
     /// [`traversal::reverse_postorder`]: crate::mir::traversal::reverse_postorder
     #[inline]
-    pub fn reverse_postorder(&self) -> &[BasicBlock] { // yj
+    pub fn reverse_postorder(&self) -> &[BasicBlock] {
         self.cache.reverse_postorder.get_or_init(|| {
             let mut rpo: Vec<_> = Postorder::new(&self.basic_blocks, START_BLOCK).collect();
             rpo.reverse();
