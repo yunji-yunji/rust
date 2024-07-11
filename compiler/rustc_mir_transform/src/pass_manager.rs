@@ -4,9 +4,6 @@ use rustc_session::Session;
 
 use crate::{lint::lint_body, validate, MirPass};
 
-// use rustc_middle::bug;
-// use rustc_codegen_ssa::pafl::dump;
-
 /// Just like `MirPass`, except it cannot mutate `Body`.
 pub trait MirLint<'tcx> {
     fn name(&self) -> &'static str {
@@ -147,44 +144,6 @@ fn run_passes_inner<'tcx>(
                 pass.run_pass(tcx, body);
             }
 
-            // information to output
-            let instance_def = body.source.instance;
-            let def_id = instance_def.def_id();
-            let krate = tcx.crate_name(def_id.krate).to_string();
-            let path = tcx.def_path(def_id).to_string_no_crate_verbose();
-            match std::env::var_os("PASS_SHORT") {
-                None => (),
-                Some(val) => {
-                    let value = match val.into_string() {
-                        Ok(s) =>{ s },
-                        Err(_e) => { panic!("wrong env var") },
-                    };
-
-                    if krate.contains(&value) | path.contains(&value) {
-                        println!("* {:?}{:?}[{:?}][{:?}]", krate, path, name, body.basic_blocks.len());
-                    }
-                }
-            }
-
-            match std::env::var_os("PASS_LONG") {
-                None => (),
-                Some(val) => {
-                    let value = match val.into_string() {
-                        Ok(s) =>{ s },
-                        Err(_e) => { panic!("wrong env var") },
-                    };
-                    if krate.contains(&value) | path.contains(&value) {
-                        println!("------ [{:?}][{:?}] ------", name, body.basic_blocks.len());
-                        for (source, _) in body.basic_blocks.iter_enumerated() {
-                            let bb_data = &body.basic_blocks[source];
-                            println!("+ [{:?}][{:?}][{:?}]",
-                            source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
-                        }
-                        println!("--------------------------");
-                    }
-                }
-            }
-
             if dump_enabled {
                 dump_mir_for_pass(tcx, body, name, true);
             }
@@ -196,8 +155,7 @@ fn run_passes_inner<'tcx>(
             }
 
             body.pass_count += 1;
-        } // end of passes loop
-        // println!("============== a set of passes done {:?} ==============", passes.len());
+        }
     }
 
     if let Some(new_phase) = phase_change {

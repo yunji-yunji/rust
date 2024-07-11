@@ -1,65 +1,18 @@
 use super::{InterpCx, Machine};
-use rustc_middle::mir::Terminator;
-use rustc_middle::mir::BasicBlock;
-use rustc_middle::ty::layout::HasTyCtxt;
-use rustc_middle::ty::print::with_no_trimmed_paths;
-use rustc_middle::ty::{self, GenericArgKind, InstanceKind, ParamEnv, Instance};
-use rustc_middle::ty::context::{PaflType, PaflGeneric, FnInstKey, Step, Trace, PaflDump, PaflCrate};
 
-use std::fs;
-use std::path::PathBuf;
-use either::Either;
-use colored::Colorize;
-
-use rustc_hir::def::DefKind;
-use rustc_hir::def_id::DefId;
-use rustc_hir::definitions::{DefPath, DisambiguatedDefPathData};
-
-use rustc_data_structures::fx::{FxHashMap, FxHashSet};
-
-use std::fs::OpenOptions;
 use std::io::Write;
-
+use std::fs::OpenOptions;
+use std::path::PathBuf;
 use byteorder::{LittleEndian, WriteBytesExt};
 
+use rustc_hir::def_id::DefId;
+use rustc_data_structures::fx::{FxHashMap, FxHashSet};
+use rustc_middle::mir::BasicBlock;
+use rustc_middle::ty::{self, InstanceKind, ParamEnv, Instance};
+use rustc_middle::ty::layout::HasTyCtxt;
+use rustc_middle::ty::dump::{PaflCrate, PaflDump, FnInstKey, Trace, Step};
+
 impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
-    pub fn crate_info(&mut self,) -> String {
-        let mut v: Vec<String> = vec![];
-        let res: String;
-        with_no_trimmed_paths!({
-            let body = self.body();
-            let instance_def = body.source.instance;
-            let def_id = instance_def.def_id();
-
-            // 0. terminator kind
-            // let term_kind = &terminator.kind;
-            // let s = format!("{:?}", term_kind);
-            // let name = with_no_trimmed_paths!(s);
-            // v.push(name);
-
-            // 1. krate name
-            let krate_name = self.tcx.crate_name(def_id.krate).to_string();
-            let tmp = with_no_trimmed_paths!(krate_name.to_string());
-            v.push(tmp);
-
-            // 3. def path
-            let def_path = self.tcx.def_path(def_id);
-            let def_paths = def_path.data;
-            for item in &def_paths {
-                // let tmp = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-                // let tmp2 = with_no_trimmed_paths!(tmp.to_string());
-                let name = with_no_trimmed_paths!(item.data.to_string());
-                v.push(name);
-                let num = with_no_trimmed_paths!(item.disambiguator.to_string());
-                v.push(num);
-            }
-
-            res = v.join(":");
-        });
-
-        res
-    }
-
     pub fn get_fn_inst_key(&self, instance: Instance<'tcx>) -> FnInstKey {
         let tcx = self.tcx();
 
@@ -79,11 +32,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             return cached.clone();
         }
 
-        // let id = instance.def_id();
-        // let path = self.tcx.def_path(id);
-        // let depth = stack.len();
-
-
         // construct the worker
         let dumper = PaflDump {
             tcx,
@@ -97,10 +45,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             summary: &mut summary.functions,
         };
 
-        // method 1: not accurate
-        // let id = instance.def_id();
-
-        // method 2
         let inst_def: ty::InstanceKind<'_> = instance.def;
         let id : DefId = match inst_def {
             InstanceKind::Item(def)
@@ -123,246 +67,11 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         inst
     }
 
-    pub fn create_fn_inst_key3(&mut self, func_inst: ty::Instance<'tcx>) -> FnInstKey {
-        let func_instance: ty::InstanceKind<'_> = func_inst.def;
-
-        let print = !func_inst.args.is_empty();
-        if print {println!("4.2.1) create_fn_key args=[{:?}]", func_inst.args);}
-
-        let def: DefId = match func_instance {
-            // InstanceKind::Item(_) => {
-            //     if self.verbose {
-            //         println!(" ~> direct");
-            //     }
-            //     let inst = PaflDump::summarize_instance(
-            //         self.tcx,
-            //         self.param_env,
-            //         resolved,
-            //         self.verbose,
-            //         &self.path_meta,
-            //         &self.path_data,
-            //         self.stack,
-            //         self.cache,
-            //         self.summary,
-            //     );
-            //     // CallSite { inst, kind: CallKind::Direct }
-            // },
-            InstanceKind::Item(def) | 
-            InstanceKind::Intrinsic(def) |
-            InstanceKind::VTableShim(def)
-            | InstanceKind::ReifyShim(def, _)
-            | InstanceKind::FnPtrShim(def, _)
-            | InstanceKind::Virtual(def, _)
-            | InstanceKind::ThreadLocalShim(def) 
-            | InstanceKind::DropGlue(def, _)
-            | InstanceKind::CloneShim(def, _)
-            | InstanceKind::FnPtrAddrShim(def, _) => { def },
-            InstanceKind::ClosureOnceShim { call_once, .. } => { call_once }, 
-            InstanceKind::ConstructCoroutineInClosureShim { coroutine_closure_def_id, .. } => { coroutine_closure_def_id },
-            InstanceKind::CoroutineKindShim { coroutine_def_id, .. } => { coroutine_def_id },
-            InstanceKind::AsyncDropGlueCtorShim(def, _) => { def },
-        };
-
-        let tcx = self.tcx.tcx;
-        // 1. krate
-        // let krate = if def.is_local() { None } else { Some(tcx.crate_name(def.krate).to_string()) };
-        let krate = Some(tcx.crate_name(def.krate).to_string());
-
-        // 2.1. dumper ===============================================
-        let param_env: ParamEnv<'_> = self.param_env;
-        let verbose = false;
-
-        let outdir= PathBuf::from("./tmp_to_get_inst_key/");
-        fs::create_dir_all(outdir.clone()).expect("unable to create output directory");
-        let path_meta = outdir.join("meta");
-        fs::create_dir_all(&path_meta).expect("unable to create meta directory");
-        let path_data = outdir.join("data");
-        fs::create_dir_all(&path_data).expect("unable to create meta directory");
-
-        let path_prefix: PathBuf = PathBuf::default();
-        let mut stack = vec![];
-        let mut cache = FxHashMap::default();
-        
-        let pafl_crate = PaflCrate { functions: Vec::new() };
-        let mut summary = pafl_crate.functions;
-
-        let dumper: PaflDump<'_, '_> = PaflDump {
-            tcx: tcx,
-            param_env: param_env,
-            verbose: verbose,
-            path_meta: path_meta.to_path_buf(),
-            path_data: path_data.to_path_buf(),
-            path_prefix: path_prefix,
-            stack: &mut stack,
-            cache: &mut cache,
-            summary: &mut summary,
-        };
-
-        // =======
-        // ================ ===============================================
-
-        let generic_args = func_inst.args;
-        // // 2.2. args
-        // let const_ty = match func.constant() {
-        //     None => {
-        //         bug!("callee is not a constant:");
-        //     },
-        //     Some(const_op) => const_op.const_.ty(),
-        // };
-        // let (_def_id, generic_args) = match const_ty.kind() {
-        //     ty::Closure(def_id, generic_args)
-        //     | ty::FnDef(def_id, generic_args) => {
-        //         (*def_id, *generic_args)
-        //     },
-        //     _ => bug!("callee is not a function or closure"),
-        // };
-
-        // 2.3. generics
-        let mut my_generics: Vec<PaflGeneric> = vec![];
-        for arg in generic_args {
-            let sub = match arg.unpack() {
-                GenericArgKind::Lifetime(_region) => PaflGeneric::Lifetime,
-                GenericArgKind::Type(_item) => PaflGeneric::Type(PaflType::Never),
-                // GenericArgKind::Type(item) => PaflGeneric::Type(dumper.process_type(item)),
-                GenericArgKind::Const(item) => PaflGeneric::Const(dumper.process_const(item)),
-                // _ => {},
-            };
-            my_generics.push(sub);
-        }
-
-        // 3. FnInstKey ===============================================
-        let fn_inst_key = FnInstKey {
-            krate,
-            index: def.index.as_usize(),
-            path: tcx.def_path(def).to_string_no_crate_verbose(),
-            generics: my_generics,
-        };
-        // print!("[createFnKey({:?})];", fn_inst_key.generics.len()); 
-        fn_inst_key
-    }
-
-    // TODO: remove
-    pub fn _log_in_eval_query(
-        &mut self, 
-    ) {
-        let tcx = self.tcx.tcx;
-        let body = self.body();
-        let instance_def = body.source.instance;
-        let def_id: DefId = instance_def.def_id();
-    
-        let crate_name2 = tcx.crate_name(def_id.krate);
-        // content.push_str(&format!("[{:?}]", crate_name2));
-        let s1 = format!("[{:?}]", crate_name2);
-        print!("{}", s1.red());
-    
-        let def_kind: DefKind = tcx.def_kind(def_id);
-        // content.push_str(&format!("[{:?}]", def_kind));
-        let s2 = format!("[{:?}]", def_kind);
-        print!("{}", s2.blue());
-    
-        let def_path: DefPath = tcx.def_path(def_id);
-        let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
-        for item in &def_paths {
-            // content.push_str(&format!("[{:?}][{:?}]", item.data, item.disambiguator));
-            let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-            print!("{}", s3.green());
-        }
-        println!("");
-        // println!("{:?}", content);
-    }
-
-    // TODO: remove
-    #[inline(always)]
-    pub fn _bb_dump_in_step(&mut self) { 
-
-        // Implementation of the function to dump basic blocks
-        // Access fields and methods of InterpCx using `self`
-        // ...
-        if let Some(last) = self.stack().last() {
-            // crate information
-            let body = self.body();
-            // what is DIFFerence BETWEEN TyCtxt and TCXtxtAt
-            let tcx = self.tcx; // self.tcx.tcx 
-
-            let instance_def = body.source.instance;
-            let def_id: DefId = instance_def.def_id();
-
-            let crate_name2 = tcx.crate_name(def_id.krate);
-            let s1 = format!("[{:?}]", crate_name2);
-            print!("{}", s1.red());
-        
-            let def_kind: DefKind = tcx.def_kind(def_id);
-            let s2 = format!("[{:?}]", def_kind);
-            print!("{}", s2.blue());
-        
-            let def_path: DefPath = tcx.def_path(def_id);
-            let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
-            for item in &def_paths {
-                let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-                print!("{}", s3.green());
-            }
-            println!("");
-
-            // BASIC BLOCK and statement number
-            let loc = last.loc;
-
-            if let Either::Left(l_loc) = loc {
-                let block = l_loc.block;
-                let statement_idx = l_loc.statement_index;
-                println!("[{:?}][{:?}]", block, statement_idx);
-                // let bb_id = 
-                // info!("// executing {:?}", loc.block);
-            }
-        }
-    }
-
-    // TODO: remove
-    fn _print_crate_info(&mut self, /*def: DefId, */ _term: &Terminator<'tcx>) {
-        if let Some(last) = self.stack().last() {
-
-            let tcx = self.tcx;
-            // 1. def_id
-            let body = self.body();
-            let instance_def = body.source.instance;
-            let def_id: DefId = instance_def.def_id();
-
-            // 2. crate name
-            let crate_name2 = tcx.crate_name(def_id.krate);
-            let s1 = format!(":[{:?}]", crate_name2);
-            print!("{}", s1.red());
-        
-            // 3. def_kind
-            let def_kind: DefKind = tcx.def_kind(def_id);
-            let s2 = format!("[{:?}]", def_kind);
-            print!("{}", s2.blue());
-        
-            let def_path: DefPath = tcx.def_path(def_id);
-            let def_paths: Vec<DisambiguatedDefPathData> = def_path.data;
-            for item in &def_paths {
-                let s3 = format!("[{:?}][{:?}]", item.data, item.disambiguator);
-                print!("{}", s3.green());
-            }
-            // println!("");
-
-            // 4. terminator kind
-
-            // 5. BASIC BLOCK and statement number
-            let loc = last.loc;
-            if let Either::Left(l_loc) = loc {
-                let block = l_loc.block;
-                // let statement_idx = l_loc.statement_index;
-                print!(":[{:?}]", block);
-                // info!("// executing {:?}", loc.block);
-            }
-        }
-
-    }
-
     #[allow(rustc::potential_query_instability)]
     pub fn dump_trace(&mut self, file_path: &str) {
         let trace = self._trace_stack.last().unwrap();
         let size = self._trace_stack.len();
-        println!("[dump] size of trace stack {}, file_path {}", size, file_path,);
+        println!("[RUSTC] size of trace stack {}, file_path {}", size, file_path,);
         // assert_eq!(size, 1);
         for i in 0..size {
             println!("on stack: {:?}", self._trace_stack[i]._entry);

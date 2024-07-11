@@ -96,10 +96,8 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         match terminator.kind {
             Return => {
                 self.return_from_current_stack_frame(/* unwinding */ false)?
-                // let crate_info = self.crate_info();
-                // let caller = self.stack().last().unwrap().instance;
-                // println!("caller of ret{:?}", caller.def);
 
+                // old code before rebase
                 // self.pop_stack_frame(/* unwinding */ false)?
             }
 
@@ -138,12 +136,6 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 call_source: _,
                 fn_span: _,
             } => {
-
-                // let instance_def = self.body().source.instance;
-                // let def_id = instance_def.def_id();
-                // let fn_inst_key = self.create_fn_inst_key(def_id, func);
-                // self.push_trace_stack1(fn_inst_key);
-
                 let old_stack = self.frame_idx();
                 let old_loc = self.frame().loc;
 

@@ -5,7 +5,7 @@ use std::path::{Path};
 use rustc_data_structures::fx::FxHashMap;
 use rustc_middle::mir::mono::MonoItem;
 use rustc_middle::ty::{ParamEnv, TyCtxt,};
-use rustc_middle::ty::context::{PaflDump, PaflCrate, };
+use rustc_middle::ty::dump::{PaflDump, PaflCrate, };
 use rustc_span::def_id::{LOCAL_CRATE};
 use rustc_middle::bug;
 

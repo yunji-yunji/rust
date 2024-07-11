@@ -665,96 +665,9 @@ fn inner_optimized_mir(tcx: TyCtxt<'_>, did: LocalDefId) -> Body<'_> {
     {
         return body;
     }
-    
-    match std::env::var_os("OPT_CFG_SHORT") {
-        None => (),
-        Some(val) => {
-            let name = match val.into_string() {
-                Ok(s) =>{ s },
-                Err(_e) => { panic!("wrong env var") },
-            };
-            let instance_def = body.source.instance;
-            let def_id = instance_def.def_id();
-            let krate = tcx.crate_name(def_id.krate).to_string();
-            let path = tcx.def_path(def_id).to_string_no_crate_verbose();
-            if krate.contains(&name) | path.contains(&name) {
-                println!("-{:?}{:?}[{:?}] -------------------------", 
-                krate, path, body.basic_blocks.clone().len());
-            }
-                
-            for (source, _) in body.basic_blocks.iter_enumerated() {
-                let bb_data = &body.basic_blocks[source];
-                println!("* [{:?}][{:?}][{:?}][{:?}]", 
-                source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
-                , bb_data.statements);
-            }
-            println!("--------------------------");
-        }
-    }
 
-    match std::env::var_os("OPT_CFG_LONG") {
-        None => (),
-        Some(val) => {
-            let name = match val.into_string() {
-                Ok(s) =>{ s },
-                Err(_e) => { panic!("wrong env var") },
-            };
-            // self.call_stk_push(s); // bb number on?
-            let instance_def = body.source.instance;
-            let def_id = instance_def.def_id();
-            let krate = tcx.crate_name(def_id.krate).to_string();
-            let path = tcx.def_path(def_id).to_string_no_crate_verbose();
-            if krate.contains(&name) | path.contains(&name) {
-                println!("-- long {:?}{:?}[{:?}] -------------------------", 
-                krate, path, body.basic_blocks.clone().len());
-                for (source, _) in body.basic_blocks.iter_enumerated() {
-                    let bb_data = &body.basic_blocks[source];
-                    println!("+ [{:?}][{:?}][{:?}]", 
-                    source, bb_data.terminator.clone().unwrap().kind, bb_data.statements);
-                }
-                println!("--------------------------");
-            }
-        }
-    }
-
-    // the passes
-    // .. -> -- > Precodegen
     run_optimization_passes(tcx, &mut body);
 
-    // how about call here?
-    match std::env::var_os("DUMP_IN_OPT_MIR2") {
-        None => {},
-        Some(val) => {
-            println!("dump in inner_optimized_mir2 {:?}", val);
-            let res = dump_mir::emit_mir(tcx);
-            println!("emit2 in opt_mir {:?}", res);
-        }
-    }
-    match std::env::var_os("OPT2_CFG_SHORT") {
-        None => (),
-        Some(val) => {
-            let name = match val.into_string() {
-                Ok(s) =>{ s },
-                Err(_e) => { panic!("wrong env var") },
-            };
-            let instance_def = body.source.instance;
-            let def_id = instance_def.def_id();
-            let krate = tcx.crate_name(def_id.krate).to_string();
-            let path = tcx.def_path(def_id).to_string_no_crate_verbose();
-            if krate.contains(&name) | path.contains(&name) {
-                println!("after opt pass-{:?}{:?}[{:?}] -------------------------", 
-                krate, path, body.basic_blocks.clone().len());
-                
-                for (source, _) in body.basic_blocks.iter_enumerated() {
-                    let bb_data = &body.basic_blocks[source];
-                    println!("opt s=[{:?}][{:?}][{:?}][{:?}]", 
-                    source, bb_data.statements.len(), bb_data.terminator.clone().unwrap().kind
-                    , bb_data.statements);
-                }
-                println!("--------------------------");
-            }
-        }
-    }
     body
 }
 

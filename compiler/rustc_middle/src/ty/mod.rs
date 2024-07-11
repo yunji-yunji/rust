@@ -147,6 +147,7 @@ mod assoc;
 mod closure;
 mod consts;
 pub mod context;
+pub mod dump;
 mod diagnostics;
 mod elaborate_impl;
 mod erase_regions;

@@ -17,7 +17,7 @@ use rustc_middle::ty::layout::{
     TyAndLayout,
 };
 use rustc_middle::{bug, span_bug};
-use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance, context::{FnInstKey, Trace}};
+use rustc_middle::ty::{self, GenericArgsRef, ParamEnv, Ty, TyCtxt, TypeFoldable, Variance};
 use rustc_mir_dataflow::storage::always_storage_live_locals;
 use rustc_session::Limit;
 use rustc_span::Span;
@@ -33,7 +33,7 @@ use crate::errors;
 use crate::util;
 use crate::{fluent_generated as fluent, ReportErrorExt};
 use rustc_middle::ty::print::with_no_trimmed_paths;
-
+use rustc_middle::ty::dump::{FnInstKey, Trace};
 pub struct InterpCx<'tcx, M: Machine<'tcx>> {
     /// Stores the `Machine` instance.
     ///

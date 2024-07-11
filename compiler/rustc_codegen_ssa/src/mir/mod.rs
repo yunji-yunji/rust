@@ -170,28 +170,6 @@ pub fn codegen_mir<'a, 'tcx, Bx: BuilderMethods<'a, 'tcx>>(
 
     let mir = cx.tcx().instance_mir(instance.def);
 
-    // this function is called, either with miri or without miri
-
-    match std::env::var_os("DUMP_WITH_CX") { // check cyclic
-        None => {},
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val.clone());
-            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                Some(v) => std::path::PathBuf::from(v),
-            };
-            println!("Env var = {:?}", val.clone()); // also recognize this
-            match cx.tcx().sess.local_crate_source_file() {
-                None => bug!("unable to locate local crate source file"),
-                Some(src) => {
-                    if src.into_local_path().expect("get local path").starts_with(&prefix) {
-                        crate::pafl::dump(cx.tcx(), &outdir);
-                    }
-                }
-            }
-        }
-    }
-
     let fn_abi = cx.fn_abi_of_instance(instance, ty::List::empty());
     debug!("fn_abi: {:?}", fn_abi);
 
