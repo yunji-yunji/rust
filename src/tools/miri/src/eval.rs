@@ -275,8 +275,8 @@ pub fn create_ecx<'tcx>(
     let mut ecx =
         InterpCx::new(tcx, rustc_span::DUMMY_SP, param_env, MiriMachine::new(config, layout_cx));
 
-    println!("[RUSTC] create ecx (MiriMachine) [{}] ({:?})",
-        tcx.def_path_debug_str(entry_id), entry_type);
+    println!("[RUSTC] create ecx (MiriMachine) [{}] ({:?})", tcx.def_path_debug_str(entry_id), entry_type);
+    println!("[RUSTC] MiriConfig arg [{}] ({:?})", config.args.len(), config.args);
     // Some parts of initialization require a full `InterpCx`.
     MiriMachine::late_init(&mut ecx, config, {
         let mut state = MainThreadState::default();
@@ -430,26 +430,43 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
-    match std::env::var_os("STATIC_DUMP") {
-        None => {},
-        Some(val) => {
-            let outdir = std::path::PathBuf::from(val.clone());
-            let prefix = match std::env::var_os("PAFL_TARGET_PREFIX") {
-                None => bug!("environment variable PAFL_TARGET_PREFIX not set"),
-                Some(v) => std::path::PathBuf::from(v),
-            };
-            println!("[RUSTC] static dump file to {:?}", val.clone());
-            match tcx.sess.local_crate_source_file() {
-                None => bug!("unable to locate local crate source file"),
-                Some(src) => {
-                    println!("[RUSTC] check if local_crate_source [{:?}] file match [{:?}]", src.clone(), prefix.clone());
-                    if src.into_local_path().expect("get local path").starts_with(&prefix) {
-                        tcx.dump_cp(&outdir);
+    // MIRI ARGUMENTS
+    let mut static_dump: Option<&str> = None;
+    let mut static_prefix: Option<&str> = None;
+    let mut trace_dump: Option<&str> = None;
+
+    println!("[RUSTC] eval_entry Miriconfig [{}] ({:?})", config.args.len(), config.args);
+    for arg in config.args.iter() {
+        println!("[RUSTC] arg [{:?}]", arg);
+
+        if arg.contains("static_dump=") { static_dump = arg.strip_prefix("static_dump="); }
+        if arg.contains("static_prefix=") { static_prefix = arg.strip_prefix("static_prefix="); }
+        if arg.contains("trace=") { trace_dump = arg.strip_prefix("trace="); }
+    };
+
+    // STATIC DUMP
+    match static_dump {
+        Some(staticdump_path) => {
+            let outdir = std::path::PathBuf::from(staticdump_path);
+            match static_prefix {
+                None => bug!("cli arg [static_prefix=] not set"),
+                Some(prefix_path) => {
+                    let prefix = std::path::PathBuf::from(prefix_path);
+                    println!("[RUSTC] static dump file to {}", staticdump_path);
+                    match tcx.sess.local_crate_source_file() {
+                        None => bug!("unable to locate local crate source file"),
+                        Some(src) => {
+                            println!("[RUSTC] check if local_crate_source [{:?}] file match [{:?}]", src.clone(), prefix.clone());
+                            if src.into_local_path().expect("get local path").starts_with(&prefix) {
+                                tcx.dump_cp(&outdir);
+                            }
+                        }
                     }
                 }
             }
-        }
-    };
+        },
+        None => {},
+    }
 
     // Copy setting before we move `config`.
     let ignore_leaks = config.ignore_leaks;
@@ -468,15 +485,16 @@ pub fn eval_entry<'tcx>(
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
     // println!("[RUSTC] runtime trace after run_threads {:?}", ecx._trace_stack);
 
-    match std::env::var_os("RUNTIME_DUMP") {
-        None => {},
-        Some(val) => {
-            println!("[RUSTC] write runtime trace to {:?}", val.clone());
-            if let Some(file_name) = val.to_str() {
-                ecx.dump_trace(file_name);
-            };
-        }
-    };
+    // RUNTIME DUMP
+    match trace_dump {
+        Some(trace_path) => {
+            println!("[RUSTC: Runtime] write runtime trace to {:?}", trace_path);
+            ecx.dump_trace(trace_path);
+        },
+        None => {
+            println!("[RUSTC: Runtime] no runtime trace dump");
+        },
+    }
 
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();

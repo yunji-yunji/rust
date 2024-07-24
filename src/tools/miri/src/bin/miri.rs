@@ -622,6 +622,8 @@ fn main() {
 
     debug!("rustc arguments: {:?}", rustc_args);
     debug!("crate arguments: {:?}", miri_config.args);
+    // eprintln!("[RUSTC] rustc arguments: {:?}", rustc_args);
+    eprintln!("[RUSTC] miri arguments: {:?}", miri_config.args);
     run_compiler(
         rustc_args,
         /* target_crate: */ true,
