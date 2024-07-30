@@ -432,19 +432,23 @@ pub fn eval_entry<'tcx>(
     config: MiriConfig,
 ) -> Option<i64> {
     // MIRI ARGUMENTS
-    let mut static_dump: Option<&str> = None;
-    let mut static_prefix: Option<&str> = None;
-    let mut trace_dump: Option<&str> = None;
+    #[cfg(any(feature = "fuzz_static", feature = "fuzz_runtime"))]
+    {
+        let mut static_dump: Option<&str> = None;
+        let mut static_prefix: Option<&str> = None;
+        let mut trace_dump: Option<&str> = None;
 
-    println!("[MIRI] eval_entry Miriconfig [{}] ({:?})", config.args.len(), config.args);
-    for arg in config.args.iter() {
-        println!("[MIRI] arg [{:?}]", arg);
-        if arg.contains("static_dump=") { static_dump = arg.strip_prefix("static_dump="); }
-        if arg.contains("static_prefix=") { static_prefix = arg.strip_prefix("static_prefix="); }
-        if arg.contains("trace=") { trace_dump = arg.strip_prefix("trace="); }
-    };
+        println!("[MIRI] eval_entry Miriconfig [{}] ({:?})", config.args.len(), config.args);
+        for arg in config.args.iter() {
+            println!("[MIRI] arg [{:?}]", arg);
+            if arg.contains("static_dump=") { static_dump = arg.strip_prefix("static_dump="); }
+            if arg.contains("static_prefix=") { static_prefix = arg.strip_prefix("static_prefix="); }
+            if arg.contains("trace=") { trace_dump = arg.strip_prefix("trace="); }
+        };
+    }
 
     // STATIC DUMP
+    #[cfg(feature = "fuzz_static")]
     match static_dump {
         Some(staticdump_path) => {
             let outdir = std::path::PathBuf::from(staticdump_path);
@@ -480,13 +484,16 @@ pub fn eval_entry<'tcx>(
         }
     };
 
+    #[cfg(feature = "fuzz_runtime")]
     println!("[MIRI] BEFORE run_threads, trace stack size = {}", ecx.trace_stack.len());
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
+    #[cfg(feature = "fuzz_runtime")]
     println!("[MIRI] AFTER run_threads, trace stack size = {}", ecx.trace_stack.len());
     
     // RUNTIME DUMP
+    #[cfg(feature = "fuzz_runtime")]
     match trace_dump {
         Some(trace_path) => {
             println!("[MIRI][Runtime] write runtime trace to {:?}", trace_path);
@@ -517,6 +524,7 @@ pub fn eval_entry<'tcx>(
         EnvVars::cleanup(&mut ecx).expect("error during env var cleanup");
     }
 
+    #[cfg(feature = "fuzz_runtime")]
     println!("[MIRI] Final size of trace stack {}", ecx.trace_stack.len());
 /*
     let trace = ecx._trace_stack.last().unwrap();

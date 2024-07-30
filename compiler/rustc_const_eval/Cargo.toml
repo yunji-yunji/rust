@@ -28,3 +28,6 @@ serde = { version = "1.0.185", features = [ "derive" ] }
 serde_cbor = "0.11.1"
 byteorder = "1.5.0"
 # tidy-alphabetical-end
+
+[features]
+fuzz_runtime = []

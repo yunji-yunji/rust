@@ -810,8 +810,11 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
                 match res {
                     Err(err) => {
                         self.stack_mut().pop();
-                        // code for trace recording
-                        self.merge_trace();
+                        #[cfg(feature = "fuzz_runtime")]
+                        {
+                            // code for trace recording
+                            self.merge_trace();
+                        }
                         Err(err)
                     }
                     Ok(()) => Ok(()),

@@ -62,6 +62,8 @@ harness = false
 default = ["stack-cache"]
 stack-cache = []
 stack-cache-consistency-check = ["stack-cache"]
+fuzz_static = []
+fuzz_runtime = []
 
 # Be aware that this file is inside a workspace when used via the
 # submodule in the rustc repo. That means there are many cargo features

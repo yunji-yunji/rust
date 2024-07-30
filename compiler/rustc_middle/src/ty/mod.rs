@@ -136,6 +136,7 @@ pub mod util;
 pub mod visit;
 pub mod vtable;
 pub mod walk;
+#[cfg(feature = "fuzz_static")]
 pub mod fuzz_static_dump;
 
 mod adt;

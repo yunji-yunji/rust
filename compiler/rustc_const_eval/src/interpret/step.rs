@@ -26,6 +26,7 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             return Ok(false);
         }
 
+        #[cfg(feature = "fuzz_runtime")]
         let frame_inst = self.frame().instance.def;
 
         let Either::Left(loc) = self.frame().loc else {
@@ -49,13 +50,16 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         M::before_terminator(self)?;
 
-        // code for trace recording
-        let body_inst = self.body().source.instance;
-        if frame_inst != body_inst {
-            // TODO: log level
-            println!("[RUSTC] Instance doesn't match: {:?} {:?}", frame_inst, body_inst);
+        #[cfg(feature = "fuzz_runtime")]
+        {
+            // code for trace recording
+            let body_inst = self.body().source.instance;
+            if frame_inst != body_inst {
+                // TODO: log level
+                println!("[RUSTC] Instance doesn't match: {:?} {:?}", frame_inst, body_inst);
+            }
+            self.push_bb(loc.block);
         }
-        self.push_bb(loc.block);
 
         let terminator = basic_block.terminator();
         self.terminator(terminator)?;
