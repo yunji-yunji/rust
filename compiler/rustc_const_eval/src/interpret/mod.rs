@@ -17,6 +17,7 @@ mod traits;
 mod util;
 mod validity;
 mod visitor;
+pub mod fuzz_runtime_dump;
 
 use eval_context::{from_known_layout, mir_assign_valid_types};
 #[doc(no_inline)]

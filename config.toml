@@ -1,0 +1,62 @@
+# Use different pre-set defaults than the global defaults.
+#
+# See `src/bootstrap/defaults` for more information.
+# Note that this has no default value (x.py uses the defaults in `config.example.toml`).
+profile = 'dist'
+
+[llvm]
+
+[build]
+
+# Whether to build documentation by default. If false, rustdoc and
+# friends will still be compiled but they will not be used to generate any
+# documentation.
+#
+# You can still build documentation when this is disabled by explicitly passing paths,
+# e.g. `x doc library`.
+docs = false
+
+# Indicate whether to build compiler documentation by default.
+# You can still build documentation when this is disabled by explicitly passing a path: `x doc compiler`.
+compiler-docs = false
+
+# Set of tools to be included in the installation.
+#
+# If `extended = false`, the only one of these built by default is rustdoc.
+#
+# If `extended = true`, they're all included, with the exception of
+# rust-demangler which additionally requires `profiler = true` to be set.
+#
+# If any enabled tool fails to build, the installation fails.
+tools = ['cargo', 'miri', 'src', 'analysis', 'cargo-miri']
+#    "cargo",
+#    "clippy",
+#    "rustdoc",
+#    "rustfmt",
+#    "rust-analyzer",
+#    "rust-analyzer-proc-macro-srv",
+#    "analysis",
+#    "src",
+#    "rust-demangler",  # if profiler = true
+#]
+
+# Arguments passed to the `./configure` script, used during distcheck. You
+# probably won't fill this in but rather it's filled in by the `./configure`
+# script. Useful for debugging.
+configure-args = ['--tools=cargo,miri,src,analysis,cargo-miri', '--set', 'install.prefix=dist/fuzz', '--set', 'install.sysconfdir=sysconf', '--disable-docs', '--disable-compiler-docs']
+
+[install]
+
+# Where to install the generated toolchain. Must be an absolute path.
+prefix = 'dist/fuzz'
+
+# Where to install system configuration files.
+# If this is a relative path, it will get installed in `prefix` above
+sysconfdir = 'sysconf'
+
+[rust]
+
+[target.x86_64-unknown-linux-gnu]
+
+[dist]
+

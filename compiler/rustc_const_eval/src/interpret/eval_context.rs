@@ -36,6 +36,9 @@ use super::{
 };
 use crate::{errors, fluent_generated as fluent, util, ReportErrorExt};
 
+use rustc_middle::ty::fuzz_static_dump::{FnInstKey, Trace};
+use rustc_middle::ty::print::with_no_trimmed_paths;
+
 pub struct InterpCx<'tcx, M: Machine<'tcx>> {
     /// Stores the `Machine` instance.
     ///
@@ -55,6 +58,10 @@ pub struct InterpCx<'tcx, M: Machine<'tcx>> {
 
     /// The recursion limit (cached from `tcx.recursion_limit(())`)
     pub recursion_limit: Limit,
+
+    /// variables for trace recording
+    pub trace_stack: Vec<Trace>,
+    pub skip_counter: usize,
 }
 
 // The Phantomdata exists to prevent this type from being `Send`. If it were sent across a thread
@@ -511,12 +518,20 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         param_env: ty::ParamEnv<'tcx>,
         machine: M,
     ) -> Self {
+        let dummy_fnkey = FnInstKey {
+            krate: None,
+            index: 0,
+            path: String::from(""),
+            generics: vec![],
+        };
         InterpCx {
             machine,
             tcx: tcx.at(root_span),
             param_env,
             memory: Memory::new(),
             recursion_limit: tcx.recursion_limit(),
+            trace_stack: vec![Trace { entry: dummy_fnkey, steps: vec![] }],
+            skip_counter: 0,
         }
     }
 
@@ -878,6 +893,14 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         let frame = M::init_frame(self, pre_frame)?;
         self.stack_mut().push(frame);
 
+        // code for trace recording
+        if self.stack().last().unwrap().instance != instance {
+            with_no_trimmed_paths!({
+                println!("STACK MISMATCH {} {}", self.stack().last().unwrap().instance, instance);
+            });
+        }
+        self.push_trace(&instance);
+
         Ok(())
     }
 
@@ -1075,6 +1098,10 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
         // All right, now it is time to actually pop the frame.
         let stack_pop_info = self.pop_stack_frame(unwinding)?;
+
+        // code for trace recording
+        // TODO: check if this is necessary. (maybe duplicated after rebase)
+        self.merge_trace();
 
         // Report error from return value copy, if any.
         copy_ret_result?;

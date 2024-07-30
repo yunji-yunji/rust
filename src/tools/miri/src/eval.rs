@@ -274,6 +274,9 @@ pub fn create_ecx<'tcx>(
     let mut ecx =
         InterpCx::new(tcx, rustc_span::DUMMY_SP, param_env, MiriMachine::new(config, layout_cx));
 
+    println!("[MIRI] MiriConfig arg [{}] ({:?})", config.args.len(), config.args);
+    println!("[MIRI] create ecx (MiriMachine) [{}] ({:?})", tcx.def_path_debug_str(entry_id), entry_type);
+
     // Some parts of initialization require a full `InterpCx`.
     MiriMachine::late_init(&mut ecx, config, {
         let mut state = MainThreadState::default();
@@ -428,6 +431,43 @@ pub fn eval_entry<'tcx>(
     entry_type: EntryFnType,
     config: MiriConfig,
 ) -> Option<i64> {
+    // MIRI ARGUMENTS
+    let mut static_dump: Option<&str> = None;
+    let mut static_prefix: Option<&str> = None;
+    let mut trace_dump: Option<&str> = None;
+
+    println!("[MIRI] eval_entry Miriconfig [{}] ({:?})", config.args.len(), config.args);
+    for arg in config.args.iter() {
+        println!("[MIRI] arg [{:?}]", arg);
+        if arg.contains("static_dump=") { static_dump = arg.strip_prefix("static_dump="); }
+        if arg.contains("static_prefix=") { static_prefix = arg.strip_prefix("static_prefix="); }
+        if arg.contains("trace=") { trace_dump = arg.strip_prefix("trace="); }
+    };
+
+    // STATIC DUMP
+    match static_dump {
+        Some(staticdump_path) => {
+            let outdir = std::path::PathBuf::from(staticdump_path);
+            match static_prefix {
+                None => bug!("cli arg [static_prefix=] not set"),
+                Some(prefix_path) => {
+                    let prefix = std::path::PathBuf::from(prefix_path);
+                    println!("[MIRI][Static] Write file to {}", staticdump_path);
+                    match tcx.sess.local_crate_source_file() {
+                        None => bug!("unable to locate local crate source file"),
+                        Some(src) => {
+                            println!("[MIRI][Static] check if local_crate_source [{:?}] file match [{:?}]", src.clone(), prefix.clone());
+                            if src.into_local_path().expect("get local path").starts_with(&prefix) {
+                                tcx.static_dump(&outdir);
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        None => {},
+    }
+
     // Copy setting before we move `config`.
     let ignore_leaks = config.ignore_leaks;
 
@@ -440,9 +480,23 @@ pub fn eval_entry<'tcx>(
         }
     };
 
+    println!("[MIRI] BEFORE run_threads, trace stack size = {}", ecx.trace_stack.len());
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
+    println!("[MIRI] AFTER run_threads, trace stack size = {}", ecx.trace_stack.len());
+    
+    // RUNTIME DUMP
+    match trace_dump {
+        Some(trace_path) => {
+            println!("[MIRI][Runtime] write runtime trace to {:?}", trace_path);
+            ecx.runtime_dump(trace_path);
+        },
+        None => {
+            println!("[MIRI][Runtime] no runtime trace dump");
+        },
+    }
+    
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
         panic::resume_unwind(panic_payload)
@@ -463,6 +517,15 @@ pub fn eval_entry<'tcx>(
         EnvVars::cleanup(&mut ecx).expect("error during env var cleanup");
     }
 
+    println!("[MIRI] Final size of trace stack {}", ecx.trace_stack.len());
+/*
+    let trace = ecx._trace_stack.last().unwrap();
+    if trace._steps.len() > 0 {
+        println!("after miri2 {:?}", trace._steps.last().unwrap());
+    } else {
+        println!("empty trace");
+    };
+*/
     // Process the result.
     let (return_code, leak_check) = report_error(&ecx, res)?;
     if leak_check && !ignore_leaks {

@@ -36,6 +36,8 @@ rustc_type_ir = { path = "../rustc_type_ir" }
 smallvec = { version = "1.8.1", features = ["union", "may_dangle"] }
 thin-vec = "0.2.12"
 tracing = "0.1"
+serde = { version = "1.0.185", features = ["derive"] }
+serde_json = "1.0.59"
 # tidy-alphabetical-end
 
 [features]

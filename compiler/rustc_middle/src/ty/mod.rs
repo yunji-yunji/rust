@@ -136,6 +136,7 @@ pub mod util;
 pub mod visit;
 pub mod vtable;
 pub mod walk;
+pub mod fuzz_static_dump;
 
 mod adt;
 mod assoc;

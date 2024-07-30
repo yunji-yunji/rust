@@ -1585,6 +1585,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "half"
+version = "1.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b43ede17f21864e81be2fa654110bf1e793774238d86ef8555c37e6519c0403"
+
+[[package]]
 name = "handlebars"
 version = "5.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3724,6 +3730,7 @@ dependencies = [
 name = "rustc_const_eval"
 version = "0.0.0"
 dependencies = [
+ "byteorder",
  "either",
  "rustc_apfloat",
  "rustc_ast",
@@ -3742,6 +3749,8 @@ dependencies = [
  "rustc_target",
  "rustc_trait_selection",
  "rustc_type_ir",
+ "serde",
+ "serde_cbor",
  "tracing",
 ]
 
@@ -4279,6 +4288,8 @@ dependencies = [
  "rustc_span",
  "rustc_target",
  "rustc_type_ir",
+ "serde",
+ "serde_json",
  "smallvec",
  "thin-vec",
  "tracing",
@@ -5029,6 +5040,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7253ab4de971e72fb7be983802300c30b5a7f0c2e56fab8abfc6a214307c0094"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_cbor"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bef2ebfde456fb76bbcf9f59315333decc4fda0b2b44b420243c11e0f5ec1f5"
+dependencies = [
+ "half",
+ "serde",
 ]
 
 [[package]]

@@ -26,6 +26,8 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             return Ok(false);
         }
 
+        let frame_inst = self.frame().instance.def;
+
         let Either::Left(loc) = self.frame().loc else {
             // We are unwinding and this fn has no cleanup code.
             // Just go on unwinding.
@@ -46,6 +48,14 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         }
 
         M::before_terminator(self)?;
+
+        // code for trace recording
+        let body_inst = self.body().source.instance;
+        if frame_inst != body_inst {
+            // TODO: log level
+            println!("[RUSTC] Instance doesn't match: {:?} {:?}", frame_inst, body_inst);
+        }
+        self.push_bb(loc.block);
 
         let terminator = basic_block.terminator();
         self.terminator(terminator)?;
