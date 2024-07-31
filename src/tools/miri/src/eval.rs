@@ -274,8 +274,8 @@ pub fn create_ecx<'tcx>(
     let mut ecx =
         InterpCx::new(tcx, rustc_span::DUMMY_SP, param_env, MiriMachine::new(config, layout_cx));
 
-    println!("[MIRI] MiriConfig arg [{}] ({:?})", config.args.len(), config.args);
-    println!("[MIRI] create ecx (MiriMachine) [{}] ({:?})", tcx.def_path_debug_str(entry_id), entry_type);
+    #[cfg(any(feature = "fuzz_static", feature = "fuzz_runtime"))]
+    println!("[MIRI] create_ecx function entry=[{}] ({:?}), MiriConfig args=[{}] ({:?})", tcx.def_path_debug_str(entry_id), entry_type, config.args.len(), config.args);
 
     // Some parts of initialization require a full `InterpCx`.
     MiriMachine::late_init(&mut ecx, config, {

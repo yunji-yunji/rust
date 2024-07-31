@@ -134,6 +134,7 @@ pub fn setup(
     // the user might have set, which is consistent with normal `cargo build` that does
     // not apply `RUSTFLAGS` to the sysroot either.
     let rustflags = &["-Cdebug-assertions=off", "-Coverflow-checks=on"];
+    let start = std::time::Instant::now();
 
     let mut after_build_output = String::new(); // what should be printed when the build is done.
     let notify = || {
@@ -177,6 +178,8 @@ pub fn setup(
         Ok(SysrootStatus::SysrootBuilt) => {
             // Print what `notify` prepared.
             eprint!("{after_build_output}");
+            let duration = start.elapsed();
+            eprintln!("[MIRI] preparing MIRI takes {} ms", duration.as_millis());
         }
         Err(err) => show_error!("failed to build sysroot: {err:?}"),
     }
