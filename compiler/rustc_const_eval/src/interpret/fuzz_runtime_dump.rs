@@ -16,12 +16,18 @@ use rustc_middle::ty::fuzz_static_dump::{PaflCrate, PaflDump, FnInstKey, Trace, 
 impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
     // called by BB(x)
     pub fn push_bb(&mut self, bb: BasicBlock) {
+        if !self.trace_enabled {
+            return
+        }
         let trace = self.trace_stack.last_mut().unwrap();
         trace.steps.push(Step::B(bb.as_usize()));
     }
 
     // called by Call
     pub fn push_trace(&mut self, instance: &Instance<'tcx>) {
+        if !self.trace_enabled {
+            return
+        }
         let fnkey: FnInstKey = self.instance_to_key(instance);
         self.trace_stack.push(Trace {
             entry: fnkey,
@@ -31,6 +37,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
 
     // called by Return
     pub fn merge_trace(&mut self) {
+        if !self.trace_enabled {
+            return
+        }
         let trace_top = self.trace_stack.pop().unwrap();
         let stk_len = self.trace_stack.len();
         if stk_len == 0 {

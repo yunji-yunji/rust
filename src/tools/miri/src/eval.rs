@@ -479,13 +479,16 @@ pub fn eval_entry<'tcx>(
             panic!("Miri initialization error: {kind:?}")
         }
     };
+    if trace_dump.is_some() {
+        ecx.set_trace_enabled(true);
+    };
 
     println!("[MIRI] BEFORE run_threads, trace stack size = {}", ecx.trace_stack.len());
     // Perform the main execution.
     let res: thread::Result<InterpResult<'_, !>> =
         panic::catch_unwind(AssertUnwindSafe(|| ecx.run_threads()));
     println!("[MIRI] AFTER run_threads, trace stack size = {}", ecx.trace_stack.len());
-    
+
     // RUNTIME DUMP
     match trace_dump {
         Some(trace_path) => {
@@ -496,7 +499,7 @@ pub fn eval_entry<'tcx>(
             println!("[MIRI][Runtime] no runtime trace dump");
         },
     }
-    
+
     let res = res.unwrap_or_else(|panic_payload| {
         ecx.handle_ice();
         panic::resume_unwind(panic_payload)

@@ -61,7 +61,7 @@ pub struct InterpCx<'tcx, M: Machine<'tcx>> {
 
     /// variables for trace recording
     pub trace_stack: Vec<Trace>,
-    pub skip_counter: usize,
+    pub trace_enabled: bool,
 }
 
 // The Phantomdata exists to prevent this type from being `Send`. If it were sent across a thread
@@ -531,8 +531,12 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
             memory: Memory::new(),
             recursion_limit: tcx.recursion_limit(),
             trace_stack: vec![Trace { entry: dummy_fnkey, steps: vec![] }],
-            skip_counter: 0,
+            trace_enabled: false,
         }
+    }
+
+    pub fn set_trace_enabled(&mut self, trace_enabled: bool) {
+        self.trace_enabled = trace_enabled;
     }
 
     /// Returns the span of the currently executed statement/terminator.
