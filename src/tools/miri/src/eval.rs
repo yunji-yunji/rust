@@ -268,6 +268,7 @@ pub fn create_ecx<'tcx>(
     entry_id: DefId,
     entry_type: EntryFnType,
     config: &MiriConfig,
+    trace_enabled: bool,
 ) -> InterpResult<'tcx, InterpCx<'tcx, MiriMachine<'tcx>>> {
     let param_env = ty::ParamEnv::reveal_all();
     let layout_cx = LayoutCx { tcx, param_env };
@@ -276,6 +277,8 @@ pub fn create_ecx<'tcx>(
 
     println!("[MIRI] MiriConfig arg [{}] ({:?})", config.args.len(), config.args);
     println!("[MIRI] create ecx (MiriMachine) [{}] ({:?})", tcx.def_path_debug_str(entry_id), entry_type);
+
+    ecx.set_trace_enabled(trace_enabled);
 
     // Some parts of initialization require a full `InterpCx`.
     MiriMachine::late_init(&mut ecx, config, {
@@ -471,16 +474,13 @@ pub fn eval_entry<'tcx>(
     // Copy setting before we move `config`.
     let ignore_leaks = config.ignore_leaks;
 
-    let mut ecx = match create_ecx(tcx, entry_id, entry_type, &config) {
+    let mut ecx = match create_ecx(tcx, entry_id, entry_type, &config, trace_dump.is_some()) {
         Ok(v) => v,
         Err(err) => {
             let (kind, backtrace) = err.into_parts();
             backtrace.print_backtrace();
             panic!("Miri initialization error: {kind:?}")
         }
-    };
-    if trace_dump.is_some() {
-        ecx.set_trace_enabled(true);
     };
 
     println!("[MIRI] BEFORE run_threads, trace stack size = {}", ecx.trace_stack.len());
