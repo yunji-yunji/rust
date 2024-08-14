@@ -4,6 +4,7 @@ use super::{InterpCx, Machine};
 
 use std::io::Write;
 use std::fs::OpenOptions;
+use std::io::BufWriter;
 use byteorder::{LittleEndian, WriteBytesExt};
 
 use rustc_hir::def_id::DefId;
@@ -127,12 +128,14 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         let mut id_vec: Vec<Vec<u8>> = id_set.drain().collect();
         id_vec.sort();
 
-        let mut file = OpenOptions::new()
+        let file = OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .open(file_path)
             .expect("unable to create output file");
+
+        let mut file = BufWriter::new(file);
 
         file.write_u32::<LittleEndian>(id_vec.len() as u32).unwrap();
         for buf in id_vec.iter() {
