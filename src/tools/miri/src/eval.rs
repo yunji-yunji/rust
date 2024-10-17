@@ -441,7 +441,7 @@ pub fn eval_entry<'tcx>(
 
     println!("[MIRI] eval_entry Miriconfig [{}] ({:?})", config.args.len(), config.args);
     for arg in config.args.iter() {
-        println!("[MIRI] arg [{:?}]", arg);
+        // println!("[MIRI] arg [{:?}]", arg);
         if arg.contains("static_dump=") { static_dump = arg.strip_prefix("static_dump="); }
         if arg.contains("static_prefix=") { static_prefix = arg.strip_prefix("static_prefix="); }
         if arg.contains("trace=") { trace_dump = arg.strip_prefix("trace="); }
