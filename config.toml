@@ -7,6 +7,8 @@ profile = 'dist'
 [llvm]
 
 [build]
+sanitizers = true
+profiler = true
 
 # Whether to build documentation by default. If false, rustdoc and
 # friends will still be compiled but they will not be used to generate any

@@ -103,9 +103,9 @@ impl<'tcx, M: Machine<'tcx>> InterpCx<'tcx, M> {
         let size = self.trace_stack.len();
         println!("[RUSTC] size of trace stack {}, file_path {}", size, file_path);
         // assert_eq!(size, 1);
-        for i in 0..size {
-            println!("on stack: {:?}", self.trace_stack[i].entry);
-        }
+        // for i in 0..size {
+        //     println!("on stack: {:?}", self.trace_stack[i].entry);
+        // }
         // if trace._steps.len() > 0 {
         //     println!("after miri2 {:?}", trace._steps.last().unwrap());
         // } else {
